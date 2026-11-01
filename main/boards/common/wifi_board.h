@@ -9,6 +9,9 @@
 class WifiBoard : public Board {
 protected:
     esp_timer_handle_t connect_timer_ = nullptr;
+    int connect_timeout_remaining_ = 0;
+    NetworkEvent current_network_event_ = NetworkEvent::Disconnected;
+    std::string current_network_data_;
     bool in_config_mode_ = false;
     NetworkEventCallback network_event_callback_ = nullptr;
 
@@ -35,6 +38,8 @@ protected:
      * WiFi connection timeout callback
      */
     static void OnWifiConnectTimeout(void* arg);
+
+    void UpdateConnectProgress();
 
 public:
     WifiBoard();
@@ -64,6 +69,10 @@ public:
      * Check if in WiFi config mode
      */
     bool IsInWifiConfigMode() const;
+
+    virtual int GetNetworkConnectTimeoutRemaining() const override {
+        return (connect_timer_ && esp_timer_is_active(connect_timer_)) ? connect_timeout_remaining_ : -1;
+    }
 };
 
 #endif // WIFI_BOARD_H

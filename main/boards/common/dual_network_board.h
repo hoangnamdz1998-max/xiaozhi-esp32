@@ -52,6 +52,9 @@ public:
     virtual void SetNetworkEventCallback(NetworkEventCallback callback) override;
     virtual NetworkInterface* GetNetwork() override;
     virtual const char* GetNetworkStateIcon() override;
+    virtual int GetNetworkConnectTimeoutRemaining() const override {
+        return current_board_ ? current_board_->GetNetworkConnectTimeoutRemaining() : -1;
+    }
     virtual void SetPowerSaveLevel(PowerSaveLevel level) override;
     virtual std::string GetBoardJson() override;
     virtual std::string GetDeviceStatusJson() override;

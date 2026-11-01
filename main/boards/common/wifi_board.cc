@@ -40,7 +40,9 @@ WifiBoard::WifiBoard() {
 
 WifiBoard::~WifiBoard() {
     if (connect_timer_) {
-        esp_timer_stop(connect_timer_);
+        if (esp_timer_is_active(connect_timer_)) {
+            esp_timer_stop(connect_timer_);
+        }
         esp_timer_delete(connect_timer_);
     }
 }
@@ -103,8 +105,15 @@ void WifiBoard::TryWifiConnect() {
 
     if (have_ssid) {
         // Start connection attempt with timeout
-        ESP_LOGI(TAG, "Starting WiFi connection attempt");
-        esp_timer_start_once(connect_timer_, CONNECT_TIMEOUT_SEC * 1000000ULL);
+        ESP_LOGI(TAG, "Starting WiFi connection attempt with %d s timeout", CONNECT_TIMEOUT_SEC);
+        if (esp_timer_is_active(connect_timer_)) {
+            esp_timer_stop(connect_timer_);
+        }
+        connect_timeout_remaining_ = CONNECT_TIMEOUT_SEC;
+        current_network_event_ = NetworkEvent::Scanning;
+        current_network_data_.clear();
+        UpdateConnectProgress();
+        esp_timer_start_periodic(connect_timer_, 1000000ULL);
         WifiManager::GetInstance().StartStation();
     } else {
         // No SSID configured, enter config mode
@@ -118,7 +127,10 @@ void WifiBoard::OnNetworkEvent(NetworkEvent event, const std::string& data) {
     switch (event) {
         case NetworkEvent::Connected:
             // Stop timeout timer
-            esp_timer_stop(connect_timer_);
+            if (esp_timer_is_active(connect_timer_)) {
+                esp_timer_stop(connect_timer_);
+            }
+            connect_timeout_remaining_ = 0;
 #ifdef CONFIG_USE_ESP_BLUFI_WIFI_PROVISIONING
             // make sure blufi resources has been released
             Blufi::GetInstance().deinit();
@@ -128,15 +140,28 @@ void WifiBoard::OnNetworkEvent(NetworkEvent event, const std::string& data) {
             break;
         case NetworkEvent::Scanning:
             ESP_LOGI(TAG, "WiFi scanning");
+            current_network_event_ = event;
+            current_network_data_.clear();
+            UpdateConnectProgress();
             break;
         case NetworkEvent::Connecting:
             ESP_LOGI(TAG, "WiFi connecting to %s", data.c_str());
+            current_network_event_ = event;
+            current_network_data_ = data;
+            UpdateConnectProgress();
             break;
         case NetworkEvent::Disconnected:
             ESP_LOGW(TAG, "WiFi disconnected");
+            current_network_event_ = NetworkEvent::Scanning;
+            current_network_data_.clear();
+            UpdateConnectProgress();
             break;
         case NetworkEvent::WifiConfigModeEnter:
             ESP_LOGI(TAG, "WiFi config mode entered");
+            if (esp_timer_is_active(connect_timer_)) {
+                esp_timer_stop(connect_timer_);
+            }
+            connect_timeout_remaining_ = 0;
             in_config_mode_ = true;
             break;
         case NetworkEvent::WifiConfigModeExit:
@@ -161,10 +186,44 @@ void WifiBoard::SetNetworkEventCallback(NetworkEventCallback callback) {
 
 void WifiBoard::OnWifiConnectTimeout(void* arg) {
     auto* board = static_cast<WifiBoard*>(arg);
-    ESP_LOGW(TAG, "WiFi connection timeout, entering config mode");
+    if (board->in_config_mode_) {
+        if (esp_timer_is_active(board->connect_timer_)) {
+            esp_timer_stop(board->connect_timer_);
+        }
+        return;
+    }
 
-    WifiManager::GetInstance().StopStation();
-    board->StartWifiConfigMode();
+    board->connect_timeout_remaining_--;
+
+    if (board->connect_timeout_remaining_ <= 0) {
+        ESP_LOGW(TAG, "WiFi connection timeout, entering config mode");
+        if (esp_timer_is_active(board->connect_timer_)) {
+            esp_timer_stop(board->connect_timer_);
+        }
+        board->connect_timeout_remaining_ = 0;
+        WifiManager::GetInstance().StopStation();
+        board->StartWifiConfigMode();
+    } else {
+        board->UpdateConnectProgress();
+    }
+}
+
+void WifiBoard::UpdateConnectProgress() {
+    if (connect_timeout_remaining_ <= 0 || in_config_mode_) {
+        return;
+    }
+    std::string msg;
+    if (current_network_event_ == NetworkEvent::Connecting && !current_network_data_.empty()) {
+        msg = Lang::Strings::CONNECT_TO + current_network_data_ + "... (" + std::to_string(connect_timeout_remaining_) + "s)";
+    } else {
+        msg = std::string(Lang::Strings::SCANNING_WIFI) + " (" + std::to_string(connect_timeout_remaining_) + "s)";
+    }
+    Application::GetInstance().Schedule([this, msg]() {
+        auto display = GetDisplay();
+        if (display != nullptr) {
+            display->ShowNotification(msg.c_str(), 3000);
+        }
+    });
 }
 
 void WifiBoard::StartWifiConfigMode() {
@@ -211,7 +270,10 @@ void WifiBoard::EnterWifiConfigMode() {
             vTaskDelay(pdMS_TO_TICKS(1000));
 
             // Stop any ongoing connection attempt
-            esp_timer_stop(board->connect_timer_);
+            if (esp_timer_is_active(board->connect_timer_)) {
+                esp_timer_stop(board->connect_timer_);
+            }
+            board->connect_timeout_remaining_ = 0;
             WifiManager::GetInstance().StopStation();
 
             // Enter config mode
@@ -228,7 +290,10 @@ void WifiBoard::EnterWifiConfigMode() {
     }
 
     // Stop any ongoing connection attempt
-    esp_timer_stop(connect_timer_);
+    if (esp_timer_is_active(connect_timer_)) {
+        esp_timer_stop(connect_timer_);
+    }
+    connect_timeout_remaining_ = 0;
     WifiManager::GetInstance().StopStation();
 
     StartWifiConfigMode();

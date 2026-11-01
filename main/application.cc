@@ -121,10 +121,17 @@ void Application::Initialize() {
         auto display = Board::GetInstance().GetDisplay();
 
         switch (event) {
-            case NetworkEvent::Scanning:
-                display->ShowNotification(Lang::Strings::SCANNING_WIFI, 30000);
+            case NetworkEvent::Scanning: {
+                int remaining = Board::GetInstance().GetNetworkConnectTimeoutRemaining();
+                if (remaining > 0) {
+                    std::string msg = std::string(Lang::Strings::SCANNING_WIFI) + " (" + std::to_string(remaining) + "s)";
+                    display->ShowNotification(msg.c_str(), 3000);
+                } else {
+                    display->ShowNotification(Lang::Strings::SCANNING_WIFI, 30000);
+                }
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_DISCONNECTED);
                 break;
+            }
             case NetworkEvent::Connecting: {
                 if (data.empty()) {
                     // Cellular network - registering without carrier info yet
@@ -134,7 +141,11 @@ void Application::Initialize() {
                     std::string msg = Lang::Strings::CONNECT_TO;
                     msg += data;
                     msg += "...";
-                    display->ShowNotification(msg.c_str(), 30000);
+                    int remaining = Board::GetInstance().GetNetworkConnectTimeoutRemaining();
+                    if (remaining > 0) {
+                        msg += " (" + std::to_string(remaining) + "s)";
+                    }
+                    display->ShowNotification(msg.c_str(), 3000);
                 }
                 break;
             }
