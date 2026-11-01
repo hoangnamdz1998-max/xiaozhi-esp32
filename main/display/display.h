@@ -3,6 +3,7 @@
 
 #include "emoji_collection.h"
 #include "text_glyph.h"
+#include "device_state.h"
 
 #ifndef CONFIG_USE_EMOTE_MESSAGE_STYLE
 #define HAVE_LVGL 1
@@ -60,6 +61,7 @@ public:
     virtual void ClearTextGlyphs() {}
     virtual void SetEmojiCollection(std::shared_ptr<EmojiCollection>) {}
     virtual void SetupUI() { setup_ui_called_ = true; }
+    virtual void OnStateChanged(DeviceState state) {}
     virtual bool IsMonochrome() const { return false; }
     virtual bool SupportsGuiOperations() const { return false; }
     virtual void SetHideSubtitle(bool hide) { (void)hide; }

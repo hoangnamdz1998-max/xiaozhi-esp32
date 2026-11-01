@@ -535,7 +535,11 @@ bool Assets::Download(std::string url,
         return false;
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
     const size_t SECTOR_SIZE = esp_partition_get_main_flash_sector_size();
+#else
+    const size_t SECTOR_SIZE = 4096;
+#endif
     using BufferPtr = std::unique_ptr<char, decltype(&heap_caps_free)>;
 
     BufferPtr buffer(static_cast<char*>(heap_caps_malloc(SECTOR_SIZE, MALLOC_CAP_INTERNAL)),

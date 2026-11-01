@@ -17,6 +17,7 @@ set(SOURCES "audio/audio_codec.cc"
             "display/display.cc"
             "display/text_glyph.cc"
             "display/lcd_display.cc"
+            "display/custom_wallpaper.cc"
             "display/oled_display.cc"
             "display/lvgl_display/lvgl_display.cc"
             "display/emote_display.cc"
@@ -49,10 +50,7 @@ set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg"
 list(APPEND SOURCES
     "boards/common/board.cc"
     "boards/common/wifi_board.cc"
-    "boards/common/ml307_board.cc"
-    "boards/common/nt26_board.cc"
-    "boards/common/dual_network_board.cc"
-    "boards/common/adc_battery_monitor.cc"
+                "boards/common/adc_battery_monitor.cc"
     "boards/common/axp2101.cc"
     "boards/common/backlight.cc"
     "boards/common/button.cc"
@@ -1139,14 +1137,11 @@ if(CONFIG_IDF_TARGET_ESP32)
                              "led/gpio_led.cc"
                              "display/lvgl_display/jpg/image_to_jpeg.cpp"
                              "display/lvgl_display/jpg/jpeg_to_image.c"
-                             "boards/common/nt26_board.cc"
-                             "boards/common/ml307_board.cc"
-                             "boards/common/dual_network_board.cc"
-                             )
+                                                                                                                    )
 endif()
 
 # Include EspVideo if target is ESP32S3 or ESP32P4
-if(CONFIG_IDF_TARGET_ESP32S3 OR CONFIG_IDF_TARGET_ESP32P4)
+if(CONFIG_IDF_TARGET_ESP32P4)
     list(APPEND SOURCES "boards/common/esp_video.cc"
                         "boards/common/rndis_board.cc"
                         )
@@ -1162,7 +1157,7 @@ if(CONFIG_BOARD_TYPE_WAVESHARE_ESP32_C5_TOUCH_LCD_3_5)
 endif()
 
 # Include Esp32Camera if target is ESP32S3
-if(CONFIG_IDF_TARGET_ESP32S3)
+if(CONFIG_IDF_TARGET_ESP32S3 AND NOT CONFIG_BOARD_TYPE_Freenove_ESP32S3_DISPLAY_2_8_LCD)
     list(APPEND SOURCES "boards/common/esp32_camera.cc")
 endif()
 
@@ -1194,6 +1189,8 @@ if(CONFIG_BOARD_TYPE_ESP32_P4_FUNCTION_EV_BOARD)
 endif()
 idf_component_register(SRCS ${SOURCES}
                     EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS}
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/wallpaper_portrait.bin"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/wallpaper_landscape.bin"
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     WHOLE_ARCHIVE
                     PRIV_REQUIRES
@@ -1219,13 +1216,15 @@ idf_component_register(SRCS ${SOURCES}
                         bt
                         fatfs
                         xiaozhi-fonts
-                        ${MAIN_PRIV_REQUIRES_EXTRA}
+                        esp-ml307
+                                                                        ${MAIN_PRIV_REQUIRES_EXTRA}
                     )
 
 # Keep project-owned C++ on GNU C++23. ESP-IDF 6 may default to a newer
 # dialect; pin the baseline so main/ does not depend on it.
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     target_compile_options(${COMPONENT_LIB} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++23>)
+    target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format)
 endif()
 
 # Use target_compile_definitions to define the reported board identity

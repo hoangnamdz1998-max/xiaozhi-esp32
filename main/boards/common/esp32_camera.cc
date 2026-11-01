@@ -257,7 +257,7 @@ std::expected<std::string, std::string> Esp32Camera::Explain(const std::string& 
             xQueueSend(jpeg_queue, &chunk, portMAX_DELAY);
         }
         int64_t end_time = esp_timer_get_time();
-        ESP_LOGI(TAG, "JPEG encoding time: %ld ms", int((end_time - start_time) / 1000));
+        ESP_LOGI(TAG, "JPEG encoding time: %ld ms", long((end_time - start_time) / 1000));
     });
 
     auto drain_jpeg_queue = [this, jpeg_queue]() {

@@ -11,6 +11,7 @@
 #include "config.h"
 #include "mcp_server.h"
 #include "adc_battery_monitor.h"
+#include "settings.h"
 
 #include <esp_log.h>
 #include <driver/i2c_master.h>
@@ -67,6 +68,37 @@ private:
     i2c_master_bus_handle_t codec_i2c_bus_;
     TouchDriver touch_;
     AdcBatteryMonitor* adc_battery_monitor_;
+    bool is_portrait_ = false;
+
+    void LoadOrientation() {
+        Settings settings("display", false);
+        int orient = settings.GetInt("orientation", 0);
+        is_portrait_ = (orient == 1);
+        ESP_LOGI(TAG, "Screen orientation: %s (%d)", is_portrait_ ? "Portrait" : "Landscape", orient);
+    }
+
+    void ToggleRotation(const std::string& mode = "toggle") {
+        bool target_portrait;
+        if (mode == "portrait" || mode == "doc") {
+            target_portrait = true;
+        } else if (mode == "landscape" || mode == "ngang") {
+            target_portrait = false;
+        } else {
+            target_portrait = !is_portrait_;
+        }
+
+        Settings settings("display", true);
+        settings.SetInt("orientation", target_portrait ? 1 : 0);
+        ESP_LOGI(TAG, "Screen orientation set to %d (%s), restarting...",
+                 target_portrait ? 1 : 0, target_portrait ? "Portrait" : "Landscape");
+
+        if (display_) {
+            display_->ShowNotification(target_portrait ? "Xoay màn hình dọc..." : "Xoay màn hình ngang...", 2000);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(600));
+        esp_restart();
+    }
 
     void InitializeBatteryMonitor() {
         adc_battery_monitor_ = new AdcBatteryMonitor(ADC_UNIT_1, ADC_CHANNEL_8, 200000, 200000, GPIO_NUM_NC);
@@ -79,6 +111,7 @@ private:
         uint32_t last_tap = 0;
         uint32_t down_start = 0;
         bool down = false;
+        int tap_count = 0;
 
         while (true) {
             bool t;
@@ -96,23 +129,37 @@ private:
 
             if (!t && down) {
                 down = false;
-
                 uint32_t press = now - down_start;
 
-                // long tap
+                // long tap (> 3s) -> Wi-Fi Config
                 if (press > 3000) {
                     self->EnterWifiConfigMode();
+                    tap_count = 0;
                 } else {
-                    // double tap
-                    if (now - last_tap < 250) {
-                        app.StartListening();
-                        last_tap = 0;
+                    if (now - last_tap < 350) {
+                        tap_count++;
                     } else {
-                        // single tap
-                        app.ToggleChatState();
-                        last_tap = now;
+                        tap_count = 1;
+                    }
+                    last_tap = now;
+
+                    if (tap_count == 3) {
+                        // Triple tap -> Toggle Screen Rotation!
+                        self->ToggleRotation("toggle");
+                        tap_count = 0;
+                        last_tap = 0;
                     }
                 }
+            }
+
+            // Timeout for 1 tap or 2 taps
+            if (tap_count > 0 && (now - last_tap >= 350)) {
+                if (tap_count == 1) {
+                    app.ToggleChatState();
+                } else if (tap_count == 2) {
+                    app.StartListening();
+                }
+                tap_count = 0;
             }
 
             vTaskDelay(pdMS_TO_TICKS(50));
@@ -188,20 +235,47 @@ private:
 
         esp_lcd_panel_init(panel);
         esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
-        esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
-        esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
+
+        int width = DISPLAY_WIDTH;
+        int height = DISPLAY_HEIGHT;
+        bool swap_xy = DISPLAY_SWAP_XY;
+        bool mirror_x = DISPLAY_MIRROR_X;
+        bool mirror_y = DISPLAY_MIRROR_Y;
+
+        if (is_portrait_) {
+            width = 240;
+            height = 320;
+            swap_xy = false;
+            mirror_x = true;
+            mirror_y = false;
+        }
+
+        esp_lcd_panel_swap_xy(panel, swap_xy);
+        esp_lcd_panel_mirror(panel, mirror_x, mirror_y);
         display_ = new SpiLcdDisplay(panel_io, panel,
-            DISPLAY_WIDTH, DISPLAY_HEIGHT,
+            width, height,
             DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
-            DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
+            mirror_x, mirror_y, swap_xy);
     }
 
     void InitializeTools() {
+        auto& mcp_server = McpServer::GetInstance();
+        mcp_server.AddTool("self.screen.set_rotation",
+            "Xoay hướng hiển thị của màn hình giữa chế độ ngang (landscape 320x240) và dọc (portrait 240x320). "
+            "Dùng công cụ này khi người dùng nói 'xoay màn hình', 'màn hình dọc', 'màn hình ngang', "
+            "'xoay ngang', 'xoay dọc', hoặc 'rotate screen'.",
+            PropertyList({Property("orientation", kPropertyTypeString, std::string("toggle"))}),
+            [this](const PropertyList& properties) -> ToolResult {
+                std::string mode = properties["orientation"].value<std::string>();
+                ToggleRotation(mode);
+                return true;
+            });
     }
 
 public:
     FreenoveESP32S3Display(): boot_button_(BOOT_BUTTON_GPIO)
     {
+        LoadOrientation();
         InitializeI2c();
         InitializeBatteryMonitor();
         InitializeSpi();

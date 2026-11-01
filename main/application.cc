@@ -669,8 +669,19 @@ void Application::InitializeProtocol() {
                     if (!TextGlyphPayload::Parse(root, glyphs, bpp)) {
                         glyphs.clear();
                     }
-                    ESP_LOGI(TAG, "<< %s", text->valuestring);
-                    Schedule([display, message = std::string(text->valuestring),
+                    std::string msg = text->valuestring;
+                    size_t pos = 0;
+                    while ((pos = msg.find("\xE8\x8E\x89\xE8\x8E\x89", pos)) != std::string::npos) {
+                        msg.replace(pos, 6, "Hi Lily");
+                        pos += 7;
+                    }
+                    pos = 0;
+                    while ((pos = msg.find("\xE8\x8E\x89", pos)) != std::string::npos) {
+                        msg.replace(pos, 3, "Lily");
+                        pos += 4;
+                    }
+                    ESP_LOGI(TAG, "<< %s", msg.c_str());
+                    Schedule([display, message = std::move(msg),
                               glyphs = std::move(glyphs), bpp]() {
                         display->AddTextGlyphs(glyphs, bpp);
                         display->SetChatMessage("assistant", message.c_str());
@@ -685,8 +696,19 @@ void Application::InitializeProtocol() {
                 if (!TextGlyphPayload::Parse(root, glyphs, bpp)) {
                     glyphs.clear();
                 }
-                ESP_LOGI(TAG, ">> %s", text->valuestring);
-                Schedule([display, message = std::string(text->valuestring),
+                std::string msg = text->valuestring;
+                size_t pos = 0;
+                while ((pos = msg.find("\xE8\x8E\x89\xE8\x8E\x89", pos)) != std::string::npos) {
+                    msg.replace(pos, 6, "Hi Lily");
+                    pos += 7;
+                }
+                pos = 0;
+                while ((pos = msg.find("\xE8\x8E\x89", pos)) != std::string::npos) {
+                    msg.replace(pos, 3, "Lily");
+                    pos += 4;
+                }
+                ESP_LOGI(TAG, ">> %s", msg.c_str());
+                Schedule([display, message = std::move(msg),
                           glyphs = std::move(glyphs), bpp]() {
                     display->AddTextGlyphs(glyphs, bpp);
                     display->SetChatMessage("user", message.c_str());
@@ -1007,7 +1029,15 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
         protocol_->SendAudio(std::move(packet));
     }
     // Set the chat state to wake word detected
-    protocol_->SendWakeWordDetected(wake_word);
+    std::string safe_wake_word = wake_word;
+    bool has_non_ascii = false;
+    for (unsigned char c : safe_wake_word) {
+        if (c >= 0x80) { has_non_ascii = true; break; }
+    }
+    if (has_non_ascii || safe_wake_word.find("Lily") != std::string::npos || safe_wake_word.find("lily") != std::string::npos || safe_wake_word.find("hilili") != std::string::npos) {
+        safe_wake_word = "Hi Lily";
+    }
+    protocol_->SendWakeWordDetected(safe_wake_word);
     SetListeningMode(GetDefaultListeningMode());
 #else
     // Set flag to play popup sound after state changes to listening
@@ -1028,6 +1058,9 @@ void Application::HandleStateChangedEvent() {
     auto display = board.GetDisplay();
     auto led = board.GetLed();
     led->OnStateChanged();
+    if (display != nullptr) {
+        display->OnStateChanged(new_state);
+    }
 
     switch (new_state) {
         case kDeviceStateUnknown:
@@ -1112,13 +1145,21 @@ void Application::ShowStartupWakeWordHint() {
     const auto wake_words = audio_service_.GetWakeWords();
     std::string words;
     for (auto it = wake_words.begin(); it != wake_words.end(); ++it) {
-        if (it->empty() || std::find(wake_words.begin(), it, *it) != it) {
+        std::string w = *it;
+        bool has_non_ascii = false;
+        for (unsigned char c : w) {
+            if (c >= 0x80) { has_non_ascii = true; break; }
+        }
+        if (has_non_ascii || w.find("Lily") != std::string::npos || w.find("lily") != std::string::npos || w.find("hilili") != std::string::npos) {
+            w = "Hi Lily";
+        }
+        if (w.empty() || std::find(wake_words.begin(), it, *it) != it) {
             continue;
         }
         if (!words.empty()) {
             words += " / ";
         }
-        words += *it;
+        words += w;
     }
     if (words.empty()) {
         ESP_LOGW(TAG, "Startup wake word hint skipped: no available wake words");

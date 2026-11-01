@@ -1,4 +1,5 @@
 #include "lcd_display.h"
+#include "custom_wallpaper.h"
 #include "assets/lang_config.h"
 #include "gif/lvgl_gif.h"
 #include "lvgl_theme.h"
@@ -24,6 +25,80 @@ LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 LV_FONT_DECLARE(BUILTIN_ICON_FONT);
 LV_FONT_DECLARE(font_material_symbols_30_4);
 LV_FONT_DECLARE(font_noto_emoji_30_4);
+
+static bool IsChineseChar(uint32_t cp) {
+    return (cp >= 0x4E00 && cp <= 0x9FFF) ||    // CJK Unified Ideographs
+           (cp >= 0x3400 && cp <= 0x4DBF) ||    // CJK Extension A
+           (cp >= 0x20000 && cp <= 0x2FA1F) ||  // CJK Extension B-F
+           (cp >= 0x3000 && cp <= 0x303F) ||    // CJK Symbols and Punctuation
+           (cp >= 0xF900 && cp <= 0xFAFF) ||    // CJK Compatibility Ideographs
+           (cp >= 0xFF00 && cp <= 0xFF60);      // Fullwidth forms
+}
+
+static std::string FilterChinese(const char* content) {
+    if (content == nullptr) {
+        return "";
+    }
+    std::string text = content;
+    const char* lili = "\xE8\x8E\x89\xE8\x8E\x89";
+    size_t pos = 0;
+    while ((pos = text.find(lili, pos)) != std::string::npos) {
+        text.replace(pos, 6, "Hi Lily");
+        pos += 7;
+    }
+    const char* li = "\xE8\x8E\x89";
+    pos = 0;
+    while ((pos = text.find(li, pos)) != std::string::npos) {
+        text.replace(pos, 3, "Lily");
+        pos += 4;
+    }
+
+    std::string result;
+    result.reserve(text.size());
+    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(text.c_str());
+    size_t len = text.length();
+    size_t i = 0;
+    while (i < len) {
+        uint32_t cp = 0;
+        size_t char_bytes = 1;
+        if (ptr[i] < 0x80) {
+            cp = ptr[i];
+            char_bytes = 1;
+        } else if ((ptr[i] & 0xE0) == 0xC0) {
+            if (i + 1 < len) {
+                cp = ((ptr[i] & 0x1F) << 6) | (ptr[i+1] & 0x3F);
+                char_bytes = 2;
+            } else {
+                char_bytes = 1;
+            }
+        } else if ((ptr[i] & 0xF0) == 0xE0) {
+            if (i + 2 < len) {
+                cp = ((ptr[i] & 0x0F) << 12) | ((ptr[i+1] & 0x3F) << 6) | (ptr[i+2] & 0x3F);
+                char_bytes = 3;
+            } else {
+                char_bytes = 1;
+            }
+        } else if ((ptr[i] & 0xF8) == 0xF0) {
+            if (i + 3 < len) {
+                cp = ((ptr[i] & 0x07) << 18) | ((ptr[i+1] & 0x3F) << 12) | ((ptr[i+2] & 0x3F) << 6) | (ptr[i+3] & 0x3F);
+                char_bytes = 4;
+            } else {
+                char_bytes = 1;
+            }
+        }
+
+        if (IsChineseChar(cp)) {
+            i += char_bytes;
+        } else {
+            for (size_t b = 0; b < char_bytes; ++b) {
+                result.push_back(text[i + b]);
+            }
+            i += char_bytes;
+        }
+    }
+    return result;
+}
+
 
 void LcdDisplay::InitializeLcdThemes() {
     auto text_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_TEXT_FONT);
@@ -416,6 +491,18 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_bg_color(container_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_border_color(container_, lvgl_theme->border_color(), 0);
 
+    /* Wallpaper image (displayed when not connected to WiFi) */
+    wallpaper_image_ = lv_image_create(screen);
+    lv_obj_set_size(wallpaper_image_, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_pad_all(wallpaper_image_, 0, 0);
+    lv_obj_set_style_border_width(wallpaper_image_, 0, 0);
+    if (width_ > height_) {
+        lv_image_set_src(wallpaper_image_, &wallpaper_landscape_dsc);
+    } else {
+        lv_image_set_src(wallpaper_image_, &wallpaper_portrait_dsc);
+    }
+
     /* Layer 1: Top bar - for status icons */
     top_bar_ = lv_obj_create(container_);
     lv_obj_set_size(top_bar_, LV_HOR_RES, LV_SIZE_CONTENT);
@@ -545,6 +632,8 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
                  role, content);
     }
     DisplayLockGuard lock(this);
+    std::string filtered_msg = FilterChinese(content);
+    content = filtered_msg.c_str();
     if (content_ == nullptr) {
         if (setup_ui_called_) {
             ESP_LOGW(TAG,
@@ -911,6 +1000,18 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_bg_color(container_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_border_color(container_, lvgl_theme->border_color(), 0);
 
+    /* Wallpaper image (displayed when not connected to WiFi) */
+    wallpaper_image_ = lv_image_create(screen);
+    lv_obj_set_size(wallpaper_image_, LV_HOR_RES, LV_VER_RES);
+    lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_pad_all(wallpaper_image_, 0, 0);
+    lv_obj_set_style_border_width(wallpaper_image_, 0, 0);
+    if (width_ > height_) {
+        lv_image_set_src(wallpaper_image_, &wallpaper_landscape_dsc);
+    } else {
+        lv_image_set_src(wallpaper_image_, &wallpaper_portrait_dsc);
+    }
+
     /* Bottom layer: emoji_box_ - centered display */
     emoji_box_ = lv_obj_create(screen);
     lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -1077,6 +1178,30 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(low_battery_label_, lv_color_white(), 0);
     lv_obj_center(low_battery_label_);
     lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
+
+    // Default to wallpaper active on startup before WiFi connects
+    is_wallpaper_active_ = true;
+    if (wallpaper_image_ != nullptr) {
+        lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (emoji_box_ != nullptr) {
+        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (container_ != nullptr) {
+        lv_obj_set_style_bg_color(container_, lv_color_black(), 0);
+    }
+    if (top_bar_ != nullptr) {
+        lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
+    }
+    if (bottom_bar_ != nullptr) {
+        lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
+    }
+    if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
+    if (mute_label_ != nullptr) lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
+    if (battery_label_ != nullptr) lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
+    if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
+    if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
+    if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
 }
 
 void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
@@ -1088,7 +1213,9 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
 
     if (image == nullptr) {
         esp_timer_stop(preview_timer_);
-        lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        if (!is_wallpaper_active_) {
+            lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        }
         lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
         preview_image_cached_.reset();
         if (gif_controller_) {
@@ -1121,6 +1248,8 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
                  role, content);
     }
     DisplayLockGuard lock(this);
+    std::string filtered_msg = FilterChinese(content);
+    content = filtered_msg.c_str();
     if (chat_message_label_ == nullptr) {
         if (setup_ui_called_) {
             ESP_LOGW(TAG,
@@ -1138,6 +1267,10 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         } else if (!hide_subtitle_) {
             lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            if (is_wallpaper_active_) {
+                lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
+                lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
+            }
         }
     }
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
@@ -1151,8 +1284,12 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
 void LcdDisplay::RemoveChatMessage(const char* role, const char* content) {
     DisplayLockGuard lock(this);
-    if (chat_message_label_ == nullptr || content == nullptr ||
-        strcmp(lv_label_get_text(chat_message_label_), content) != 0) {
+    if (chat_message_label_ == nullptr || content == nullptr) {
+        return;
+    }
+    std::string filtered_msg = FilterChinese(content);
+    if (strcmp(lv_label_get_text(chat_message_label_), content) != 0 &&
+        strcmp(lv_label_get_text(chat_message_label_), filtered_msg.c_str()) != 0) {
         return;
     }
     // The classic layout has one text slot and does not distinguish message roles.
@@ -1435,5 +1572,58 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
                 lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
             }
         }
+    }
+}
+
+void LcdDisplay::OnStateChanged(DeviceState state) {
+    DisplayLockGuard lock(this);
+    bool should_show_wallpaper = (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring);
+    if (should_show_wallpaper == is_wallpaper_active_) {
+        return;
+    }
+    is_wallpaper_active_ = should_show_wallpaper;
+    if (wallpaper_image_ == nullptr || emoji_box_ == nullptr) {
+        return;
+    }
+
+    auto lvgl_theme = static_cast<LvglTheme*>(current_theme_);
+    if (is_wallpaper_active_) {
+        lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        if (container_ != nullptr) {
+            lv_obj_set_style_bg_color(container_, lv_color_black(), 0);
+        }
+        if (top_bar_ != nullptr) {
+            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
+        }
+        if (bottom_bar_ != nullptr) {
+            lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
+        }
+        if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
+        if (mute_label_ != nullptr) lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
+        if (battery_label_ != nullptr) lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
+        if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
+        if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
+        if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
+    } else {
+        lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        if (container_ != nullptr) {
+            lv_obj_set_style_bg_color(container_, lvgl_theme->background_color(), 0);
+        }
+        if (top_bar_ != nullptr) {
+            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_50, 0);
+            lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
+        }
+        if (bottom_bar_ != nullptr) {
+            lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
+            lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
+        }
+        if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+        if (mute_label_ != nullptr) lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
+        if (battery_label_ != nullptr) lv_obj_set_style_text_color(battery_label_, lvgl_theme->text_color(), 0);
+        if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
+        if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
+        if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     }
 }

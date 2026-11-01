@@ -172,7 +172,15 @@ bool AfeAudioEngine::Initialize(AudioCodec* codec, int frame_duration_ms,
                 const auto end = remaining.find(';');
                 const auto word = remaining.substr(0, end);
                 if (!word.empty()) {
-                    wake_words_.emplace_back(word);
+                    std::string w(word);
+                    bool has_non_ascii = false;
+                    for (unsigned char c : w) {
+                        if (c >= 0x80) { has_non_ascii = true; break; }
+                    }
+                    if (has_non_ascii || w.find("Lily") != std::string::npos || w.find("lily") != std::string::npos || w.find("hilili") != std::string::npos) {
+                        w = "Hi Lily";
+                    }
+                    wake_words_.emplace_back(w);
                 }
                 if (end == std::string_view::npos) {
                     break;
@@ -471,6 +479,13 @@ void AfeAudioEngine::HandleWakeWordResult(const afe_fetch_result_t* result) {
     }
 
     last_detected_wake_word_ = wake_words_[model_index];
+    bool has_non_ascii = false;
+    for (unsigned char c : last_detected_wake_word_) {
+        if (c >= 0x80) { has_non_ascii = true; break; }
+    }
+    if (has_non_ascii || last_detected_wake_word_.find("Lily") != std::string::npos || last_detected_wake_word_.find("lily") != std::string::npos || last_detected_wake_word_.find("hilili") != std::string::npos) {
+        last_detected_wake_word_ = "Hi Lily";
+    }
     xEventGroupClearBits(event_group_, kWakeWordEnabled);
     // UpdateActiveState marks the AFE controls dirty; the next loop iteration
     // of ProcessingTask disables WakeNet via ApplyAfeControls.
