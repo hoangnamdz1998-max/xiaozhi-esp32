@@ -58,6 +58,7 @@ public:
 
     // Set whether to hide chat messages/subtitles
     virtual void SetHideSubtitle(bool hide) override;
+    virtual void SetOrientation(bool is_portrait) override;
 };
 
 // SPI LCD display

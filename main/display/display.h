@@ -65,6 +65,7 @@ public:
     virtual bool IsMonochrome() const { return false; }
     virtual bool SupportsGuiOperations() const { return false; }
     virtual void SetHideSubtitle(bool hide) { (void)hide; }
+    virtual void SetOrientation(bool is_portrait) { (void)is_portrait; }
     virtual bool InsertAnimDialog(const char* name, uint32_t duration_ms) {
         (void)name;
         (void)duration_ms;

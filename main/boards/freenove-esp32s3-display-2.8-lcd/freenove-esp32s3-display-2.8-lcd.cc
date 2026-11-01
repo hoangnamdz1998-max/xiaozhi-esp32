@@ -87,17 +87,17 @@ private:
             target_portrait = !is_portrait_;
         }
 
+        is_portrait_ = target_portrait;
+
         Settings settings("display", true);
         settings.SetInt("orientation", target_portrait ? 1 : 0);
-        ESP_LOGI(TAG, "Screen orientation set to %d (%s), restarting...",
+        ESP_LOGI(TAG, "Screen orientation set to %d (%s) dynamically without reboot",
                  target_portrait ? 1 : 0, target_portrait ? "Portrait" : "Landscape");
 
         if (display_) {
-            display_->ShowNotification(target_portrait ? "Xoay màn hình dọc..." : "Xoay màn hình ngang...", 2000);
+            display_->SetOrientation(target_portrait);
+            display_->ShowNotification(target_portrait ? "Xoay màn hình dọc" : "Xoay màn hình ngang", 1500);
         }
-
-        vTaskDelay(pdMS_TO_TICKS(600));
-        esp_restart();
     }
 
     void InitializeBatteryMonitor() {
@@ -242,20 +242,16 @@ private:
         bool mirror_x = DISPLAY_MIRROR_X;
         bool mirror_y = DISPLAY_MIRROR_Y;
 
-        if (is_portrait_) {
-            width = 240;
-            height = 320;
-            swap_xy = false;
-            mirror_x = true;
-            mirror_y = false;
-        }
-
         esp_lcd_panel_swap_xy(panel, swap_xy);
         esp_lcd_panel_mirror(panel, mirror_x, mirror_y);
         display_ = new SpiLcdDisplay(panel_io, panel,
             width, height,
             DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
             mirror_x, mirror_y, swap_xy);
+
+        if (is_portrait_) {
+            display_->SetOrientation(true);
+        }
     }
 
     void InitializeTools() {

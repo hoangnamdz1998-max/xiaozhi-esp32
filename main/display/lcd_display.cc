@@ -1627,3 +1627,93 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     }
 }
+
+void LcdDisplay::SetOrientation(bool is_portrait) {
+    DisplayLockGuard lock(this);
+    if (display_ == nullptr) {
+        return;
+    }
+
+    lv_display_rotation_t target_rot = is_portrait ? LV_DISPLAY_ROTATION_90 : LV_DISPLAY_ROTATION_0;
+    lv_display_set_rotation(display_, target_rot);
+    width_ = lv_display_get_horizontal_resolution(display_);
+    height_ = lv_display_get_vertical_resolution(display_);
+
+    if (!setup_ui_called_) {
+        return;
+    }
+
+    auto screen = lv_screen_active();
+    if (screen != nullptr) {
+        lv_obj_set_size(screen, width_, height_);
+    }
+
+    if (container_ != nullptr) {
+        lv_obj_set_size(container_, width_, height_);
+    }
+
+    if (wallpaper_image_ != nullptr) {
+        lv_obj_set_size(wallpaper_image_, width_, height_);
+        if (width_ > height_) {
+            lv_image_set_src(wallpaper_image_, &wallpaper_landscape_dsc);
+        } else {
+            lv_image_set_src(wallpaper_image_, &wallpaper_portrait_dsc);
+        }
+        lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
+    }
+
+    auto lvgl_theme = static_cast<LvglTheme*>(current_theme_);
+
+    if (top_bar_ != nullptr) {
+        lv_obj_set_size(top_bar_, width_, LV_SIZE_CONTENT);
+        lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, 0);
+    }
+
+    if (status_bar_ != nullptr) {
+        lv_obj_set_size(status_bar_, width_, LV_SIZE_CONTENT);
+        lv_obj_align(status_bar_, LV_ALIGN_TOP_MID, 0, 0);
+    }
+
+    if (notification_label_ != nullptr) {
+        lv_obj_set_width(notification_label_, width_ * 0.75);
+        lv_obj_align(notification_label_, LV_ALIGN_CENTER, 0, 0);
+    }
+
+    if (status_label_ != nullptr) {
+        lv_obj_set_width(status_label_, width_ * 0.75);
+        lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
+    }
+
+    if (content_ != nullptr) {
+        lv_obj_set_width(content_, width_);
+    }
+
+    if (bottom_bar_ != nullptr) {
+        lv_obj_set_width(bottom_bar_, width_);
+        lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    }
+
+    if (chat_message_label_ != nullptr && lvgl_theme != nullptr) {
+        lv_obj_set_width(chat_message_label_, width_ - lvgl_theme->spacing(8));
+        lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+    }
+
+    if (emoji_box_ != nullptr) {
+        lv_obj_align(emoji_box_, LV_ALIGN_CENTER, 0, 0);
+    }
+
+    if (preview_image_ != nullptr) {
+        lv_obj_set_size(preview_image_, width_ / 2, height_ / 2);
+        lv_obj_align(preview_image_, LV_ALIGN_CENTER, 0, 0);
+    }
+
+    if (low_battery_popup_ != nullptr && lvgl_theme != nullptr) {
+        auto text_font = lvgl_theme->text_font()->font();
+        lv_obj_set_size(low_battery_popup_, width_ * 0.9, text_font->line_height * 2);
+        lv_obj_align(low_battery_popup_, LV_ALIGN_BOTTOM_MID, 0, -lvgl_theme->spacing(4));
+    }
+
+    if (screen != nullptr) {
+        lv_obj_invalidate(screen);
+    }
+}
