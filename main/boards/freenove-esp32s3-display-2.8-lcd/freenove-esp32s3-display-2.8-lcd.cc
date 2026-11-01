@@ -154,10 +154,13 @@ private:
 
             // Timeout for 1 tap or 2 taps
             if (tap_count > 0 && (now - last_tap >= 350)) {
-                if (tap_count == 1) {
-                    app.ToggleChatState();
-                } else if (tap_count == 2) {
-                    app.StartListening();
+                auto state = app.GetDeviceState();
+                if (state != kDeviceStateStarting && state != kDeviceStateWifiConfiguring && state != kDeviceStateAudioTesting) {
+                    if (tap_count == 1) {
+                        app.ToggleChatState();
+                    } else if (tap_count == 2) {
+                        app.StartListening();
+                    }
                 }
                 tap_count = 0;
             }
@@ -201,8 +204,13 @@ private:
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
             auto &app = Application::GetInstance();
-            if (app.GetDeviceState() == kDeviceStateStarting) {
+            auto state = app.GetDeviceState();
+            if (state == kDeviceStateStarting) {
                 EnterWifiConfigMode();
+                return;
+            }
+            if (state == kDeviceStateWifiConfiguring || state == kDeviceStateAudioTesting) {
+                return;
             }
             app.ToggleChatState();
         });

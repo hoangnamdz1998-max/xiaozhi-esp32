@@ -1577,7 +1577,7 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
 
 void LcdDisplay::OnStateChanged(DeviceState state) {
     DisplayLockGuard lock(this);
-    bool should_show_wallpaper = (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring);
+    bool should_show_wallpaper = (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring || state == kDeviceStateAudioTesting);
     if (should_show_wallpaper == is_wallpaper_active_) {
         return;
     }
