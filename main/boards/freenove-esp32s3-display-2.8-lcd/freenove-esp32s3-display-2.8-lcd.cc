@@ -1,3 +1,12 @@
+#include "boards/common/esp32_music.h"
+#include <esp_vfs_fat.h>
+#include <sdmmc_cmd.h>
+#include <driver/sdmmc_host.h>
+#include <dirent.h>
+#include "display/lvgl_display/jpg/jpeg_to_image.h"
+#define LODEPNG_NO_COMPILE_CPP
+#include "src/libs/lodepng/lodepng.h"
+
 #include <esp_lcd_panel_vendor.h>
 #include <esp_lcd_panel_io.h>
 #include <esp_lcd_panel_ops.h>
@@ -67,8 +76,255 @@ private:
     LcdDisplay *display_;
     i2c_master_bus_handle_t codec_i2c_bus_;
     TouchDriver touch_;
+    lv_indev_t* indev_ = nullptr;
+    int16_t raw_touch_x_ = 0;
+    int16_t raw_touch_y_ = 0;
+    int16_t touch_lvgl_x_ = 0;
+    int16_t touch_lvgl_y_ = 0;
+    bool touch_pressed_ = false;
+
+    static void touchpad_read(lv_indev_t* indev, lv_indev_data_t* data) {
+        auto* self = static_cast<FreenoveESP32S3Display*>(lv_indev_get_user_data(indev));
+        if (self == nullptr) return;
+
+        data->point.x = self->touch_lvgl_x_;
+        data->point.y = self->touch_lvgl_y_;
+        data->state = self->touch_pressed_ ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    }
     AdcBatteryMonitor* adc_battery_monitor_;
     bool is_portrait_ = false;
+    bool sd_card_mounted_ = false;
+    std::vector<std::string> wallpaper_files_;
+    size_t current_wallpaper_idx_ = 0;
+    uint8_t* current_jpeg_decoded_buf_ = nullptr;
+    lv_image_dsc_t current_wallpaper_dsc_ = {};
+    esp_timer_handle_t wallpaper_timer_ = nullptr;
+    bool first_wallpaper_loaded_ = false;
+    int wallpaper_rotation_tick_ = 0;
+
+    void InitializeSdCard() {
+        // Freenove ESP32-S3 Display 2.8" SDMMC Pinout:
+        // CLK=GPIO 38, CMD=GPIO 40, D0=GPIO 39, D1=GPIO 41, D2=GPIO 48, D3=GPIO 47
+        gpio_set_pull_mode(GPIO_NUM_38, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode(GPIO_NUM_40, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode(GPIO_NUM_39, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode(GPIO_NUM_41, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode(GPIO_NUM_48, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode(GPIO_NUM_47, GPIO_PULLUP_ONLY);
+
+        esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+            .format_if_mount_failed = false,
+            .max_files = 5,
+            .allocation_unit_size = 16 * 1024,
+            .disk_status_check_enable = false
+        };
+
+        sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+        host.max_freq_khz = SDMMC_FREQ_DEFAULT;
+
+        sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
+        slot_config.clk = GPIO_NUM_38;
+        slot_config.cmd = GPIO_NUM_40;
+        slot_config.d0 = GPIO_NUM_39;
+        slot_config.d1 = GPIO_NUM_41;
+        slot_config.d2 = GPIO_NUM_48;
+        slot_config.d3 = GPIO_NUM_47;
+        slot_config.d4 = GPIO_NUM_NC;
+        slot_config.d5 = GPIO_NUM_NC;
+        slot_config.d6 = GPIO_NUM_NC;
+        slot_config.d7 = GPIO_NUM_NC;
+        slot_config.cd = GPIO_NUM_NC;
+        slot_config.wp = GPIO_NUM_NC;
+        slot_config.width = 4;
+        slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+
+        sdmmc_card_t* card = nullptr;
+        esp_err_t ret = esp_vfs_fat_sdmmc_mount("/sdcard", &host, &slot_config, &mount_config, &card);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "4-bit SDMMC mount failed (%s), trying 1-bit mode...", esp_err_to_name(ret));
+            slot_config.width = 1;
+            slot_config.d1 = GPIO_NUM_NC;
+            slot_config.d2 = GPIO_NUM_NC;
+            slot_config.d3 = GPIO_NUM_NC;
+            host.flags = SDMMC_HOST_FLAG_1BIT;
+            ret = esp_vfs_fat_sdmmc_mount("/sdcard", &host, &slot_config, &mount_config, &card);
+        }
+
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "SD card mounted successfully at /sdcard (Name: %s, Capacity: %llu MB)",
+                     card->cid.name, ((uint64_t)card->csd.capacity) * card->csd.sector_size / (1024 * 1024));
+            sd_card_mounted_ = true;
+            ScanWallpapers();
+        } else {
+            ESP_LOGW(TAG, "No SD card mounted: %s", esp_err_to_name(ret));
+            sd_card_mounted_ = false;
+        }
+
+        // Start periodic wallpaper rotation timer (checks every 1 second)
+        esp_timer_create_args_t timer_args = {
+            .callback = [](void* arg) {
+                auto* self = static_cast<FreenoveESP32S3Display*>(arg);
+                auto& app = Application::GetInstance();
+                if (app.GetDeviceState() == kDeviceStateIdle) {
+                    if (!self->first_wallpaper_loaded_) {
+                        self->first_wallpaper_loaded_ = true;
+                        if (!self->wallpaper_files_.empty()) {
+                            self->LoadWallpaper(0);
+                        }
+                    } else if (++self->wallpaper_rotation_tick_ >= 60) {
+                        self->wallpaper_rotation_tick_ = 0;
+                        self->NextWallpaper();
+                    }
+                }
+            },
+            .arg = this,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "wallpaper_rot"
+        };
+        esp_timer_create(&timer_args, &wallpaper_timer_);
+        esp_timer_start_periodic(wallpaper_timer_, 1000000ULL);
+    }
+
+    void ScanWallpapers() {
+        wallpaper_files_.clear();
+        std::vector<std::string> search_dirs = {"/sdcard/wallpapers", "/sdcard/wallpaper", "/sdcard"};
+        for (const auto& dir_path : search_dirs) {
+            DIR* dir = opendir(dir_path.c_str());
+            if (dir != nullptr) {
+                struct dirent* entry;
+                while ((entry = readdir(dir)) != nullptr) {
+                    if (entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN) {
+                        std::string name = entry->d_name;
+                        ESP_LOGI(TAG, "File on SD: %s/%s", dir_path.c_str(), name.c_str());
+                        std::string lower = name;
+                        for (auto& c : lower) c = tolower(c);
+                        if (lower.ends_with(".jpg") || lower.ends_with(".jpeg") || lower.ends_with(".png")) {
+                            wallpaper_files_.push_back(dir_path + "/" + name);
+                            ESP_LOGI(TAG, "Registered wallpaper: %s", (dir_path + "/" + name).c_str());
+                        }
+                    }
+                }
+                closedir(dir);
+                if (!wallpaper_files_.empty()) {
+                    break;
+                }
+            }
+        }
+        ESP_LOGI(TAG, "Total wallpapers found on SD card: %d", (int)wallpaper_files_.size());
+    }
+
+    bool LoadWallpaper(size_t index) {
+        if (wallpaper_files_.empty() || index >= wallpaper_files_.size()) {
+            return false;
+        }
+        const std::string& path = wallpaper_files_[index];
+        FILE* f = fopen(path.c_str(), "rb");
+        if (!f) {
+            ESP_LOGE(TAG, "Cannot open wallpaper file: %s", path.c_str());
+            return false;
+        }
+        fseek(f, 0, SEEK_END);
+        size_t size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        long file_sz = (long)size;
+        ESP_LOGI(TAG, "Opening wallpaper file: %s, size = %ld bytes", path.c_str(), file_sz);
+        if (size == 0 || size > 10 * 1024 * 1024) { // Max 10MB
+            fclose(f);
+            ESP_LOGW(TAG, "Wallpaper file invalid size: %ld bytes (max 10MB)", file_sz);
+            return false;
+        }
+
+        uint8_t* file_buf = (uint8_t*)heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (!file_buf) {
+            fclose(f);
+            ESP_LOGE(TAG, "Cannot allocate %ld bytes in PSRAM for wallpaper file", file_sz);
+            return false;
+        }
+        fread(file_buf, 1, size, f);
+        fclose(f);
+
+        uint8_t* out_rgb = nullptr;
+        size_t out_len = 0;
+        size_t out_w = 0, out_h = 0, out_stride = 0;
+
+        std::string lower_path = path;
+        for (auto& c : lower_path) c = tolower(c);
+
+        if (lower_path.ends_with(".png")) {
+            unsigned char* png_rgba = nullptr;
+            unsigned png_w = 0, png_h = 0;
+            unsigned error = lodepng_decode32(&png_rgba, &png_w, &png_h, file_buf, size);
+            heap_caps_free(file_buf);
+            if (error != 0 || !png_rgba || png_w == 0 || png_h == 0) {
+                ESP_LOGE(TAG, "lodepng error %u: %s", error, lodepng_error_text(error));
+                if (png_rgba) free(png_rgba);
+                return false;
+            }
+            ESP_LOGI(TAG, "Decoded PNG: %ux%u, scaling to 320x240 RGB565", png_w, png_h);
+            out_w = 320;
+            out_h = 240;
+            out_stride = 320 * 2;
+            out_len = 320 * 240 * 2;
+            out_rgb = (uint8_t*)heap_caps_malloc(out_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+            if (!out_rgb) {
+                ESP_LOGE(TAG, "Cannot allocate memory for PNG wallpaper");
+                free(png_rgba);
+                return false;
+            }
+            uint16_t* dst = (uint16_t*)out_rgb;
+            for (size_t y = 0; y < 240; y++) {
+                size_t src_y = y * png_h / 240;
+                for (size_t x = 0; x < 320; x++) {
+                    size_t src_x = x * png_w / 320;
+                    size_t idx = (src_y * png_w + src_x) * 4;
+                    uint8_t r = png_rgba[idx];
+                    uint8_t g = png_rgba[idx + 1];
+                    uint8_t b = png_rgba[idx + 2];
+                    dst[y * 320 + x] = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+                }
+            }
+            free(png_rgba);
+        } else {
+            esp_err_t ret = jpeg_to_image_fit(file_buf, size, 320, 240,
+                                              &out_rgb, &out_len, &out_w, &out_h, &out_stride);
+            heap_caps_free(file_buf);
+            if (ret != ESP_OK || out_rgb == nullptr) {
+                ESP_LOGE(TAG, "Failed to decode JPEG: %s", path.c_str());
+                return false;
+            }
+        }
+
+        if (current_jpeg_decoded_buf_ != nullptr) {
+            free(current_jpeg_decoded_buf_);
+        }
+        current_jpeg_decoded_buf_ = out_rgb;
+
+        current_wallpaper_dsc_.header.magic = LV_IMAGE_HEADER_MAGIC;
+        current_wallpaper_dsc_.header.cf = LV_COLOR_FORMAT_RGB565;
+        current_wallpaper_dsc_.header.flags = 0;
+        current_wallpaper_dsc_.header.w = (uint32_t)out_w;
+        current_wallpaper_dsc_.header.h = (uint32_t)out_h;
+        current_wallpaper_dsc_.header.stride = (uint32_t)out_stride;
+        current_wallpaper_dsc_.header.reserved_2 = 0;
+        current_wallpaper_dsc_.data_size = out_len;
+        current_wallpaper_dsc_.data = current_jpeg_decoded_buf_;
+        current_wallpaper_dsc_.reserved = nullptr;
+
+        current_wallpaper_idx_ = index;
+        if (display_ != nullptr) {
+            display_->SetCustomWallpaper(&current_wallpaper_dsc_);
+            ESP_LOGI(TAG, "Applied wallpaper %s (%dx%d)", path.c_str(), (int)out_w, (int)out_h);
+        }
+        return true;
+    }
+
+    virtual void NextWallpaper() override {
+        if (wallpaper_files_.empty()) {
+            return;
+        }
+        size_t next_idx = (current_wallpaper_idx_ + 1) % wallpaper_files_.size();
+        LoadWallpaper(next_idx);
+    }
 
     void LoadOrientation() {
         Settings settings("display", false);
@@ -111,6 +367,9 @@ private:
         uint32_t last_tap = 0;
         uint32_t down_start = 0;
         bool down = false;
+        bool swiped = false;
+        uint16_t start_x = 0, start_y = 0;
+        uint16_t last_x = 0, last_y = 0;
         int tap_count = 0;
 
         while (true) {
@@ -121,22 +380,119 @@ private:
             uint32_t now = esp_timer_get_time() / 1000;
 
             if (t) {
+                // Compute screen coordinates
+                int16_t sc_x = (int16_t)y;
+                int16_t sc_y = 319 - (int16_t)x;
+                if (sc_x < 0) {
+                    sc_x = 0;
+                } else if (sc_x > 239) {
+                    sc_x = 239;
+                }
+                if (sc_y < 0) {
+                    sc_y = 0;
+                } else if (sc_y > 319) {
+                    sc_y = 319;
+                }
+
                 if (!down) {
                     down = true;
                     down_start = now;
+                    start_x = sc_x;
+                    start_y = sc_y;
+                    last_x = sc_x;
+                    last_y = sc_y;
+                    swiped = false;
+                    self->raw_touch_x_ = x;
+                    self->raw_touch_y_ = y;
+
+                    if (self->is_portrait_) {
+                        self->touch_lvgl_x_ = sc_y;
+                        self->touch_lvgl_y_ = 239 - sc_x;
+                    } else {
+                        self->touch_lvgl_x_ = x;
+                        self->touch_lvgl_y_ = y;
+                    }
+                    self->touch_pressed_ = true;
+                } else {
+                    last_x = sc_x;
+                    last_y = sc_y;
+                    self->raw_touch_x_ = x;
+                    self->raw_touch_y_ = y;
+
+                    if (self->is_portrait_) {
+                        self->touch_lvgl_x_ = sc_y;
+                        self->touch_lvgl_y_ = 239 - sc_x;
+                    } else {
+                        self->touch_lvgl_x_ = x;
+                        self->touch_lvgl_y_ = y;
+                    }
+
+                    int delta_x = (int)sc_x - (int)start_x;
+                    int delta_y = (int)sc_y - (int)start_y;
+
+                    if (!swiped && (now - down_start < 800)) {
+                        // Check vertical swipe first (vuốt dưới lên / vuốt trên xuống)
+                        if (abs(delta_y) > 40 && abs(delta_y) > abs(delta_x) * 1.2) {
+                            swiped = true;
+                            self->touch_pressed_ = false;
+                            if (delta_y < -40) {
+                                ESP_LOGI(TAG, "Vuot duoi len (Swipe UP, dy=%d)", delta_y);
+                                if (self->display_) self->display_->OnSwipeUp();
+                            } else if (delta_y > 40) {
+                                ESP_LOGI(TAG, "Vuot tren xuong (Swipe DOWN, dy=%d)", delta_y);
+                                if (self->display_) self->display_->OnSwipeDown();
+                            }
+                        } else if (abs(delta_x) > 40 && abs(delta_x) > abs(delta_y) * 1.2) {
+                            swiped = true;
+                            self->touch_pressed_ = false;
+                            if (delta_x < -40) {
+                                ESP_LOGI(TAG, "Vuot sang trai (Swipe LEFT, dx=%d)", delta_x);
+                                if (self->display_) self->display_->OnSwipeLeft();
+                            } else if (delta_x > 40) {
+                                ESP_LOGI(TAG, "Vuot sang phai (Swipe RIGHT, dx=%d)", delta_x);
+                                if (self->display_) self->display_->OnSwipeRight();
+                            }
+                        }
+                    }
                 }
             }
 
             if (!t && down) {
                 down = false;
+                self->touch_pressed_ = false;
                 uint32_t press = now - down_start;
+                int delta_x = (int)last_x - (int)start_x;
+                int delta_y = (int)last_y - (int)start_y;
 
-                // long tap (> 3s) -> Wi-Fi Config
-                if (press > 3000) {
+                bool is_gesture = swiped || (press < 600 && (abs(delta_y) > 40 || abs(delta_x) > 40));
+                if (is_gesture) {
+                    if (!swiped) {
+                        if (abs(delta_y) > 40 && abs(delta_y) > abs(delta_x) * 1.2) {
+                            if (delta_y < -40) {
+                                ESP_LOGI(TAG, "Vuot duoi len on release (dy=%d)", delta_y);
+                                if (self->display_) self->display_->OnSwipeUp();
+                            } else if (delta_y > 40) {
+                                ESP_LOGI(TAG, "Vuot tren xuong on release (dy=%d)", delta_y);
+                                if (self->display_) self->display_->OnSwipeDown();
+                            }
+                        } else if (abs(delta_x) > 40 && abs(delta_x) > abs(delta_y) * 1.2) {
+                            if (delta_x < -40) {
+                                ESP_LOGI(TAG, "Vuot sang trai on release (dx=%d)", delta_x);
+                                if (self->display_) self->display_->OnSwipeLeft();
+                            } else if (delta_x > 40) {
+                                ESP_LOGI(TAG, "Vuot sang phai on release (dx=%d)", delta_x);
+                                if (self->display_) self->display_->OnSwipeRight();
+                            }
+                        }
+                    }
+                    tap_count = 0;
+                    last_tap = 0;
+                } else if (press > 3000) {
                     self->EnterWifiConfigMode();
                     tap_count = 0;
+                    last_tap = 0;
                 } else {
-                    if (now - last_tap < 350) {
+                    if (now - last_tap < 300) {
                         tap_count++;
                     } else {
                         tap_count = 1;
@@ -144,33 +500,41 @@ private:
                     last_tap = now;
 
                     if (tap_count == 3) {
-                        // Triple tap -> Toggle Screen Rotation!
                         self->ToggleRotation("toggle");
+                        tap_count = 0;
+                        last_tap = 0;
+                    } else if (tap_count == 4) {
+                        self->NextWallpaper();
                         tap_count = 0;
                         last_tap = 0;
                     }
                 }
             }
 
-            // Timeout for 1 tap or 2 taps
-            if (tap_count > 0 && (now - last_tap >= 350)) {
+            if (tap_count > 0 && (now - last_tap >= 300)) {
                 auto state = app.GetDeviceState();
                 if (state != kDeviceStateStarting && state != kDeviceStateWifiConfiguring && state != kDeviceStateAudioTesting) {
-                    if (tap_count == 1) {
+                    if (tap_count == 2) {
                         app.ToggleChatState();
-                    } else if (tap_count == 2) {
-                        app.StartListening();
                     }
                 }
                 tap_count = 0;
             }
 
-            vTaskDelay(pdMS_TO_TICKS(50));
+            vTaskDelay(pdMS_TO_TICKS(25));
         }
     }
 
     void InitializeTouch() {
         if (!touch_.Init(codec_i2c_bus_, 0x38)) return;
+
+        DisplayLockGuard lock(display_);
+        indev_ = lv_indev_create();
+        lv_indev_set_type(indev_, LV_INDEV_TYPE_POINTER);
+        lv_indev_set_read_cb(indev_, touchpad_read);
+        lv_indev_set_user_data(indev_, this);
+        lv_indev_set_disp(indev_, lv_display_get_default());
+
         xTaskCreatePinnedToCore(TouchTask, "touch_task", 4096, this, 5, nullptr, 0);
     }
 
@@ -274,6 +638,20 @@ private:
                 ToggleRotation(mode);
                 return true;
             });
+
+        mcp_server.AddTool("self.wallpaper.next",
+            "Chuyển sang hình nền tiếp theo trong thẻ nhớ khi người dùng yêu cầu đổi hình nền, chuyển ảnh khác, ảnh tiếp theo.",
+            PropertyList(),
+            [this](const PropertyList& properties) -> ToolResult {
+                if (!sd_card_mounted_) {
+                    return "Không nhận diện được thẻ nhớ microSD. Hãy kiểm tra thẻ đã gắn chặt và đúng định dạng FAT32.";
+                }
+                if (wallpaper_files_.empty()) {
+                    return "Thẻ nhớ đã kết nối nhưng không tìm thấy file ảnh .jpg nào.";
+                }
+                NextWallpaper();
+                return "Đã chuyển sang hình nền tiếp theo";
+            });
     }
 
 public:
@@ -286,6 +664,7 @@ public:
         InitializeLcdDisplay();
         InitializeTouch();
         InitializeButtons();
+        InitializeSdCard();
         InitializeTools();
         GetBacklight()->SetBrightness(100);
     }
@@ -293,6 +672,11 @@ public:
     virtual Led *GetLed() override {
         static SingleLed led(BUILTIN_LED_GPIO);
         return &led;
+    }
+
+    virtual Music* GetMusic() override {
+        static Esp32Music music;
+        return &music;
     }
 
     virtual AudioCodec* GetAudioCodec() override {

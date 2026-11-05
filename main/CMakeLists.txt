@@ -42,14 +42,16 @@ set(SOURCES "audio/audio_codec.cc"
             "device_state_machine.cc"
             "assets.cc"
             "main.cc"
+            "weather/weather_service.cc"
             )
 
-set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
+set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols" "weather")
 
 # Add board common files
 list(APPEND SOURCES
     "boards/common/board.cc"
     "boards/common/wifi_board.cc"
+    "boards/common/esp32_music.cc"
                 "boards/common/adc_battery_monitor.cc"
     "boards/common/axp2101.cc"
     "boards/common/backlight.cc"
@@ -1191,6 +1193,8 @@ idf_component_register(SRCS ${SOURCES}
                     EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS}
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/wallpaper_portrait.bin"
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/wallpaper_landscape.bin"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/boot_portrait.bin"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/boot_landscape.bin"
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     WHOLE_ARCHIVE
                     PRIV_REQUIRES
@@ -1215,6 +1219,8 @@ idf_component_register(SRCS ${SOURCES}
                         efuse
                         bt
                         fatfs
+                        esp_driver_sdmmc
+                        sdmmc
                         xiaozhi-fonts
                         esp-ml307
                                                                         ${MAIN_PRIV_REQUIRES_EXTRA}

@@ -1,4 +1,6 @@
+#include "boards/common/music.h"
 #include "application.h"
+#include "weather_service.h"
 #include "assets.h"
 #include "assets/lang_config.h"
 #include "audio_codec.h"
@@ -61,7 +63,14 @@ Application::~Application() {
     vEventGroupDelete(event_group_);
 }
 
-bool Application::SetDeviceState(DeviceState state) { return state_machine_.TransitionTo(state); }
+bool Application::SetDeviceState(DeviceState state) {
+    DeviceState previous_state = GetDeviceState();
+    if (previous_state == kDeviceStateIdle && state != kDeviceStateIdle) {
+        auto music = Board::GetInstance().GetMusic();
+        if (music) {
+            music->StopStreaming();
+        }
+    } return state_machine_.TransitionTo(state); }
 
 void Application::Initialize() {
     auto& board = Board::GetInstance();
@@ -192,6 +201,7 @@ void Application::Initialize() {
 
     // Update the status bar immediately to show the network state
     display->UpdateStatusBar(true);
+    WeatherService::GetInstance().Start();
 }
 
 void Application::Run() {
@@ -270,6 +280,42 @@ void Application::Run() {
                     break;
                 }
             }
+            if (GetDeviceState() == kDeviceStateListening && !stop_listening_sent_) {
+                int64_t now = esp_timer_get_time();
+                if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
+                    user_has_spoken_ = true;
+                    last_speech_time_ = now;
+                } else if (user_has_spoken_) {
+                    if (now - last_speech_time_ >= 2000000) { // 2 seconds silence after speech
+                        ESP_LOGI(TAG, "2 seconds silence detected after speech, stopping listening");
+                        stop_listening_sent_ = true;
+                        if (protocol_) {
+                            protocol_->SendStopListening();
+                        }
+                        audio_service_.EnableVoiceProcessing(false);
+                    }
+                } else {
+                    if (!prompt_sent_) {
+                        if (now - listening_start_time_ >= 10000000) { // 10s initial silence
+                            ESP_LOGI(TAG, "No speech detected for 10s, prompting user");
+                            prompt_sent_ = true;
+                            prompt_time_ = now;
+                            listening_start_time_ = now;
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                            Board::GetInstance().GetDisplay()->SetChatMessage("assistant", "Bạn có ở đó không?");
+                        }
+                    } else {
+                        if (now - listening_start_time_ >= 10000000) { // 10s second silence
+                            ESP_LOGI(TAG, "No speech detected after reminder (10s), going to idle");
+                            stop_listening_sent_ = true;
+                            if (protocol_) {
+                                protocol_->SendStopListening();
+                            }
+                            SetDeviceState(kDeviceStateIdle);
+                        }
+                    }
+                }
+            }
         }
 
         if (bits & MAIN_EVENT_WAKE_WORD_DETECTED) {
@@ -280,6 +326,11 @@ void Application::Run() {
             if (GetDeviceState() == kDeviceStateListening) {
                 auto led = Board::GetInstance().GetLed();
                 led->OnStateChanged();
+                int64_t now = esp_timer_get_time();
+                if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
+                    user_has_spoken_ = true;
+                    last_speech_time_ = now;
+                }
             }
         }
 
@@ -296,6 +347,49 @@ void Application::Run() {
             clock_ticks_++;
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
+
+            if (GetDeviceState() == kDeviceStateListening && !stop_listening_sent_) {
+                int64_t now = esp_timer_get_time();
+                if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
+                    user_has_spoken_ = true;
+                    last_speech_time_ = now;
+                } else if (user_has_spoken_) {
+                    if (now - last_speech_time_ >= 2000000) {
+                        ESP_LOGI(TAG, "2 seconds silence detected in clock tick, stopping listening");
+                        stop_listening_sent_ = true;
+                        if (protocol_) {
+                            protocol_->SendStopListening();
+                        }
+                        audio_service_.EnableVoiceProcessing(false);
+                    }
+                } else {
+                    if (!prompt_sent_) {
+                        if (now - listening_start_time_ >= 10000000) {
+                            ESP_LOGI(TAG, "No speech detected for 10s in clock tick, prompting user");
+                            prompt_sent_ = true;
+                            prompt_time_ = now;
+                            listening_start_time_ = now;
+                            audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
+                            Board::GetInstance().GetDisplay()->SetChatMessage("assistant", "Bạn có ở đó không?");
+                        }
+                    } else {
+                        if (now - listening_start_time_ >= 10000000) {
+                            ESP_LOGI(TAG, "No speech detected for 10s after reminder in clock tick, going to idle");
+                            stop_listening_sent_ = true;
+                            if (protocol_) {
+                                protocol_->SendStopListening();
+                            }
+                            SetDeviceState(kDeviceStateIdle);
+                        }
+                    }
+                }
+            } else if (GetDeviceState() == kDeviceStateListening && stop_listening_sent_) {
+                int64_t now = esp_timer_get_time();
+                if (now - last_speech_time_ >= 15000000) {
+                    ESP_LOGW(TAG, "Server reply timeout after stop listening, returning to idle");
+                    SetDeviceState(kDeviceStateIdle);
+                }
+            }
 
             // Print debug info every 10 seconds
             if (clock_ticks_ % 10 == 0) {
@@ -336,6 +430,7 @@ void Application::HandleNetworkConnectedEvent() {
     // Update the status bar immediately to show the network state
     auto display = Board::GetInstance().GetDisplay();
     display->UpdateStatusBar(true);
+    WeatherService::GetInstance().RefreshNow();
 }
 
 void Application::HandleNetworkDisconnectedEvent() {
@@ -353,6 +448,7 @@ void Application::HandleNetworkDisconnectedEvent() {
     // Update the status bar immediately to show the network state
     auto display = Board::GetInstance().GetDisplay();
     display->UpdateStatusBar(true);
+    WeatherService::GetInstance().RefreshNow();
 }
 
 void Application::HandleActivationDoneEvent() {
@@ -665,11 +761,7 @@ void Application::InitializeProtocol() {
             } else if (strcmp(state->valuestring, "stop") == 0) {
                 Schedule([this]() {
                     if (GetDeviceState() == kDeviceStateSpeaking) {
-                        if (listening_mode_ == kListeningModeManualStop) {
-                            SetDeviceState(kDeviceStateIdle);
-                        } else {
-                            SetDeviceState(kDeviceStateListening);
-                        }
+                        SetDeviceState(kDeviceStateListening);
                     }
                 });
             } else if (strcmp(state->valuestring, "sentence_start") == 0) {
@@ -872,8 +964,9 @@ void Application::HandleToggleChatEvent() {
         SetListeningMode(mode);
     } else if (state == kDeviceStateSpeaking) {
         AbortSpeaking(kAbortReasonNone);
-    } else if (state == kDeviceStateListening) {
+    } else if (state == kDeviceStateListening || state == kDeviceStateConnecting) {
         protocol_->CloseAudioChannel();
+        SetDeviceState(kDeviceStateIdle);
     }
 }
 
@@ -1097,6 +1190,13 @@ void Application::HandleStateChangedEvent() {
             display->SetStatus(Lang::Strings::LISTENING);
             display->SetEmotion("neutral");
 
+            listening_start_time_ = esp_timer_get_time();
+            last_speech_time_ = 0;
+            prompt_time_ = 0;
+            user_has_spoken_ = false;
+            stop_listening_sent_ = false;
+            prompt_sent_ = false;
+
             // Make sure the audio processor is running
             if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
                 // For auto mode, wait for the playback queue to drain before enabling
@@ -1220,6 +1320,11 @@ void Application::StartListeningAudio() {
         return;
     }
 
+    listening_start_time_ = esp_timer_get_time();
+    last_speech_time_ = 0;
+    user_has_spoken_ = false;
+    stop_listening_sent_ = false;
+
     // Send the start listening command
     protocol_->SendStartListening(listening_mode_);
     audio_service_.EnableVoiceProcessing(true);
@@ -1331,7 +1436,7 @@ void Application::SetListeningMode(ListeningMode mode) {
 }
 
 ListeningMode Application::GetDefaultListeningMode() const {
-    return aec_mode_ == kAecOff ? kListeningModeAutoStop : kListeningModeRealtime;
+    return aec_mode_ == kAecOff ? kListeningModeManualStop : kListeningModeRealtime;
 }
 
 void Application::Reboot() {
@@ -1516,4 +1621,48 @@ void Application::ResetProtocol() {
         // Reset protocol
         protocol_.reset();
     });
+}
+
+static std::vector<int16_t> ResampleLinear(const int16_t* src, size_t src_len, int in_rate, int out_rate) {
+    if (in_rate == out_rate || src_len == 0 || in_rate <= 0 || out_rate <= 0) {
+        return std::vector<int16_t>(src, src + src_len);
+    }
+    size_t out_len = (size_t)((uint64_t)src_len * out_rate / in_rate);
+    std::vector<int16_t> dst(out_len);
+    uint32_t step = ((uint64_t)in_rate << 16) / out_rate;
+    uint32_t pos = 0;
+    for (size_t i = 0; i < out_len; ++i) {
+        size_t idx = pos >> 16;
+        uint32_t frac = pos & 0xFFFF;
+        if (idx + 1 < src_len) {
+            int32_t s0 = src[idx];
+            int32_t s1 = src[idx + 1];
+            dst[i] = (int16_t)(s0 + (((s1 - s0) * (int32_t)frac) >> 16));
+        } else if (idx < src_len) {
+            dst[i] = src[idx];
+        } else {
+            dst[i] = 0;
+        }
+        pos += step;
+    }
+    return dst;
+}
+
+void Application::AddAudioData(AudioStreamPacket&& packet) {
+    auto codec = Board::GetInstance().GetAudioCodec();
+    if (GetDeviceState() == kDeviceStateIdle && codec && codec->output_enabled()) {
+        if (packet.payload.size() >= 2) {
+            size_t num_samples = packet.payload.size() / sizeof(int16_t);
+            const int16_t* pcm_raw = reinterpret_cast<const int16_t*>(packet.payload.data());
+            int in_rate = packet.sample_rate;
+            int out_rate = codec->output_sample_rate();
+            if (in_rate > 0 && out_rate > 0 && in_rate != out_rate) {
+                auto resampled = ResampleLinear(pcm_raw, num_samples, in_rate, out_rate);
+                codec->OutputData(resampled);
+            } else {
+                std::vector<int16_t> pcm_data(pcm_raw, pcm_raw + num_samples);
+                codec->OutputData(pcm_data);
+            }
+        }
+    }
 }

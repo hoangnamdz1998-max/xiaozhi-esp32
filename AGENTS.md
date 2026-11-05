@@ -91,3 +91,55 @@ The build script changes local `sdkconfig` and build state. Do not assume the bu
 - CI matrix: `.github/workflows/build.yml`
 
 Keep detailed or fast-changing information in those files, not here. Add a nested `AGENTS.md` only when a subsystem needs specialized instructions.
+
+
+## Workspace Customizations (Active Project History)
+
+### Hardware Target
+- **Board**: `freenove-esp32s3-display-2.8-lcd` (ESP32-S3 with 8MB PSRAM, 16MB Flash).
+- **Display**: 2.8-inch LCD (ILI9341, 320x240 landscape orientation).
+- **SD Card**: SDMMC 4-bit bus mode on GPIO pins 38 (CLK), 40 (CMD), 39 (D0), 41 (D1), 48 (D2), 47 (D3).
+- **Primary Upload Port**: COM30.
+
+### Implemented Features & Custom Architecture
+1. **Dual Wallpaper System**:
+   - `boot_landscape.bin` (in `main/assets/`): Displays during boot and WiFi connection ("XIAOZHI_DZ AI SMART ASSISTANT" robot banner).
+   - `wallpaper_landscape.bin` (in `main/assets/`): Displays when WiFi is connected and system enters `kDeviceStateIdle`.
+   - Handled via `main/display/custom_wallpaper.h`, `custom_wallpaper.cc`, and `main/display/lcd_display.cc`.
+2. **SD Card Auto-Fit Wallpaper**:
+   - `main/boards/freenove-esp32s3-display-2.8-lcd/freenove-esp32s3-display-2.8-lcd.cc` mounts `/sdcard` and reads JPEG/PNG wallpapers.
+   - Images are automatically zoomed and centered using LVGL scaling to fit 320x240 perfectly.
+3. **Top-Left Solar & Vietnamese Lunar Calendar**:
+   - `main/display/vietnamese_lunar_calendar.h`: Pure C++ astronomical algorithm computing exact Vietnamese Lunar calendar dates (taking timezone +7:00 into account).
+   - Displayed at top-left 1/4 area using font `font_noto_sans_basic_20_4` in white with frosted dark pill background: `DD/MM/YYYY\nÂm lịch: DD/MM`.
+4. **Center Big Digital Clock**:
+   - Large digital clock at `LV_ALIGN_CENTER, 0, 10` using Montserrat 40px with real-time seconds (`HH:MM:SS`), updated every second in `LcdDisplay::UpdateStatusBar`.
+5. **Giao diện màn hình chờ nâng cao (Standby UI Redesign - Ngang 320x240 & Dọc 240x320)**:
+   - Nền màu tối slate (#0f172a) hiện đại, tự động hiển thị khi vào chế độ chờ (idle) và ẩn đi khi đang trò chuyện/lắng nghe.
+   - **Toàn bộ chữ trên màn hình chờ đều để màu TRẮNG tinh khôi (`lv_color_white()`)**.
+   - **Góc trên bên trái**:
+     - Đồng hồ số lớn font Montserrat 40 (`HH:MM`) và **số đếm giây nhỏ hơn** (`:SS`, font 20px trắng) được đẩy ra xa hơn tự động bám sát chữ số phút với khoảng cách đúng 3px (cw + 3), hoàn toàn cách biệt và không bị đè dấu `:`.
+     - **Thêm hàng Thứ theo thời gian thực**: `Thứ Tư` (hoặc `Thứ Hai`, `Thứ Ba`...) nằm ngay phía trên hàng lịch dương.
+     - Dương lịch: Chuẩn định dạng `dd/mm/yyyy` (ví dụ: `04/11/2026`).
+     - Âm lịch: `Âm lịch: 24 / 9` hoặc `Âm lịch: Mùng X / Y` (đã bỏ chữ "Ngày").
+     - Đã bỏ dòng Năm 2026 cho thoáng màn hình.
+     - Bố cục màn hình dọc (Portrait) đối xứng: Nửa trên (Trái: Thứ, Dương lịch, Âm lịch rải đều; Phải: Đồng hồ số ở trên, số giây đếm :SS nằm dưới phút và được căn sát lề phải thẳng hàng với phút). Nửa giữa (Trái: Icon mây ở trên, Nhiệt độ lớn ở dưới căn giữa; Phải: Thành phố, thời tiết, độ ẩm, gió rải đều). Nửa dưới: 4 thẻ dự báo.
+   - **Góc trên bên phải**:
+     - **Biểu tượng thời tiết và nhiệt độ lớn (`25°C`) nằm NGANG HÀNG nhau**.
+     - Biểu tượng thời tiết động thông minh: trời nắng/mây sẽ có icon mặt trời hoặc mặt trời ló sau mây (`sun_cloud`), trời mưa có giọt mưa (`rain`), sấm sét (`thunder`).
+     - **Tên địa phương (ví dụ: `TP. Hồ Chí Minh`) được XUỐNG DÒNG riêng biệt** ngay bên dưới cụm icon và nhiệt độ.
+     - Dưới cùng là trạng thái thời tiết (`Trời có mây`), `Độ ẩm: XX%` (đã sửa triệt để lỗi mất dấu thành "Độ m" bằng glyph substitution) và `Gió: X km/h`.
+   - **Phía dưới**:
+     - 4 thẻ card bo góc hiện đại hiển thị dự báo thời tiết 4 ngày kế tiếp (`T4 04`, `T5 05`, `T6 06`, `T7 07`).
+     - Mỗi thẻ gồm: Thứ & ngày, icon thời tiết 24x24 px, nhiệt độ cao nhất trong ngày (`25°C`).
+   - Tự động lấy dữ liệu thời gian thực từ Open-Meteo API. Định vị vị trí động theo mạng WiFi kết nối: Sử dụng ưu tiên ipwho.is (độ chính xác cao cho các dải IP mạng Việt Nam) và dự phòng ip-api.com. Khi chuyển sang WiFi mới, hệ thống tự động cập nhật lại vị trí và thời tiết của nơi đó.
+      - Hỗ trợ công cụ MCP self.weather.set_location và self.weather.refresh cho phép AI hoặc người dùng đổi vị trí thời tiết linh hoạt khi cần.
+      - Phân biệt thời tiết ngày/đêm thông qua tham số is_day:
+        + Ban ngày: Hiển thị icon Mặt Trời / Mây Mặt Trời (weather_icon_sun, weather_icon_sun_cloud), mô tả 'Trời nắng', 'Nắng nhẹ'.
+        + Ban đêm (is_day == 0): Hiển thị icon Mặt Trăng khuyết / Mây Mặt Trăng (weather_icon_moon, weather_icon_moon_cloud), mô tả chuẩn xác 'Trời quang', 'Ít mây' thay vì hiển thị nắng.
+6. **Touch Gestures & Voice Interaction Timing**:
+   - **Double-tap (Chạm 2 lần)**: Đánh thức thiết bị khi đang ở màn hình chờ (idle), hoặc ngắt cuộc trò chuyện và quay lại màn hình chờ khi đang lắng nghe / đang nói.
+   - **Single-tap (Chạm 1 lần)**: Đã được vô hiệu hóa để tránh chạm nhầm.
+   - **Triple-tap (Chạm 3 lần)**: Đổi chiều xoay màn hình (ngang / dọc).
+   - **4 taps (Chạm 4 lần)**: Đổi hình nền tiếp theo từ thẻ nhớ SD.
+   - **VAD Silence Timeout**: Thời gian dừng nói để AI phản hồi được cấu hình là 2 giây (`2,000,000 us`).

@@ -36,6 +36,8 @@ private:
     std::string name_;
 };
 
+struct WeatherInfo;
+
 class Display {
 public:
     Display();
@@ -66,6 +68,22 @@ public:
     virtual bool SupportsGuiOperations() const { return false; }
     virtual void SetHideSubtitle(bool hide) { (void)hide; }
     virtual void SetOrientation(bool is_portrait) { (void)is_portrait; }
+    virtual void SetCustomWallpaper(const lv_image_dsc_t* img_dsc) { (void)img_dsc; }
+    virtual void OnSwipeLeft() {}
+    virtual void OnSwipeRight() {}
+    virtual void OnSwipeUp() {}
+    virtual void OnSwipeDown() {}
+    virtual void ShowMenu() {}
+    virtual void ShowStandby() {}
+    virtual void ShowCalendar() {}
+    virtual void ShowWeatherDetail() {}
+    virtual void UpdateWeatherFull(const WeatherInfo& info) { (void)info; }
+    virtual void UpdateWeather(float temp, int humidity, const char* condition, int icon_type) {
+        (void)temp;
+        (void)humidity;
+        (void)condition;
+        (void)icon_type;
+    }
     virtual bool InsertAnimDialog(const char* name, uint32_t duration_ms) {
         (void)name;
         (void)duration_ms;

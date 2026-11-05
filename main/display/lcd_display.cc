@@ -18,6 +18,32 @@
 #include <vector>
 
 #include "board.h"
+#include "application.h"
+#include "vietnamese_lunar_calendar.h"
+#include "weather_icons.h"
+#include "weather/weather_service.h"
+LV_FONT_DECLARE(font_noto_sans_basic_14_1);
+
+static lv_font_t font_noto_sans_custom_16_4;
+static bool CustomFontGetGlyphDsc16(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
+    if (unicode_letter == 0x1EA9) unicode_letter = 0x1EA5; // ẩ -> ấ (Fixes 'Độ ẩm')
+    if (unicode_letter == 0x1EA8) unicode_letter = 0x1EA4; // Ẩ -> Ấ
+    if (unicode_letter == 0x1EE9) unicode_letter = 0x1EED; // ứ -> 1EED (Patched with true ứ glyph)
+    if (unicode_letter == 0x1EE8) unicode_letter = 0x1EED; // Ứ -> 1EED
+    if (unicode_letter == 0x01A1) unicode_letter = 'o';    // ơ -> o
+    if (unicode_letter == 0x01A0) unicode_letter = 'O';    // Ơ -> O
+    if (unicode_letter == 0x1EB9) unicode_letter = 0x00E9; // ẹ -> é
+    if (unicode_letter == 0x1EB8) unicode_letter = 0x00C9; // Ẹ -> É
+    return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
+}
+
+LV_FONT_DECLARE(font_noto_sans_basic_16_4);
+LV_FONT_DECLARE(font_noto_sans_basic_20_4);
+LV_FONT_DECLARE(font_noto_sans_basic_30_4);
+LV_FONT_DECLARE(font_noto_sans_basic_20_4);
+#if LV_FONT_MONTSERRAT_40
+LV_FONT_DECLARE(lv_font_montserrat_40);
+#endif
 
 #define TAG "LcdDisplay"
 
@@ -497,11 +523,15 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_pad_all(wallpaper_image_, 0, 0);
     lv_obj_set_style_border_width(wallpaper_image_, 0, 0);
-    if (width_ > height_) {
-        lv_image_set_src(wallpaper_image_, &wallpaper_landscape_dsc);
-    } else {
-        lv_image_set_src(wallpaper_image_, &wallpaper_portrait_dsc);
+    const lv_image_dsc_t* def_dsc = (width_ > height_) ? &boot_landscape_dsc : &boot_portrait_dsc;
+    lv_image_set_src(wallpaper_image_, def_dsc);
+    if (def_dsc->header.w > 0 && def_dsc->header.h > 0) {
+        uint32_t zoom_w = (256 * width_) / def_dsc->header.w;
+        uint32_t zoom_h = (256 * height_) / def_dsc->header.h;
+        uint32_t zoom = (zoom_w > zoom_h) ? zoom_w : zoom_h;
+        lv_image_set_scale(wallpaper_image_, zoom);
     }
+    lv_image_set_inner_align(wallpaper_image_, LV_IMAGE_ALIGN_CENTER);
 
     /* Layer 1: Top bar - for status icons */
     top_bar_ = lv_obj_create(container_);
@@ -520,11 +550,20 @@ void LcdDisplay::SetupUI() {
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
 
-    // Left icon
-    network_label_ = lv_label_create(top_bar_);
-    lv_label_set_text(network_label_, "");
-    lv_obj_set_style_text_font(network_label_, icon_font, 0);
-    lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+    // Left container: Network icon & Date / Lunar calendar
+    lv_obj_t* left_container = lv_obj_create(top_bar_);
+    lv_obj_set_size(left_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(left_container, 0, 0);
+    lv_obj_set_style_pad_all(left_container, 0, 0);
+    lv_obj_set_flex_flow(left_container, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(left_container, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+
+    calendar_label_ = lv_label_create(left_container);
+    lv_label_set_text(calendar_label_, "");
+    lv_obj_set_style_text_font(calendar_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
 
     // Right icons container
     lv_obj_t* right_icons = lv_obj_create(top_bar_);
@@ -536,10 +575,16 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_flex_align(right_icons, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
 
+    network_label_ = lv_label_create(right_icons);
+    lv_label_set_text(network_label_, "");
+    lv_obj_set_style_text_font(network_label_, icon_font, 0);
+    lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+
     mute_label_ = lv_label_create(right_icons);
     lv_label_set_text(mute_label_, "");
     lv_obj_set_style_text_font(mute_label_, icon_font, 0);
     lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_margin_left(mute_label_, lvgl_theme->spacing(2), 0);
 
     battery_label_ = lv_label_create(right_icons);
     lv_label_set_text(battery_label_, "");
@@ -575,6 +620,162 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
+
+    idle_clock_label_ = lv_label_create(screen);
+    lv_label_set_text(idle_clock_label_, "");
+#if LV_FONT_MONTSERRAT_40
+    lv_obj_set_style_text_font(idle_clock_label_, &lv_font_montserrat_40, 0);
+#else
+    lv_obj_set_style_text_font(idle_clock_label_, &font_noto_sans_basic_20_4, 0);
+#endif
+    lv_obj_set_style_text_color(idle_clock_label_, lv_color_white(), 0);
+    lv_obj_set_style_bg_color(idle_clock_label_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(idle_clock_label_, LV_OPA_30, 0);
+    lv_obj_set_style_radius(idle_clock_label_, 8, 0);
+    lv_obj_set_style_pad_hor(idle_clock_label_, 12, 0);
+    lv_obj_set_style_pad_ver(idle_clock_label_, 4, 0);
+    lv_obj_align(idle_clock_label_, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+
+    weather_box_ = lv_obj_create(screen);
+    lv_obj_set_size(weather_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(weather_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(weather_box_, LV_OPA_30, 0);
+    lv_obj_set_style_radius(weather_box_, 8, 0);
+    lv_obj_set_style_border_width(weather_box_, 0, 0);
+    lv_obj_set_style_pad_hor(weather_box_, 10, 0);
+    lv_obj_set_style_pad_ver(weather_box_, 4, 0);
+    lv_obj_set_flex_flow(weather_box_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(weather_box_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(weather_box_, 6, 0);
+    lv_obj_align(weather_box_, LV_ALIGN_CENTER, 0, (height_ > width_) ? 70 : 58);
+    lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
+    weather_icon_ = lv_image_create(weather_box_);
+    lv_image_set_src(weather_icon_, &weather_icon_cloud_dsc);
+
+    weather_label_ = lv_label_create(weather_box_);
+    lv_obj_set_style_text_font(weather_label_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(weather_label_, lv_color_white(), 0);
+    lv_label_set_text(weather_label_, "");
+
+    // --- STANDBY FULL SCREEN DASHBOARD (Matching User Reference) ---
+    standby_box_ = lv_obj_create(screen);
+    lv_obj_set_size(standby_box_, LV_HOR_RES, LV_VER_RES);
+    lv_obj_set_style_bg_color(standby_box_, lv_color_hex(0x0f172a), 0);
+    lv_obj_set_style_bg_opa(standby_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(standby_box_, 0, 0);
+    lv_obj_set_style_border_width(standby_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby_box_, 0, 0);
+    lv_obj_set_scrollbar_mode(standby_box_, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(standby_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Initialize custom font supporting 'ẩ'
+    font_noto_sans_custom_16_4 = font_noto_sans_basic_16_4;
+    font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
+
+    // Clock (HH:MM) - All white text
+    standby_clock_ = lv_label_create(standby_box_);
+#if LV_FONT_MONTSERRAT_40
+    lv_obj_set_style_text_font(standby_clock_, &lv_font_montserrat_40, 0);
+#else
+    lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_basic_30_4, 0);
+#endif
+    lv_obj_set_style_text_color(standby_clock_, lv_color_white(), 0);
+    lv_label_set_text(standby_clock_, "00:00");
+
+    // Seconds (:SS smaller font, white)
+    standby_sec_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_color(standby_sec_, lv_color_white(), 0);
+    lv_label_set_text(standby_sec_, ":00");
+
+    // Weekday (Thứ Tư, etc.)
+    standby_weekday_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_weekday_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_weekday_, lv_color_white(), 0);
+    lv_label_set_text(standby_weekday_, "");
+
+    // Date (dd/mm/yyyy, white)
+    standby_date_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_date_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_date_, lv_color_white(), 0);
+    lv_label_set_text(standby_date_, "");
+
+    // Lunar (white)
+    standby_lunar_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_lunar_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_lunar_, lv_color_white(), 0);
+    lv_label_set_text(standby_lunar_, "");
+
+    // Year (hidden)
+    standby_year_ = lv_label_create(standby_box_);
+    lv_obj_add_flag(standby_year_, LV_OBJ_FLAG_HIDDEN);
+
+    // Weather Main Icon
+    standby_weather_icon_ = lv_image_create(standby_box_);
+    lv_image_set_src(standby_weather_icon_, &weather_icon_sun_cloud_48_dsc);
+
+    // Main Temp (white)
+    standby_temp_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_color(standby_temp_, lv_color_white(), 0);
+    lv_label_set_text(standby_temp_, "--°C");
+
+    // City (white, placed on own row)
+    standby_city_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_city_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_city_, lv_color_white(), 0);
+    lv_label_set_text(standby_city_, "Đang cập nhật...");
+
+    // Condition (white)
+    standby_condition_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_condition_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_condition_, lv_color_white(), 0);
+    lv_label_set_text(standby_condition_, "Trời có mây");
+
+    // Humidity (white)
+    standby_humidity_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_humidity_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_humidity_, lv_color_white(), 0);
+    lv_label_set_text(standby_humidity_, "Độ ẩm: --%");
+
+    // Wind (white)
+    standby_wind_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_wind_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_wind_, lv_color_white(), 0);
+    lv_label_set_text(standby_wind_, "Gió: -- km/h");
+
+    // 4 Forecast Cards
+    for (int i = 0; i < 4; ++i) {
+        forecast_cards_[i].card = lv_obj_create(standby_box_);
+        lv_obj_set_style_bg_color(forecast_cards_[i].card, lv_color_hex(0x1e293b), 0);
+        lv_obj_set_style_bg_opa(forecast_cards_[i].card, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(forecast_cards_[i].card, 10, 0);
+        lv_obj_set_style_border_width(forecast_cards_[i].card, 0, 0);
+        lv_obj_set_style_pad_all(forecast_cards_[i].card, 4, 0);
+        lv_obj_clear_flag(forecast_cards_[i].card, LV_OBJ_FLAG_SCROLLABLE);
+
+        forecast_cards_[i].day = lv_label_create(forecast_cards_[i].card);
+        lv_obj_set_style_text_font(forecast_cards_[i].day, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_color(forecast_cards_[i].day, lv_color_white(), 0);
+        lv_label_set_text(forecast_cards_[i].day, "--");
+
+        forecast_cards_[i].icon = lv_image_create(forecast_cards_[i].card);
+        lv_image_set_src(forecast_cards_[i].icon, &weather_icon_cloud_24_dsc);
+
+        forecast_cards_[i].temp = lv_label_create(forecast_cards_[i].card);
+        lv_obj_set_style_text_font(forecast_cards_[i].temp, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_color(forecast_cards_[i].temp, lv_color_white(), 0);
+        lv_label_set_text(forecast_cards_[i].temp, "--°C");
+    }
+
+    LayoutStandbyWidgets(height_ > width_);
+    CreateMenuUI();
+    CreateCalendarUI();
+    CreateWeatherDetailUI();
+
 
     /* Content - Chat area */
     content_ = lv_obj_create(container_);
@@ -1006,11 +1207,15 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_pad_all(wallpaper_image_, 0, 0);
     lv_obj_set_style_border_width(wallpaper_image_, 0, 0);
-    if (width_ > height_) {
-        lv_image_set_src(wallpaper_image_, &wallpaper_landscape_dsc);
-    } else {
-        lv_image_set_src(wallpaper_image_, &wallpaper_portrait_dsc);
+    const lv_image_dsc_t* def_dsc = (width_ > height_) ? &boot_landscape_dsc : &boot_portrait_dsc;
+    lv_image_set_src(wallpaper_image_, def_dsc);
+    if (def_dsc->header.w > 0 && def_dsc->header.h > 0) {
+        uint32_t zoom_w = (256 * width_) / def_dsc->header.w;
+        uint32_t zoom_h = (256 * height_) / def_dsc->header.h;
+        uint32_t zoom = (zoom_w > zoom_h) ? zoom_w : zoom_h;
+        lv_image_set_scale(wallpaper_image_, zoom);
     }
+    lv_image_set_inner_align(wallpaper_image_, LV_IMAGE_ALIGN_CENTER);
 
     /* Bottom layer: emoji_box_ - centered display */
     emoji_box_ = lv_obj_create(screen);
@@ -1053,11 +1258,20 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, 0);
 
-    // Left icon
-    network_label_ = lv_label_create(top_bar_);
-    lv_label_set_text(network_label_, "");
-    lv_obj_set_style_text_font(network_label_, icon_font, 0);
-    lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+    // Left container: Network icon & Date / Lunar calendar
+    lv_obj_t* left_container = lv_obj_create(top_bar_);
+    lv_obj_set_size(left_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(left_container, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(left_container, 0, 0);
+    lv_obj_set_style_pad_all(left_container, 0, 0);
+    lv_obj_set_flex_flow(left_container, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(left_container, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+
+    calendar_label_ = lv_label_create(left_container);
+    lv_label_set_text(calendar_label_, "");
+    lv_obj_set_style_text_font(calendar_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
 
     // Right icons container
     lv_obj_t* right_icons = lv_obj_create(top_bar_);
@@ -1069,10 +1283,16 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_flex_align(right_icons, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
 
+    network_label_ = lv_label_create(right_icons);
+    lv_label_set_text(network_label_, "");
+    lv_obj_set_style_text_font(network_label_, icon_font, 0);
+    lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+
     mute_label_ = lv_label_create(right_icons);
     lv_label_set_text(mute_label_, "");
     lv_obj_set_style_text_font(mute_label_, icon_font, 0);
     lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_margin_left(mute_label_, lvgl_theme->spacing(2), 0);
 
     battery_label_ = lv_label_create(right_icons);
     lv_label_set_text(battery_label_, "");
@@ -1109,6 +1329,162 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
+
+    idle_clock_label_ = lv_label_create(screen);
+    lv_label_set_text(idle_clock_label_, "");
+#if LV_FONT_MONTSERRAT_40
+    lv_obj_set_style_text_font(idle_clock_label_, &lv_font_montserrat_40, 0);
+#else
+    lv_obj_set_style_text_font(idle_clock_label_, &font_noto_sans_basic_20_4, 0);
+#endif
+    lv_obj_set_style_text_color(idle_clock_label_, lv_color_white(), 0);
+    lv_obj_set_style_bg_color(idle_clock_label_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(idle_clock_label_, LV_OPA_30, 0);
+    lv_obj_set_style_radius(idle_clock_label_, 8, 0);
+    lv_obj_set_style_pad_hor(idle_clock_label_, 12, 0);
+    lv_obj_set_style_pad_ver(idle_clock_label_, 4, 0);
+    lv_obj_align(idle_clock_label_, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+
+    weather_box_ = lv_obj_create(screen);
+    lv_obj_set_size(weather_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_color(weather_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(weather_box_, LV_OPA_30, 0);
+    lv_obj_set_style_radius(weather_box_, 8, 0);
+    lv_obj_set_style_border_width(weather_box_, 0, 0);
+    lv_obj_set_style_pad_hor(weather_box_, 10, 0);
+    lv_obj_set_style_pad_ver(weather_box_, 4, 0);
+    lv_obj_set_flex_flow(weather_box_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(weather_box_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(weather_box_, 6, 0);
+    lv_obj_align(weather_box_, LV_ALIGN_CENTER, 0, (height_ > width_) ? 70 : 58);
+    lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
+    weather_icon_ = lv_image_create(weather_box_);
+    lv_image_set_src(weather_icon_, &weather_icon_cloud_dsc);
+
+    weather_label_ = lv_label_create(weather_box_);
+    lv_obj_set_style_text_font(weather_label_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(weather_label_, lv_color_white(), 0);
+    lv_label_set_text(weather_label_, "");
+
+    // --- STANDBY FULL SCREEN DASHBOARD (Matching User Reference) ---
+    standby_box_ = lv_obj_create(screen);
+    lv_obj_set_size(standby_box_, LV_HOR_RES, LV_VER_RES);
+    lv_obj_set_style_bg_color(standby_box_, lv_color_hex(0x0f172a), 0);
+    lv_obj_set_style_bg_opa(standby_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(standby_box_, 0, 0);
+    lv_obj_set_style_border_width(standby_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby_box_, 0, 0);
+    lv_obj_set_scrollbar_mode(standby_box_, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(standby_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Initialize custom font supporting 'ẩ'
+    font_noto_sans_custom_16_4 = font_noto_sans_basic_16_4;
+    font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
+
+    // Clock (HH:MM) - All white text
+    standby_clock_ = lv_label_create(standby_box_);
+#if LV_FONT_MONTSERRAT_40
+    lv_obj_set_style_text_font(standby_clock_, &lv_font_montserrat_40, 0);
+#else
+    lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_basic_30_4, 0);
+#endif
+    lv_obj_set_style_text_color(standby_clock_, lv_color_white(), 0);
+    lv_label_set_text(standby_clock_, "00:00");
+
+    // Seconds (:SS smaller font, white)
+    standby_sec_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_color(standby_sec_, lv_color_white(), 0);
+    lv_label_set_text(standby_sec_, ":00");
+
+    // Weekday (Thứ Tư, etc.)
+    standby_weekday_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_weekday_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_weekday_, lv_color_white(), 0);
+    lv_label_set_text(standby_weekday_, "");
+
+    // Date (dd/mm/yyyy, white)
+    standby_date_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_date_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_date_, lv_color_white(), 0);
+    lv_label_set_text(standby_date_, "");
+
+    // Lunar (white)
+    standby_lunar_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_lunar_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_lunar_, lv_color_white(), 0);
+    lv_label_set_text(standby_lunar_, "");
+
+    // Year (hidden)
+    standby_year_ = lv_label_create(standby_box_);
+    lv_obj_add_flag(standby_year_, LV_OBJ_FLAG_HIDDEN);
+
+    // Weather Main Icon
+    standby_weather_icon_ = lv_image_create(standby_box_);
+    lv_image_set_src(standby_weather_icon_, &weather_icon_sun_cloud_48_dsc);
+
+    // Main Temp (white)
+    standby_temp_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_color(standby_temp_, lv_color_white(), 0);
+    lv_label_set_text(standby_temp_, "--°C");
+
+    // City (white, placed on own row)
+    standby_city_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_city_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_city_, lv_color_white(), 0);
+    lv_label_set_text(standby_city_, "Đang cập nhật...");
+
+    // Condition (white)
+    standby_condition_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_condition_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_condition_, lv_color_white(), 0);
+    lv_label_set_text(standby_condition_, "Trời có mây");
+
+    // Humidity (white)
+    standby_humidity_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_humidity_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_humidity_, lv_color_white(), 0);
+    lv_label_set_text(standby_humidity_, "Độ ẩm: --%");
+
+    // Wind (white)
+    standby_wind_ = lv_label_create(standby_box_);
+    lv_obj_set_style_text_font(standby_wind_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby_wind_, lv_color_white(), 0);
+    lv_label_set_text(standby_wind_, "Gió: -- km/h");
+
+    // 4 Forecast Cards
+    for (int i = 0; i < 4; ++i) {
+        forecast_cards_[i].card = lv_obj_create(standby_box_);
+        lv_obj_set_style_bg_color(forecast_cards_[i].card, lv_color_hex(0x1e293b), 0);
+        lv_obj_set_style_bg_opa(forecast_cards_[i].card, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(forecast_cards_[i].card, 10, 0);
+        lv_obj_set_style_border_width(forecast_cards_[i].card, 0, 0);
+        lv_obj_set_style_pad_all(forecast_cards_[i].card, 4, 0);
+        lv_obj_clear_flag(forecast_cards_[i].card, LV_OBJ_FLAG_SCROLLABLE);
+
+        forecast_cards_[i].day = lv_label_create(forecast_cards_[i].card);
+        lv_obj_set_style_text_font(forecast_cards_[i].day, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_color(forecast_cards_[i].day, lv_color_white(), 0);
+        lv_label_set_text(forecast_cards_[i].day, "--");
+
+        forecast_cards_[i].icon = lv_image_create(forecast_cards_[i].card);
+        lv_image_set_src(forecast_cards_[i].icon, &weather_icon_cloud_24_dsc);
+
+        forecast_cards_[i].temp = lv_label_create(forecast_cards_[i].card);
+        lv_obj_set_style_text_font(forecast_cards_[i].temp, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_color(forecast_cards_[i].temp, lv_color_white(), 0);
+        lv_label_set_text(forecast_cards_[i].temp, "--°C");
+    }
+
+    LayoutStandbyWidgets(height_ > width_);
+    CreateMenuUI();
+    CreateCalendarUI();
+    CreateWeatherDetailUI();
+
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
     /* Bottom bar - auto height, grows upward with wrapped text */
@@ -1203,6 +1579,8 @@ void LcdDisplay::SetupUI() {
     if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
     if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
     if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
+    if (calendar_label_ != nullptr) lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
+    if (idle_clock_label_ != nullptr) lv_obj_set_style_text_color(idle_clock_label_, lv_color_white(), 0);
 }
 
 void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
@@ -1576,56 +1954,123 @@ void LcdDisplay::SetHideSubtitle(bool hide) {
     }
 }
 
-void LcdDisplay::OnStateChanged(DeviceState state) {
-    DisplayLockGuard lock(this);
-    bool should_show_wallpaper = (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring || state == kDeviceStateAudioTesting);
-    if (should_show_wallpaper == is_wallpaper_active_) {
+void LcdDisplay::SetCustomWallpaper(const lv_image_dsc_t* img_dsc) {
+    if (wallpaper_image_ == nullptr || img_dsc == nullptr) {
         return;
     }
-    is_wallpaper_active_ = should_show_wallpaper;
-    if (wallpaper_image_ == nullptr || emoji_box_ == nullptr) {
+    has_custom_sd_wallpaper_ = true;
+    DisplayLockGuard lock(this);
+    lv_image_set_src(wallpaper_image_, img_dsc);
+    if (img_dsc->header.w > 0 && img_dsc->header.h > 0) {
+        uint32_t zoom_w = (256 * width_) / img_dsc->header.w;
+        uint32_t zoom_h = (256 * height_) / img_dsc->header.h;
+        uint32_t zoom = (zoom_w > zoom_h) ? zoom_w : zoom_h;
+        lv_image_set_scale(wallpaper_image_, zoom);
+    }
+    lv_image_set_inner_align(wallpaper_image_, LV_IMAGE_ALIGN_CENTER);
+    lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
+}
+
+void LcdDisplay::OnStateChanged(DeviceState state) {
+    DisplayLockGuard lock(this);
+    is_wallpaper_active_ = true;
+    if (wallpaper_image_ == nullptr) {
         return;
     }
 
-    auto lvgl_theme = static_cast<LvglTheme*>(current_theme_);
-    if (is_wallpaper_active_) {
-        lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    if (emoji_box_ != nullptr) {
         lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-        if (container_ != nullptr) {
-            lv_obj_set_style_bg_color(container_, lv_color_black(), 0);
+    }
+    if (container_ != nullptr) {
+        lv_obj_set_style_bg_opa(container_, LV_OPA_TRANSP, 0);
+    }
+    if (top_bar_ != nullptr) {
+        lv_obj_set_style_bg_opa(top_bar_, LV_OPA_30, 0);
+        lv_obj_set_style_bg_color(top_bar_, lv_color_black(), 0);
+    }
+    if (bottom_bar_ != nullptr) {
+        lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_30, 0);
+        lv_obj_set_style_bg_color(bottom_bar_, lv_color_black(), 0);
+    }
+    if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
+    if (mute_label_ != nullptr) lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
+    if (battery_label_ != nullptr) lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
+    if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
+    if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
+    if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
+    if (state == kDeviceStateIdle) {
+        wifi_connected_ = true;
+        if (!has_custom_sd_wallpaper_ && wallpaper_image_ != nullptr) {
+            const lv_image_dsc_t* standby_dsc = (width_ > height_) ? &wallpaper_landscape_dsc : &wallpaper_portrait_dsc;
+            lv_image_set_src(wallpaper_image_, standby_dsc);
         }
-        if (top_bar_ != nullptr) {
-            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
+        if (calendar_label_ != nullptr) {
+            lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
+            lv_obj_remove_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
         }
-        if (bottom_bar_ != nullptr) {
-            lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
+        if (idle_clock_label_ != nullptr) {
+            lv_obj_set_style_text_color(idle_clock_label_, lv_color_white(), 0);
+            lv_obj_remove_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
         }
-        if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
-        if (mute_label_ != nullptr) lv_obj_set_style_text_color(mute_label_, lv_color_white(), 0);
-        if (battery_label_ != nullptr) lv_obj_set_style_text_color(battery_label_, lv_color_white(), 0);
-        if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lv_color_white(), 0);
-        if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lv_color_white(), 0);
-        if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
+        if (status_label_ != nullptr) {
+            lv_label_set_text(status_label_, "");
+            lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+            if (weather_box_ != nullptr && weather_ready_) {
+                lv_obj_remove_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (screen_mode_ == kScreenMenu && menu_box_ != nullptr) {
+                lv_obj_remove_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+            } else if (screen_mode_ == kScreenCalendar && calendar_box_ != nullptr) {
+                lv_obj_remove_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+            } else if (screen_mode_ == kScreenWeatherDetail && weather_detail_box_ != nullptr) {
+                lv_obj_remove_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                if (standby_box_ != nullptr) {
+                    lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+                }
+            }
+    } else if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
+        wifi_connected_ = false;
+        if (!has_custom_sd_wallpaper_ && wallpaper_image_ != nullptr) {
+            const lv_image_dsc_t* boot_dsc = (width_ > height_) ? &boot_landscape_dsc : &boot_portrait_dsc;
+            lv_image_set_src(wallpaper_image_, boot_dsc);
+        }
+        if (calendar_label_ != nullptr) {
+            lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (idle_clock_label_ != nullptr) {
+            lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (status_label_ != nullptr) {
+            lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+            if (weather_box_ != nullptr) {
+                lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (standby_box_ != nullptr) {
+                lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+            }
     } else {
-        lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-        if (container_ != nullptr) {
-            lv_obj_set_style_bg_color(container_, lvgl_theme->background_color(), 0);
+        if (calendar_label_ != nullptr) {
+            lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
         }
-        if (top_bar_ != nullptr) {
-            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_50, 0);
-            lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
+        if (idle_clock_label_ != nullptr) {
+            lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
         }
-        if (bottom_bar_ != nullptr) {
-            lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
-            lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
+        if (status_label_ != nullptr) {
+            lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
         }
-        if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
-        if (mute_label_ != nullptr) lv_obj_set_style_text_color(mute_label_, lvgl_theme->text_color(), 0);
-        if (battery_label_ != nullptr) lv_obj_set_style_text_color(battery_label_, lvgl_theme->text_color(), 0);
-        if (status_label_ != nullptr) lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
-        if (notification_label_ != nullptr) lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
-        if (chat_message_label_ != nullptr) lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
+            if (weather_box_ != nullptr) {
+                lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (standby_box_ != nullptr) {
+                lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+            if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+            if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -1655,10 +2100,12 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
 
     if (wallpaper_image_ != nullptr) {
         lv_obj_set_size(wallpaper_image_, width_, height_);
-        if (width_ > height_) {
-            lv_image_set_src(wallpaper_image_, &wallpaper_landscape_dsc);
-        } else {
-            lv_image_set_src(wallpaper_image_, &wallpaper_portrait_dsc);
+        if (!has_custom_sd_wallpaper_) {
+            if (wifi_connected_) {
+                lv_image_set_src(wallpaper_image_, (width_ > height_) ? &wallpaper_landscape_dsc : &wallpaper_portrait_dsc);
+            } else {
+                lv_image_set_src(wallpaper_image_, (width_ > height_) ? &boot_landscape_dsc : &boot_portrait_dsc);
+            }
         }
         lv_obj_align(wallpaper_image_, LV_ALIGN_CENTER, 0, 0);
     }
@@ -1703,6 +2150,17 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
         lv_obj_align(emoji_box_, LV_ALIGN_CENTER, 0, 0);
     }
 
+    if (idle_clock_label_ != nullptr) {
+        lv_obj_align(idle_clock_label_, LV_ALIGN_CENTER, 0, 10);
+    }
+    if (weather_box_ != nullptr) {
+        lv_obj_align(weather_box_, LV_ALIGN_CENTER, 0, (height_ > width_) ? 70 : 58);
+    }
+    LayoutStandbyWidgets(is_portrait);
+    LayoutMenuWidgets(is_portrait);
+    LayoutCalendarWidgets(is_portrait);
+    LayoutWeatherDetailWidgets(is_portrait);
+
     if (preview_image_ != nullptr) {
         lv_obj_set_size(preview_image_, width_ / 2, height_ / 2);
         lv_obj_align(preview_image_, LV_ALIGN_CENTER, 0, 0);
@@ -1718,3 +2176,1143 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
         lv_obj_invalidate(screen);
     }
 }
+
+void LcdDisplay::UpdateStatusBar(bool update_all) {
+    LvglDisplay::UpdateStatusBar(update_all);
+
+    auto& app = Application::GetInstance();
+    DisplayLockGuard lock(this);
+
+    if (app.GetDeviceState() == kDeviceStateIdle) {
+        time_t now = time(NULL);
+        struct tm* tm_now = localtime(&now);
+        if (tm_now->tm_year >= 2025 - 1900) {
+            // Keep status_label_ clear in idle mode so only the large clock shows
+            if (status_label_ != nullptr) {
+                lv_label_set_text(status_label_, "");
+                lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+            }
+
+            // Update large center clock every second (HH:MM:SS)
+            if (idle_clock_label_ != nullptr) {
+                int cur_sec = tm_now->tm_hour * 3600 + tm_now->tm_min * 60 + tm_now->tm_sec;
+                if (update_all || cur_sec != last_displayed_clock_sec_) {
+                    last_displayed_clock_sec_ = cur_sec;
+                    char time_str[16];
+                    strftime(time_str, sizeof(time_str), "%H:%M:%S", tm_now);
+                    lv_label_set_text(idle_clock_label_, time_str);
+                    if (standby_clock_ != nullptr) {
+                        char hm[8];
+                        strftime(hm, sizeof(hm), "%H:%M", tm_now);
+                        lv_label_set_text(standby_clock_, hm);
+                    }
+                    if (standby_sec_ != nullptr) {
+                        char sec[8];
+                        strftime(sec, sizeof(sec), ":%S", tm_now);
+                        lv_label_set_text(standby_sec_, sec);
+                        bool is_p = (height_ > width_);
+                        if (!is_p) {
+                            lv_obj_update_layout(standby_clock_);
+                            int cw = lv_obj_get_width(standby_clock_);
+                            if (cw > 0) {
+                                int clk_x = lv_obj_get_x(standby_clock_);
+                                int clk_y = lv_obj_get_y(standby_clock_);
+                                lv_obj_set_pos(standby_sec_, clk_x + cw + 3, clk_y + 14);
+                            }
+                        } else {
+                            if (standby_clock_ != nullptr) {
+                                lv_obj_update_layout(standby_clock_);
+                                lv_obj_update_layout(standby_sec_);
+                                int cw = lv_obj_get_width(standby_clock_);
+                                int sw = lv_obj_get_width(standby_sec_);
+                                int clk_x = lv_obj_get_x(standby_clock_);
+                                int clk_y = lv_obj_get_y(standby_clock_);
+                                int sec_x = (cw > 0 && sw > 0) ? (clk_x + cw - sw) : (clk_x + 72);
+                                lv_obj_set_pos(standby_sec_, sec_x, clk_y + 42);
+                            }
+                        }
+                    }
+                }
+                lv_obj_remove_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+            }
+
+            // Update top-left calendar daily
+            if (calendar_label_ != nullptr) {
+                int cur_day = tm_now->tm_year * 1000 + tm_now->tm_yday;
+                if (update_all || cur_day != last_displayed_calendar_day_) {
+                    last_displayed_calendar_day_ = cur_day;
+                    int dd = tm_now->tm_mday;
+                    int mm = tm_now->tm_mon + 1;
+                    int yy = tm_now->tm_year + 1900;
+                    LunarDate lunar = VietnameseLunarCalendar::SolarToLunar(dd, mm, yy, 7.0);
+
+                    char buf[64];
+                    if (lunar.is_leap) {
+                        snprintf(buf, sizeof(buf), "%02d/%02d/%04d\nÂm lịch: %02d/%02d (N)", dd, mm, yy, lunar.day, lunar.month);
+                    } else {
+                        snprintf(buf, sizeof(buf), "%02d/%02d/%04d\nÂm lịch: %02d/%02d", dd, mm, yy, lunar.day, lunar.month);
+                    }
+                    lv_label_set_text(calendar_label_, buf);
+                    if (standby_weekday_ != nullptr) {
+                        const char* full_wdays[] = {"Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
+                        lv_label_set_text(standby_weekday_, full_wdays[tm_now->tm_wday]);
+                    }
+                    if (standby_date_ != nullptr) {
+                        char dbuf[64];
+                        snprintf(dbuf, sizeof(dbuf), "%02d/%02d/%04d", dd, mm, yy);
+                        lv_label_set_text(standby_date_, dbuf);
+                    }
+                    if (standby_lunar_ != nullptr) {
+                        char lbuf[64];
+                        if (lunar.day <= 10) {
+                            snprintf(lbuf, sizeof(lbuf), "Âm lịch: Mùng %d / %d", lunar.day, lunar.month);
+                        } else {
+                            snprintf(lbuf, sizeof(lbuf), "Âm lịch: %d / %d", lunar.day, lunar.month);
+                        }
+                        lv_label_set_text(standby_lunar_, lbuf);
+                    }
+                    if (standby_year_ != nullptr) {
+                        lv_obj_add_flag(standby_year_, LV_OBJ_FLAG_HIDDEN);
+                    }
+                }
+                lv_obj_remove_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+            }
+        } else {
+            if (calendar_label_ != nullptr) lv_label_set_text(calendar_label_, "");
+            if (idle_clock_label_ != nullptr) lv_label_set_text(idle_clock_label_, "");
+        }
+    } else {
+        last_displayed_clock_sec_ = -1;
+    }
+}
+
+void LcdDisplay::UpdateWeather(float temp, int humidity, const char* condition, int icon_type) {
+    DisplayLockGuard lock(this);
+    if (weather_label_ == nullptr || weather_icon_ == nullptr) {
+        return;
+    }
+    const lv_image_dsc_t* dsc = &weather_icon_cloud_dsc;
+    switch (icon_type) {
+        case 0: dsc = &weather_icon_sun_dsc; break;
+        case 1: dsc = &weather_icon_sun_cloud_dsc; break;
+        case 2: dsc = &weather_icon_cloud_dsc; break;
+        case 3: dsc = &weather_icon_rain_dsc; break;
+        case 4: dsc = &weather_icon_thunder_dsc; break;
+        default: dsc = &weather_icon_cloud_dsc; break;
+    }
+    lv_image_set_src(weather_icon_, dsc);
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%.0f°C · %s · Độ ẩm: %d%%", temp, condition, humidity);
+    lv_label_set_text(weather_label_, buf);
+    weather_ready_ = true;
+
+    if (wifi_connected_ && weather_box_ != nullptr) {
+        lv_obj_remove_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void LcdDisplay::LayoutStandbyWidgets(bool is_portrait) {
+    if (standby_box_ == nullptr) return;
+
+    int w = is_portrait ? 240 : 320;
+    int h = is_portrait ? 320 : 240;
+    lv_obj_set_size(standby_box_, w, h);
+    lv_obj_align(standby_box_, LV_ALIGN_TOP_LEFT, 0, 0);
+
+    if (!is_portrait) {
+        // Landscape (320x240) - UNCHANGED as user requested
+        if (standby_clock_) lv_obj_set_pos(standby_clock_, 12, 8);
+        if (standby_sec_) lv_obj_set_pos(standby_sec_, 128, 22);
+        if (standby_weekday_) lv_obj_set_pos(standby_weekday_, 12, 52);
+        if (standby_date_) lv_obj_set_pos(standby_date_, 12, 74);
+        if (standby_lunar_) lv_obj_set_pos(standby_lunar_, 12, 96);
+        if (standby_year_) lv_obj_add_flag(standby_year_, LV_OBJ_FLAG_HIDDEN);
+
+        // Top-Right: Weather
+        if (standby_weather_icon_) lv_obj_set_pos(standby_weather_icon_, 184, 8);
+        if (standby_temp_) {
+            lv_obj_set_size(standby_temp_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_align(standby_temp_, LV_TEXT_ALIGN_LEFT, 0);
+            lv_obj_set_pos(standby_temp_, 236, 14);
+        }
+
+        if (standby_city_) lv_obj_set_pos(standby_city_, 184, 56);
+        if (standby_condition_) lv_obj_set_pos(standby_condition_, 184, 76);
+        if (standby_humidity_) lv_obj_set_pos(standby_humidity_, 184, 96);
+        if (standby_wind_) lv_obj_set_pos(standby_wind_, 184, 116);
+
+        // Bottom: 4 Forecast Cards
+        int card_w = 68;
+        int card_h = 86;
+        int gap = 8;
+        int start_x = 12;
+        int start_y = 144;
+
+        for (int i = 0; i < 4; ++i) {
+            if (forecast_cards_[i].card) {
+                lv_obj_set_pos(forecast_cards_[i].card, start_x + i * (card_w + gap), start_y);
+                lv_obj_set_size(forecast_cards_[i].card, card_w, card_h);
+                if (forecast_cards_[i].day) lv_obj_align(forecast_cards_[i].day, LV_ALIGN_TOP_MID, 0, 4);
+                if (forecast_cards_[i].icon) lv_obj_align(forecast_cards_[i].icon, LV_ALIGN_CENTER, 0, -2);
+                if (forecast_cards_[i].temp) lv_obj_align(forecast_cards_[i].temp, LV_ALIGN_BOTTOM_MID, 0, -4);
+            }
+        }
+    } else {
+        // Portrait (240x320)
+        // Top-Left: Thứ & Ngày tháng xích lên và rải đều
+        if (standby_weekday_) lv_obj_set_pos(standby_weekday_, 12, 16);
+        if (standby_date_) lv_obj_set_pos(standby_date_, 12, 46);
+        if (standby_lunar_) lv_obj_set_pos(standby_lunar_, 12, 76);
+        if (standby_year_) lv_obj_add_flag(standby_year_, LV_OBJ_FLAG_HIDDEN);
+
+        // Top-Right: Giờ bên phải, số giây đếm nằm dưới phút (căn phải thẳng hàng với phút)
+        if (standby_clock_) lv_obj_set_pos(standby_clock_, 126, 20);
+        if (standby_sec_) lv_obj_set_pos(standby_sec_, 198, 62); // Directly under minutes (aligned right)
+
+        // Mid-Left: Nhiệt độ xuống DƯỚI đám mây và căn giữa lại
+        if (standby_weather_icon_) lv_obj_set_pos(standby_weather_icon_, 36, 126);
+        if (standby_temp_) {
+            lv_obj_set_size(standby_temp_, 116, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_align(standby_temp_, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_pos(standby_temp_, 0, 174);
+        }
+
+        // Mid-Right: Nâng các thông tin chi tiết lên và rải đều
+        if (standby_city_) lv_obj_set_pos(standby_city_, 120, 126);
+        if (standby_condition_) lv_obj_set_pos(standby_condition_, 120, 150);
+        if (standby_humidity_) lv_obj_set_pos(standby_humidity_, 120, 174);
+        if (standby_wind_) lv_obj_set_pos(standby_wind_, 120, 198);
+
+        // Bottom: 4 Forecast Cards
+        int card_w = 50;
+        int card_h = 78;
+        int gap = 8;
+        int start_x = 8;
+        int start_y = 236;
+
+        for (int i = 0; i < 4; ++i) {
+            if (forecast_cards_[i].card) {
+                lv_obj_set_pos(forecast_cards_[i].card, start_x + i * (card_w + gap), start_y);
+                lv_obj_set_size(forecast_cards_[i].card, card_w, card_h);
+                if (forecast_cards_[i].day) lv_obj_align(forecast_cards_[i].day, LV_ALIGN_TOP_MID, 0, 4);
+                if (forecast_cards_[i].icon) lv_obj_align(forecast_cards_[i].icon, LV_ALIGN_CENTER, 0, -2);
+                if (forecast_cards_[i].temp) lv_obj_align(forecast_cards_[i].temp, LV_ALIGN_BOTTOM_MID, 0, -4);
+            }
+        }
+    }
+}
+
+void LcdDisplay::UpdateWeatherFull(const WeatherInfo& info) {
+    DisplayLockGuard lock(this);
+    if (standby_box_ == nullptr) return;
+
+    char temp_str[16];
+    snprintf(temp_str, sizeof(temp_str), "%.0f°C", info.temp);
+    if (standby_temp_ != nullptr) lv_label_set_text(standby_temp_, temp_str);
+
+    char hum_str[32];
+    snprintf(hum_str, sizeof(hum_str), "Độ ẩm: %d%%", info.humidity);
+    if (standby_humidity_ != nullptr) lv_label_set_text(standby_humidity_, hum_str);
+
+    char wind_str[32];
+    snprintf(wind_str, sizeof(wind_str), "Gió: %.0f km/h", info.wind_speed);
+    if (standby_wind_ != nullptr) lv_label_set_text(standby_wind_, wind_str);
+
+    if (standby_city_ != nullptr) lv_label_set_text(standby_city_, info.city.c_str());
+    if (standby_condition_ != nullptr) lv_label_set_text(standby_condition_, info.condition.c_str());
+
+    if (standby_weather_icon_ != nullptr) {
+        const lv_image_dsc_t* dsc48 = &weather_icon_sun_cloud_48_dsc;
+        switch (info.icon_type) {
+            case 0: dsc48 = &weather_icon_sun_48_dsc; break;
+            case 1: dsc48 = &weather_icon_sun_cloud_48_dsc; break;
+            case 2: dsc48 = &weather_icon_cloud_48_dsc; break;
+            case 3: dsc48 = &weather_icon_rain_48_dsc; break;
+            case 4: dsc48 = &weather_icon_thunder_48_dsc; break;
+            case 5: dsc48 = &weather_icon_moon_48_dsc; break;
+            case 6: dsc48 = &weather_icon_moon_cloud_48_dsc; break;
+        }
+        lv_image_set_src(standby_weather_icon_, dsc48);
+    }
+
+    for (size_t i = 0; i < 4 && i < info.daily.size(); ++i) {
+        if (forecast_cards_[i].day != nullptr) {
+            lv_label_set_text(forecast_cards_[i].day, info.daily[i].day_str.c_str());
+        }
+        if (forecast_cards_[i].icon != nullptr) {
+            const lv_image_dsc_t* dsc24 = &weather_icon_cloud_24_dsc;
+            switch (info.daily[i].icon_type) {
+                case 0: dsc24 = &weather_icon_sun_24_dsc; break;
+                case 1: dsc24 = &weather_icon_sun_cloud_24_dsc; break;
+                case 2: dsc24 = &weather_icon_cloud_24_dsc; break;
+                case 3: dsc24 = &weather_icon_rain_24_dsc; break;
+                case 4: dsc24 = &weather_icon_thunder_24_dsc; break;
+                case 5: dsc24 = &weather_icon_moon_24_dsc; break;
+                case 6: dsc24 = &weather_icon_moon_cloud_24_dsc; break;
+            }
+            lv_image_set_src(forecast_cards_[i].icon, dsc24);
+        }
+        if (forecast_cards_[i].temp != nullptr) {
+            char tbuf[16];
+            snprintf(tbuf, sizeof(tbuf), "%.0f°C", info.daily[i].temp_max);
+            lv_label_set_text(forecast_cards_[i].temp, tbuf);
+        }
+    }
+
+    weather_ready_ = true;
+    if (wifi_connected_ && standby_box_ != nullptr) {
+        if (screen_mode_ == kScreenStandby) {
+            lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+    if (screen_mode_ == kScreenWeatherDetail) {
+        UpdateWeatherDetailUI();
+    }
+}
+
+
+void LcdDisplay::OnSwipeLeft() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    if (screen_mode_ == kScreenStandby) {
+        ShowMenu();
+    }
+}
+
+void LcdDisplay::OnSwipeRight() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    if (screen_mode_ == kScreenMenu) {
+        ShowStandby();
+    } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail) {
+        ShowMenu();
+    }
+}
+
+void LcdDisplay::OnSwipeUp() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    if (screen_mode_ == kScreenStandby) {
+        ShowMenu();
+    } else if (screen_mode_ == kScreenMenu) {
+        ShowStandby();
+    } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail) {
+        ShowMenu();
+    }
+}
+
+void LcdDisplay::OnSwipeDown() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    if (screen_mode_ == kScreenMenu) {
+        ShowStandby();
+    } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail) {
+        ShowMenu();
+    }
+}
+
+void LcdDisplay::ShowStandby() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    screen_mode_ = kScreenStandby;
+    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+
+    auto& app = Application::GetInstance();
+    if (app.GetDeviceState() == kDeviceStateIdle) {
+        if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        if (content_ != nullptr) lv_obj_remove_flag(content_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void LcdDisplay::ShowMenu() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    screen_mode_ = kScreenMenu;
+    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+
+    if (menu_box_ != nullptr) {
+        lv_obj_remove_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void LcdDisplay::ShowCalendar() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    screen_mode_ = kScreenCalendar;
+    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+
+    time_t now = time(nullptr);
+    struct tm* tm_info = localtime(&now);
+    if (tm_info != nullptr && tm_info->tm_year > 100) {
+        curr_cal_year_ = tm_info->tm_year + 1900;
+        curr_cal_month_ = tm_info->tm_mon + 1;
+    }
+    UpdateCalendarUI();
+
+    if (calendar_box_ != nullptr) {
+        lv_obj_remove_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void LcdDisplay::ShowWeatherDetail() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+    screen_mode_ = kScreenWeatherDetail;
+    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+
+    UpdateWeatherDetailUI();
+
+    if (weather_detail_box_ != nullptr) {
+        lv_obj_remove_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void LcdDisplay::CreateMenuUI() {
+    auto screen = lv_screen_active();
+    menu_box_ = lv_obj_create(screen);
+    lv_obj_set_size(menu_box_, width_, height_);
+    lv_obj_set_style_bg_color(menu_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(menu_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(menu_box_, 0, 0);
+    lv_obj_set_style_border_width(menu_box_, 0, 0);
+    lv_obj_set_style_pad_all(menu_box_, 0, 0);
+    lv_obj_clear_flag(menu_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+
+    menu_title_ = lv_label_create(menu_box_);
+    lv_label_set_text(menu_title_, "TRANG CHÍNH 2");
+    lv_obj_set_style_text_font(menu_title_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(menu_title_, lv_color_white(), 0);
+
+    const char* titles[9] = {
+        "Lịch", "Đồng hồ", "Thời tiết",
+        "Tỷ giá", "Chat bot", "Cài đặt",
+        "Âm nhạc", "Hình nền", "Thư viện"
+    };
+
+    // Current date for iOS Calendar icon
+    time_t now_cal = time(nullptr);
+    struct tm* tm_now = localtime(&now_cal);
+    int cur_day = (tm_now != nullptr && tm_now->tm_mday >= 1) ? tm_now->tm_mday : 6;
+    int cur_wday = (tm_now != nullptr) ? tm_now->tm_wday : 5;
+    const char* wday_names[7] = {"CN", "T.HAI", "T.BA", "T.TƯ", "T.NĂM", "T.SÁU", "T.BẢY"};
+
+    for (int i = 0; i < 9; ++i) {
+        lv_obj_t* btn = lv_obj_create(menu_box_);
+        menu_items_[i] = btn;
+        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(btn, 0, 0);
+        lv_obj_set_style_pad_all(btn, 0, 0);
+        lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+
+        // iOS Squircle Icon Tile (52x52, radius 13)
+        lv_obj_t* tile = lv_obj_create(btn);
+        lv_obj_set_size(tile, 52, 52);
+        lv_obj_align(tile, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_radius(tile, 13, 0);
+        lv_obj_set_style_border_width(tile, 0, 0);
+        lv_obj_set_style_pad_all(tile, 0, 0);
+        lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(tile, LV_OBJ_FLAG_CLICKABLE);
+
+        if (i == 0) {
+            // 0. Lịch: Authentic iOS Calendar Icon (White tile, red top bar with day of week, black day number)
+            lv_obj_set_style_bg_color(tile, lv_color_white(), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* red_bar = lv_obj_create(tile);
+            lv_obj_set_size(red_bar, 52, 16);
+            lv_obj_align(red_bar, LV_ALIGN_TOP_MID, 0, 0);
+            lv_obj_set_style_bg_color(red_bar, lv_color_hex(0xFF3B30), 0);
+            lv_obj_set_style_bg_opa(red_bar, LV_OPA_COVER, 0);
+            lv_obj_set_style_radius(red_bar, 0, 0);
+            lv_obj_set_style_border_width(red_bar, 0, 0);
+            lv_obj_set_style_pad_all(red_bar, 0, 0);
+            lv_obj_clear_flag(red_bar, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_clear_flag(red_bar, LV_OBJ_FLAG_CLICKABLE);
+
+            lv_obj_t* wday_lbl = lv_label_create(red_bar);
+            lv_label_set_text(wday_lbl, wday_names[cur_wday]);
+            lv_obj_set_style_text_font(wday_lbl, &font_noto_sans_basic_14_1, 0);
+            lv_obj_set_style_text_color(wday_lbl, lv_color_white(), 0);
+            lv_obj_align(wday_lbl, LV_ALIGN_CENTER, 0, -1);
+            lv_obj_clear_flag(wday_lbl, LV_OBJ_FLAG_CLICKABLE);
+
+            char day_str[16];
+            snprintf(day_str, sizeof(day_str), "%d", cur_day);
+            lv_obj_t* day_lbl = lv_label_create(tile);
+            lv_label_set_text(day_lbl, day_str);
+            lv_obj_set_style_text_font(day_lbl, &font_noto_sans_basic_20_4, 0);
+            lv_obj_set_style_text_color(day_lbl, lv_color_hex(0x1C1C1E), 0);
+            lv_obj_align(day_lbl, LV_ALIGN_CENTER, 0, 7);
+            lv_obj_clear_flag(day_lbl, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 1) {
+            // 1. Đồng hồ: iOS Clock Icon (Dark tile with clock dial)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x1C1C1E), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_SCHEDULE);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 2) {
+            // 2. Thời tiết: iOS Weather Icon (Sky blue tile with sun & cloud)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x29B6F6), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_image_create(tile);
+            lv_image_set_src(icon, &weather_icon_sun_cloud_24_dsc);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 3) {
+            // 3. Tỷ giá: iOS Stocks / Currency (Dark tile with green currency)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x1C1C1E), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, "$ / ₫");
+            lv_obj_set_style_text_font(icon, &font_noto_sans_basic_16_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_hex(0x30D158), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 4) {
+            // 4. Chat bot: iOS Messages / Siri (Green tile with chat bubble)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x34C759), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_CHAT_BUBBLE);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 5) {
+            // 5. Cài đặt: iOS Settings (Silver/Slate tile with gear)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x8E8E93), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_SETTINGS);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 6) {
+            // 6. Âm nhạc: Apple Music (Red/Pink tile with white music note)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0xFA2D48), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_MUSIC_NOTE);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 7) {
+            // 7. Hình nền: iOS Photos / Wallpaper (Deep Purple tile with image)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x5856D6), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_IMAGE);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+
+        } else if (i == 8) {
+            // 8. Thư viện: iOS App Library / Camera (Dark Slate tile with photo camera)
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x3A3A3C), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_PHOTO_CAMERA);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
+        }
+
+        // Title label below tile
+        lv_obj_t* lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, titles[i]);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_clear_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
+
+        lv_obj_set_user_data(btn, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(btn, [](lv_event_t* e) {
+            auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+            auto* current_btn = lv_event_get_current_target_obj(e);
+            int index = (int)(intptr_t)lv_obj_get_user_data(current_btn);
+            if (index == 0) {
+                self->ShowCalendar();
+            } else if (index == 2) {
+                self->ShowWeatherDetail();
+            } else if (index == 4) {
+                Application::GetInstance().ToggleChatState();
+            } else if (index == 7) {
+                Board::GetInstance().NextWallpaper();
+            } else {
+                self->ShowNotification("Tính năng đang phát triển", 1500);
+            }
+        }, LV_EVENT_CLICKED, this);
+    }
+
+    LayoutMenuWidgets(height_ > width_);
+}
+
+void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
+    if (menu_box_ == nullptr) return;
+    lv_obj_set_size(menu_box_, width_, height_);
+
+    if (menu_title_ != nullptr) {
+        lv_obj_align(menu_title_, LV_ALIGN_TOP_MID, 0, is_portrait ? 12 : 5);
+    }
+
+    if (is_portrait) {
+        // 240 x 320: 3 columns x 3 rows
+        int col_x[3] = {12, 88, 164};
+        int row_y[3] = {45, 130, 215};
+        for (int i = 0; i < 9; ++i) {
+            if (menu_items_[i] == nullptr) continue;
+            int r = i / 3;
+            int c = i % 3;
+            lv_obj_set_size(menu_items_[i], 64, 75);
+            lv_obj_set_pos(menu_items_[i], col_x[c], row_y[r]);
+        }
+    } else {
+        // 320 x 240: 3 columns x 3 rows
+        int col_x[3] = {38, 128, 218};
+        int row_y[3] = {30, 96, 162};
+        for (int i = 0; i < 9; ++i) {
+            if (menu_items_[i] == nullptr) continue;
+            int r = i / 3;
+            int c = i % 3;
+            lv_obj_set_size(menu_items_[i], 64, 62);
+            lv_obj_set_pos(menu_items_[i], col_x[c], row_y[r]);
+        }
+    }
+}
+
+void LcdDisplay::CreateCalendarUI() {
+    auto screen = lv_screen_active();
+    calendar_box_ = lv_obj_create(screen);
+    lv_obj_set_size(calendar_box_, width_, height_);
+    lv_obj_set_style_bg_color(calendar_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(calendar_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(calendar_box_, 0, 0);
+    lv_obj_set_style_border_width(calendar_box_, 0, 0);
+    lv_obj_set_style_pad_all(calendar_box_, 0, 0);
+    lv_obj_clear_flag(calendar_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Back button
+    calendar_back_btn_ = lv_button_create(calendar_box_);
+    lv_obj_set_size(calendar_back_btn_, 32, 28);
+    lv_obj_set_style_bg_opa(calendar_back_btn_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(calendar_back_btn_, 0, 0);
+    lv_obj_set_style_pad_all(calendar_back_btn_, 0, 0);
+    lv_obj_t* back_lbl = lv_label_create(calendar_back_btn_);
+    lv_label_set_text(back_lbl, MATERIAL_SYMBOLS_ARROW_BACK);
+    lv_obj_set_style_text_font(back_lbl, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(back_lbl, lv_color_white(), 0);
+    lv_obj_align(back_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(calendar_back_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->ShowMenu();
+    }, LV_EVENT_CLICKED, this);
+
+    // Prev month button
+    calendar_prev_btn_ = lv_button_create(calendar_box_);
+    lv_obj_set_size(calendar_prev_btn_, 28, 28);
+    lv_obj_set_style_bg_color(calendar_prev_btn_, lv_color_hex(0x223344), 0);
+    lv_obj_set_style_bg_opa(calendar_prev_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(calendar_prev_btn_, 6, 0);
+    lv_obj_set_style_border_width(calendar_prev_btn_, 0, 0);
+    lv_obj_set_style_pad_all(calendar_prev_btn_, 0, 0);
+    lv_obj_t* prev_lbl = lv_label_create(calendar_prev_btn_);
+    lv_label_set_text(prev_lbl, "<");
+    lv_obj_set_style_text_font(prev_lbl, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(prev_lbl, lv_color_white(), 0);
+    lv_obj_align(prev_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(calendar_prev_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self->curr_cal_month_ == 1) {
+            self->curr_cal_month_ = 12;
+            self->curr_cal_year_--;
+        } else {
+            self->curr_cal_month_--;
+        }
+        self->UpdateCalendarUI();
+    }, LV_EVENT_CLICKED, this);
+
+    // Next month button
+    calendar_next_btn_ = lv_button_create(calendar_box_);
+    lv_obj_set_size(calendar_next_btn_, 28, 28);
+    lv_obj_set_style_bg_color(calendar_next_btn_, lv_color_hex(0x223344), 0);
+    lv_obj_set_style_bg_opa(calendar_next_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(calendar_next_btn_, 6, 0);
+    lv_obj_set_style_border_width(calendar_next_btn_, 0, 0);
+    lv_obj_set_style_pad_all(calendar_next_btn_, 0, 0);
+    lv_obj_t* next_lbl = lv_label_create(calendar_next_btn_);
+    lv_label_set_text(next_lbl, ">");
+    lv_obj_set_style_text_font(next_lbl, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(next_lbl, lv_color_white(), 0);
+    lv_obj_align(next_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(calendar_next_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self->curr_cal_month_ == 12) {
+            self->curr_cal_month_ = 1;
+            self->curr_cal_year_++;
+        } else {
+            self->curr_cal_month_++;
+        }
+        self->UpdateCalendarUI();
+    }, LV_EVENT_CLICKED, this);
+
+    // Title label
+    calendar_title_label_ = lv_label_create(calendar_box_);
+    lv_label_set_text(calendar_title_label_, "Tháng 11 / 2026");
+    lv_obj_set_style_text_font(calendar_title_label_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(calendar_title_label_, lv_color_white(), 0);
+
+    // DOW headers (CN, T2..T7)
+    const char* dow_names[7] = {"CN", "T2", "T3", "T4", "T5", "T6", "T7"};
+    for (int col = 0; col < 7; ++col) {
+        lv_obj_t* lbl = lv_label_create(calendar_box_);
+        lv_label_set_text(lbl, dow_names[col]);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_basic_14_1, 0);
+        if (col == 0) {
+            lv_obj_set_style_text_color(lbl, lv_color_hex(0xFF5252), 0);
+        } else {
+            lv_obj_set_style_text_color(lbl, lv_color_hex(0xB0BEC5), 0);
+        }
+        lv_obj_set_user_data(lbl, (void*)(intptr_t)(100 + col));
+    }
+
+    // 42 cells (6 rows x 7 cols)
+    for (int i = 0; i < 42; ++i) {
+        lv_obj_t* cell = lv_obj_create(calendar_box_);
+        calendar_cells_[i].container = cell;
+        lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(cell, 0, 0);
+        lv_obj_set_style_radius(cell, 6, 0);
+        lv_obj_set_style_pad_all(cell, 0, 0);
+        lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* solar = lv_label_create(cell);
+        calendar_cells_[i].solar_label = solar;
+        lv_obj_set_style_text_font(solar, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_color(solar, lv_color_white(), 0);
+        lv_obj_align(solar, LV_ALIGN_TOP_MID, 0, 1);
+
+        lv_obj_t* lunar = lv_label_create(cell);
+        calendar_cells_[i].lunar_label = lunar;
+        lv_obj_set_style_text_font(lunar, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_color(lunar, lv_color_hex(0x90A4AE), 0);
+        lv_obj_align(lunar, LV_ALIGN_BOTTOM_MID, 0, -1);
+    }
+
+    LayoutCalendarWidgets(height_ > width_);
+}
+
+void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
+    if (calendar_box_ == nullptr) return;
+    lv_obj_set_size(calendar_box_, width_, height_);
+
+    if (is_portrait) {
+        // 240 x 320
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 4, 6);
+        if (calendar_prev_btn_) lv_obj_set_pos(calendar_prev_btn_, 40, 6);
+        if (calendar_next_btn_) lv_obj_set_pos(calendar_next_btn_, 208, 6);
+        if (calendar_title_label_) lv_obj_align(calendar_title_label_, LV_ALIGN_TOP_MID, 0, 10);
+
+        uint32_t cnt = lv_obj_get_child_count(calendar_box_);
+        for (uint32_t i = 0; i < cnt; ++i) {
+            lv_obj_t* child = lv_obj_get_child(calendar_box_, i);
+            int id = (int)(intptr_t)lv_obj_get_user_data(child);
+            if (id >= 100 && id < 107) {
+                int col = id - 100;
+                lv_obj_set_size(child, 34, 20);
+                lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(child, 1 + col * 34, 38);
+            }
+        }
+
+        for (int i = 0; i < 42; ++i) {
+            if (calendar_cells_[i].container == nullptr) continue;
+            int r = i / 7;
+            int c = i % 7;
+            lv_obj_set_size(calendar_cells_[i].container, 32, 38);
+            lv_obj_set_pos(calendar_cells_[i].container, 2 + c * 34, 60 + r * 41);
+        }
+    } else {
+        // 320 x 240
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 4, 4);
+        if (calendar_prev_btn_) lv_obj_set_pos(calendar_prev_btn_, 70, 4);
+        if (calendar_next_btn_) lv_obj_set_pos(calendar_next_btn_, 245, 4);
+        if (calendar_title_label_) lv_obj_align(calendar_title_label_, LV_ALIGN_TOP_MID, 0, 6);
+
+        uint32_t cnt = lv_obj_get_child_count(calendar_box_);
+        for (uint32_t i = 0; i < cnt; ++i) {
+            lv_obj_t* child = lv_obj_get_child(calendar_box_, i);
+            int id = (int)(intptr_t)lv_obj_get_user_data(child);
+            if (id >= 100 && id < 107) {
+                int col = id - 100;
+                lv_obj_set_size(child, 45, 18);
+                lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(child, 2 + col * 45, 26);
+            }
+        }
+
+        for (int i = 0; i < 42; ++i) {
+            if (calendar_cells_[i].container == nullptr) continue;
+            int r = i / 7;
+            int c = i % 7;
+            lv_obj_set_size(calendar_cells_[i].container, 43, 31);
+            lv_obj_set_pos(calendar_cells_[i].container, 3 + c * 45, 46 + r * 32);
+        }
+    }
+}
+
+void LcdDisplay::UpdateCalendarUI() {
+    if (calendar_box_ == nullptr) return;
+
+    char title_buf[32];
+    snprintf(title_buf, sizeof(title_buf), "Tháng %d / %d", curr_cal_month_, curr_cal_year_);
+    if (calendar_title_label_ != nullptr) {
+        lv_label_set_text(calendar_title_label_, title_buf);
+    }
+
+    time_t raw_time = time(nullptr);
+    struct tm* tm_now = localtime(&raw_time);
+    int today_day = (tm_now != nullptr) ? tm_now->tm_mday : -1;
+    int today_month = (tm_now != nullptr) ? (tm_now->tm_mon + 1) : -1;
+    int today_year = (tm_now != nullptr) ? (tm_now->tm_year + 1900) : -1;
+
+    struct tm t = {};
+    t.tm_year = curr_cal_year_ - 1900;
+    t.tm_mon = curr_cal_month_ - 1;
+    t.tm_mday = 1;
+    mktime(&t);
+    int first_wday = t.tm_wday; // 0 = CN, 1 = T2, ..., 6 = T7
+
+    int days_in_month = 31;
+    if (curr_cal_month_ == 4 || curr_cal_month_ == 6 || curr_cal_month_ == 9 || curr_cal_month_ == 11) {
+        days_in_month = 30;
+    } else if (curr_cal_month_ == 2) {
+        bool is_leap = (curr_cal_year_ % 4 == 0 && curr_cal_year_ % 100 != 0) || (curr_cal_year_ % 400 == 0);
+        days_in_month = is_leap ? 29 : 28;
+    }
+
+    for (int cell = 0; cell < 42; ++cell) {
+        auto& c = calendar_cells_[cell];
+        if (c.container == nullptr) continue;
+
+        int day_num = cell - first_wday + 1;
+        if (day_num >= 1 && day_num <= days_in_month) {
+            lv_obj_remove_flag(c.container, LV_OBJ_FLAG_HIDDEN);
+
+            char sbuf[8];
+            snprintf(sbuf, sizeof(sbuf), "%d", day_num);
+            lv_label_set_text(c.solar_label, sbuf);
+
+            LunarDate lunar = VietnameseLunarCalendar::SolarToLunar(day_num, curr_cal_month_, curr_cal_year_);
+            char lbuf[12];
+            if (lunar.day == 1) {
+                snprintf(lbuf, sizeof(lbuf), "1/%d", lunar.month);
+            } else {
+                snprintf(lbuf, sizeof(lbuf), "%d", lunar.day);
+            }
+            lv_label_set_text(c.lunar_label, lbuf);
+
+            bool is_today = (day_num == today_day && curr_cal_month_ == today_month && curr_cal_year_ == today_year);
+            bool is_sunday = ((cell % 7) == 0);
+
+            if (is_today) {
+                lv_obj_set_style_bg_color(c.container, lv_palette_main(LV_PALETTE_BLUE), 0);
+                lv_obj_set_style_bg_opa(c.container, LV_OPA_COVER, 0);
+                lv_obj_set_style_text_color(c.solar_label, lv_color_white(), 0);
+                lv_obj_set_style_text_color(c.lunar_label, lv_color_hex(0xFFE082), 0);
+            } else {
+                lv_obj_set_style_bg_opa(c.container, LV_OPA_TRANSP, 0);
+                if (is_sunday) {
+                    lv_obj_set_style_text_color(c.solar_label, lv_color_hex(0xFF5252), 0);
+                } else {
+                    lv_obj_set_style_text_color(c.solar_label, lv_color_white(), 0);
+                }
+                if (lunar.day == 1) {
+                    lv_obj_set_style_text_color(c.lunar_label, lv_color_hex(0xFFD54F), 0);
+                } else {
+                    lv_obj_set_style_text_color(c.lunar_label, lv_color_hex(0x90A4AE), 0);
+                }
+            }
+        } else {
+            lv_obj_add_flag(c.container, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
+void LcdDisplay::CreateWeatherDetailUI() {
+    auto screen = lv_screen_active();
+    weather_detail_box_ = lv_obj_create(screen);
+    lv_obj_set_size(weather_detail_box_, width_, height_);
+    lv_obj_set_style_bg_color(weather_detail_box_, lv_color_hex(0x0c1017), 0);
+    lv_obj_set_style_bg_opa(weather_detail_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(weather_detail_box_, 0, 0);
+    lv_obj_set_style_border_width(weather_detail_box_, 0, 0);
+    lv_obj_set_style_pad_all(weather_detail_box_, 0, 0);
+    lv_obj_clear_flag(weather_detail_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Back button
+    lv_obj_t* back_btn = lv_button_create(weather_detail_box_);
+    lv_obj_set_size(back_btn, 32, 28);
+    lv_obj_set_style_bg_opa(back_btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(back_btn, 0, 0);
+    lv_obj_set_style_pad_all(back_btn, 0, 0);
+    lv_obj_set_pos(back_btn, 4, 6);
+    lv_obj_t* back_lbl = lv_label_create(back_btn);
+    lv_label_set_text(back_lbl, MATERIAL_SYMBOLS_ARROW_BACK);
+    lv_obj_set_style_text_font(back_lbl, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(back_lbl, lv_color_white(), 0);
+    lv_obj_align(back_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(back_btn, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->ShowMenu();
+    }, LV_EVENT_CLICKED, this);
+
+    // City label
+    weather_detail_city_ = lv_label_create(weather_detail_box_);
+    lv_label_set_text(weather_detail_city_, "Đang tải...");
+    lv_obj_set_style_text_font(weather_detail_city_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(weather_detail_city_, lv_color_white(), 0);
+
+    // Hero card
+    lv_obj_t* hero = lv_obj_create(weather_detail_box_);
+    lv_obj_set_style_bg_color(hero, lv_color_hex(0x151e2e), 0);
+    lv_obj_set_style_bg_opa(hero, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(hero, 10, 0);
+    lv_obj_set_style_border_width(hero, 0, 0);
+    lv_obj_set_style_pad_all(hero, 0, 0);
+    lv_obj_clear_flag(hero, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_user_data(hero, (void*)(intptr_t)200);
+
+    weather_detail_icon_ = lv_image_create(hero);
+    lv_image_set_src(weather_detail_icon_, &weather_icon_sun_cloud_48_dsc);
+
+    weather_detail_temp_ = lv_label_create(hero);
+    lv_label_set_text(weather_detail_temp_, "--°C");
+#if LV_FONT_MONTSERRAT_40
+    lv_obj_set_style_text_font(weather_detail_temp_, &lv_font_montserrat_40, 0);
+#else
+    lv_obj_set_style_text_font(weather_detail_temp_, &font_noto_sans_basic_30_4, 0);
+#endif
+    lv_obj_set_style_text_color(weather_detail_temp_, lv_color_white(), 0);
+
+    weather_detail_condition_ = lv_label_create(hero);
+    lv_label_set_text(weather_detail_condition_, "--");
+    lv_obj_set_style_text_font(weather_detail_condition_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_color(weather_detail_condition_, lv_color_hex(0x64B5F6), 0);
+
+    weather_detail_stats_ = lv_label_create(hero);
+    lv_label_set_text(weather_detail_stats_, "Độ ẩm: --%  |  Gió: -- km/h");
+    lv_obj_set_style_text_font(weather_detail_stats_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_color(weather_detail_stats_, lv_color_hex(0xB0BEC5), 0);
+
+    // Forecast section title
+    lv_obj_t* ftitle = lv_label_create(weather_detail_box_);
+    lv_label_set_text(ftitle, "DỰ BÁO CÁC NGÀY TỚI");
+    lv_obj_set_style_text_font(ftitle, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_color(ftitle, lv_color_hex(0x78909C), 0);
+    lv_obj_set_user_data(ftitle, (void*)(intptr_t)201);
+
+    // 4 daily forecast rows
+    for (int i = 0; i < 4; ++i) {
+        lv_obj_t* row = lv_obj_create(weather_detail_box_);
+        weather_detail_daily_[i].row = row;
+        lv_obj_set_style_bg_color(row, lv_color_hex(0x111823), 0);
+        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(row, 6, 0);
+        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* day = lv_label_create(row);
+        weather_detail_daily_[i].day_label = day;
+        lv_label_set_text(day, "--");
+        lv_obj_set_style_text_font(day, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_color(day, lv_color_white(), 0);
+
+        lv_obj_t* icon = lv_image_create(row);
+        weather_detail_daily_[i].icon = icon;
+        lv_image_set_src(icon, &weather_icon_cloud_24_dsc);
+
+        lv_obj_t* temp = lv_label_create(row);
+        weather_detail_daily_[i].temp_label = temp;
+        lv_label_set_text(temp, "--°C");
+        lv_obj_set_style_text_font(temp, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_color(temp, lv_color_hex(0xFFA726), 0);
+    }
+
+    LayoutWeatherDetailWidgets(height_ > width_);
+}
+
+void LcdDisplay::LayoutWeatherDetailWidgets(bool is_portrait) {
+    if (weather_detail_box_ == nullptr) return;
+    lv_obj_set_size(weather_detail_box_, width_, height_);
+
+    if (weather_detail_city_ != nullptr) {
+        lv_obj_align(weather_detail_city_, LV_ALIGN_TOP_MID, 0, is_portrait ? 10 : 6);
+    }
+
+    lv_obj_t* hero = nullptr;
+    lv_obj_t* ftitle = nullptr;
+    uint32_t cnt = lv_obj_get_child_count(weather_detail_box_);
+    for (uint32_t i = 0; i < cnt; ++i) {
+        lv_obj_t* child = lv_obj_get_child(weather_detail_box_, i);
+        int tag = (int)(intptr_t)lv_obj_get_user_data(child);
+        if (tag == 200) hero = child;
+        else if (tag == 201) ftitle = child;
+    }
+
+    if (is_portrait) {
+        // 240 x 320
+        if (hero != nullptr) {
+            lv_obj_set_size(hero, 220, 110);
+            lv_obj_set_pos(hero, 10, 38);
+        }
+        if (weather_detail_icon_ != nullptr) lv_obj_set_pos(weather_detail_icon_, 12, 12);
+        if (weather_detail_temp_ != nullptr) lv_obj_set_pos(weather_detail_temp_, 75, 8);
+        if (weather_detail_condition_ != nullptr) lv_obj_set_pos(weather_detail_condition_, 75, 52);
+        if (weather_detail_stats_ != nullptr) lv_obj_set_pos(weather_detail_stats_, 12, 84);
+
+        if (ftitle != nullptr) lv_obj_set_pos(ftitle, 14, 154);
+
+        for (int i = 0; i < 4; ++i) {
+            auto& d = weather_detail_daily_[i];
+            if (d.row == nullptr) continue;
+            lv_obj_set_size(d.row, 220, 30);
+            lv_obj_set_pos(d.row, 10, 175 + i * 34);
+            if (d.day_label != nullptr) lv_obj_set_pos(d.day_label, 10, 6);
+            if (d.icon != nullptr) lv_obj_set_pos(d.icon, 105, 3);
+            if (d.temp_label != nullptr) lv_obj_set_pos(d.temp_label, 160, 6);
+        }
+    } else {
+        // 320 x 240
+        if (hero != nullptr) {
+            lv_obj_set_size(hero, 140, 195);
+            lv_obj_set_pos(hero, 10, 32);
+        }
+        if (weather_detail_icon_ != nullptr) lv_obj_align(weather_detail_icon_, LV_ALIGN_TOP_MID, 0, 10);
+        if (weather_detail_temp_ != nullptr) lv_obj_align(weather_detail_temp_, LV_ALIGN_TOP_MID, 0, 65);
+        if (weather_detail_condition_ != nullptr) lv_obj_align(weather_detail_condition_, LV_ALIGN_TOP_MID, 0, 115);
+        if (weather_detail_stats_ != nullptr) lv_obj_align(weather_detail_stats_, LV_ALIGN_TOP_MID, 0, 148);
+
+        if (ftitle != nullptr) lv_obj_set_pos(ftitle, 165, 30);
+
+        for (int i = 0; i < 4; ++i) {
+            auto& d = weather_detail_daily_[i];
+            if (d.row == nullptr) continue;
+            lv_obj_set_size(d.row, 150, 36);
+            lv_obj_set_pos(d.row, 160, 50 + i * 42);
+            if (d.day_label != nullptr) lv_obj_set_pos(d.day_label, 6, 8);
+            if (d.icon != nullptr) lv_obj_set_pos(d.icon, 68, 6);
+            if (d.temp_label != nullptr) lv_obj_set_pos(d.temp_label, 105, 8);
+        }
+    }
+}
+
+void LcdDisplay::UpdateWeatherDetailUI() {
+    if (weather_detail_box_ == nullptr) return;
+    const auto& info = WeatherService::GetInstance().GetWeatherInfo();
+
+    if (weather_detail_city_ != nullptr) {
+        lv_label_set_text(weather_detail_city_, info.city.c_str());
+    }
+    if (weather_detail_temp_ != nullptr) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%.0f°C", info.temp);
+        lv_label_set_text(weather_detail_temp_, tbuf);
+    }
+    if (weather_detail_condition_ != nullptr) {
+        lv_label_set_text(weather_detail_condition_, info.condition.c_str());
+    }
+    if (weather_detail_stats_ != nullptr) {
+        char sbuf[64];
+        snprintf(sbuf, sizeof(sbuf), "Độ ẩm: %d%%  |  Gió: %.0f km/h", info.humidity, info.wind_speed);
+        lv_label_set_text(weather_detail_stats_, sbuf);
+    }
+    if (weather_detail_icon_ != nullptr) {
+        const lv_image_dsc_t* dsc48 = &weather_icon_sun_cloud_48_dsc;
+        switch (info.icon_type) {
+            case 0: dsc48 = &weather_icon_sun_48_dsc; break;
+            case 1: dsc48 = &weather_icon_sun_cloud_48_dsc; break;
+            case 2: dsc48 = &weather_icon_cloud_48_dsc; break;
+            case 3: dsc48 = &weather_icon_rain_48_dsc; break;
+            case 4: dsc48 = &weather_icon_thunder_48_dsc; break;
+            case 5: dsc48 = &weather_icon_moon_48_dsc; break;
+            case 6: dsc48 = &weather_icon_moon_cloud_48_dsc; break;
+        }
+        lv_image_set_src(weather_detail_icon_, dsc48);
+    }
+
+    for (size_t i = 0; i < 4; ++i) {
+        if (i < info.daily.size()) {
+            if (weather_detail_daily_[i].row != nullptr) {
+                lv_obj_remove_flag(weather_detail_daily_[i].row, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (weather_detail_daily_[i].day_label != nullptr) {
+                lv_label_set_text(weather_detail_daily_[i].day_label, info.daily[i].day_str.c_str());
+            }
+            if (weather_detail_daily_[i].icon != nullptr) {
+                const lv_image_dsc_t* dsc24 = &weather_icon_cloud_24_dsc;
+                switch (info.daily[i].icon_type) {
+                    case 0: dsc24 = &weather_icon_sun_24_dsc; break;
+                    case 1: dsc24 = &weather_icon_sun_cloud_24_dsc; break;
+                    case 2: dsc24 = &weather_icon_cloud_24_dsc; break;
+                    case 3: dsc24 = &weather_icon_rain_24_dsc; break;
+                    case 4: dsc24 = &weather_icon_thunder_24_dsc; break;
+                    case 5: dsc24 = &weather_icon_moon_24_dsc; break;
+                    case 6: dsc24 = &weather_icon_moon_cloud_24_dsc; break;
+                }
+                lv_image_set_src(weather_detail_daily_[i].icon, dsc24);
+            }
+            if (weather_detail_daily_[i].temp_label != nullptr) {
+                char tbuf[16];
+                snprintf(tbuf, sizeof(tbuf), "%.0f°C", info.daily[i].temp_max);
+                lv_label_set_text(weather_detail_daily_[i].temp_label, tbuf);
+            }
+        } else {
+            if (weather_detail_daily_[i].row != nullptr) {
+                lv_obj_add_flag(weather_detail_daily_[i].row, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+}
+

@@ -1,3 +1,4 @@
+#include "boards/common/music.h"
 /*
  * MCP Server Implementation
  * Reference: https://modelcontextprotocol.io/specification/2024-11-05
@@ -18,6 +19,7 @@
 #include "lvgl_image.h"
 #include "lvgl_theme.h"
 #include "settings.h"
+#include "weather/weather_service.h"
 
 #define TAG "MCP"
 
@@ -36,6 +38,78 @@ void McpServer::AddCommonTools() {
 
     // Do not add custom tools here.
     // Custom tools must be added in the board's InitializeTools function.
+
+    
+    auto music = board.GetMusic();
+    if (music) {
+        AddTool("self.music.play_song",
+            "Phát bài hát tiếng Việt hoặc bất kỳ bài hát nào từ Zing MP3. Khi người dùng yêu cầu phát nhạc, mở nhạc, nghe nhạc, công cụ này sẽ tự động tải và phát nhạc trực tiếp ra loa.\n"
+            "Tham số:\n"
+            "  `song_name`: Tên bài hát (bắt buộc)\n"
+            "  `artist_name`: Tên ca sĩ (tùy chọn)\n",
+            PropertyList({
+                Property("song_name", kPropertyTypeString),
+                Property("artist_name", kPropertyTypeString, std::string(""))
+            }),
+            [music](const PropertyList& properties) -> ReturnValue {
+                auto song_name = properties["song_name"].value<std::string>();
+                auto artist_name = properties["artist_name"].value<std::string>();
+                if (!music->Download(song_name, artist_name)) {
+                    return "{\"success\": false, \"message\": \"Không thể tìm thấy hoặc phát bài hát này\"}";
+                }
+                return "{\"success\": true, \"message\": \"Đang phát bài hát ra loa\" }";
+            });
+
+        AddTool("self.music.stop",
+            "Dừng phát nhạc ngay lập tức khi người dùng yêu cầu dừng lại, tắt nhạc, ngắt nhạc.",
+            PropertyList(),
+            [music](const PropertyList& properties) -> ReturnValue {
+                music->StopStreaming();
+                return "{\"success\": true, \"message\": \"Đã dừng phát nhạc\"}";
+            });
+    }
+
+    AddTool("self.weather.set_location",
+        "Cài đặt vị trí hiển thị thời tiết trên màn hình chờ (ví dụ: 'TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Đà Lạt', 'Cần Thơ', v.v.).\n"
+        "Tham số:\n"
+        "  `location`: Tên thành phố hoặc tỉnh thành tại Việt Nam.\n",
+        PropertyList({Property("location", kPropertyTypeString)}),
+        [](const PropertyList& properties) -> ReturnValue {
+            auto loc = properties["location"].value<std::string>();
+            float lat = 10.8231f, lon = 106.6297f;
+            std::string city = "TP. Hồ Chí Minh";
+            std::string lower;
+            for (char ch : loc) lower += tolower((unsigned char)ch);
+            if (lower.find("ha noi") != std::string::npos || lower.find("hanoi") != std::string::npos) {
+                lat = 21.0285f; lon = 105.8542f; city = "Hà Nội";
+            } else if (lower.find("da nang") != std::string::npos) {
+                lat = 16.0544f; lon = 108.2022f; city = "Đà Nẵng";
+            } else if (lower.find("da lat") != std::string::npos) {
+                lat = 11.9404f; lon = 108.4583f; city = "Đà Lạt";
+            } else if (lower.find("hai phong") != std::string::npos) {
+                lat = 20.8449f; lon = 106.6881f; city = "Hải Phòng";
+            } else if (lower.find("can tho") != std::string::npos) {
+                lat = 10.0452f; lon = 105.7469f; city = "Cần Thơ";
+            } else if (lower.find("nha trang") != std::string::npos) {
+                lat = 12.2388f; lon = 109.1967f; city = "Nha Trang";
+            } else if (lower.find("hue") != std::string::npos) {
+                lat = 16.4637f; lon = 107.5909f; city = "Huế";
+            } else if (lower.find("vung tau") != std::string::npos) {
+                lat = 10.3460f; lon = 107.0843f; city = "Vũng Tàu";
+            } else {
+                lat = 10.8231f; lon = 106.6297f; city = "TP. Hồ Chí Minh";
+            }
+            WeatherService::GetInstance().SetLocation(city, lat, lon);
+            return "{\"success\": true, \"message\": \"Đã cập nhật vị trí thời tiết thành " + city + "\"}";
+        });
+
+    AddTool("self.weather.refresh",
+        "Làm mới thông tin thời tiết trên màn hình chờ ngay lập tức.",
+        PropertyList(),
+        [](const PropertyList& properties) -> ReturnValue {
+            WeatherService::GetInstance().RefreshNow();
+            return "{\"success\": true, \"message\": \"Đang cập nhật thời tiết mới nhất\"}";
+        });
 
     AddTool("self.get_device_status",
             "Provides the real-time information of the device, including the current status of the "

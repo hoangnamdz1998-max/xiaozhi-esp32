@@ -95,6 +95,7 @@ public:
      * Sends MAIN_EVENT_TOGGLE_CHAT to be handled in Run()
      */
     void ToggleChatState();
+    void AddAudioData(AudioStreamPacket&& packet);
 
     /**
      * Start listening (event-based, thread-safe)
@@ -156,6 +157,12 @@ private:
     bool play_popup_on_listening_ = false;  // Flag to play popup sound after state changes to listening
     bool pending_listening_start_ = false;  // Waiting for playback to drain before starting listening (auto mode)
     int clock_ticks_ = 0;
+    int64_t listening_start_time_ = 0;
+    int64_t last_speech_time_ = 0;
+    int64_t prompt_time_ = 0;
+    bool user_has_spoken_ = false;
+    bool stop_listening_sent_ = false;
+    bool prompt_sent_ = false;
     TaskHandle_t activation_task_handle_ = nullptr;
 
 
