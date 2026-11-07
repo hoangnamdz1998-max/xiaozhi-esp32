@@ -3461,8 +3461,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_brightness_slider_, lv_color_white(), LV_PART_KNOB);
     lv_obj_set_style_radius(qs_brightness_slider_, 10, LV_PART_INDICATOR);
     lv_obj_set_style_radius(qs_brightness_slider_, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(qs_brightness_slider_, 2, LV_PART_KNOB);
-    lv_obj_set_ext_click_area(qs_brightness_slider_, 0);
+    lv_obj_set_style_pad_all(qs_brightness_slider_, 4, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_brightness_slider_, 6);
 
     qs_brightness_label_ = lv_label_create(qs_sliders_card_);
     char b_buf[16];
@@ -3508,8 +3508,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_volume_slider_, lv_color_white(), LV_PART_KNOB);
     lv_obj_set_style_radius(qs_volume_slider_, 10, LV_PART_INDICATOR);
     lv_obj_set_style_radius(qs_volume_slider_, 10, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(qs_volume_slider_, 2, LV_PART_KNOB);
-    lv_obj_set_ext_click_area(qs_volume_slider_, 0);
+    lv_obj_set_style_pad_all(qs_volume_slider_, 4, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_volume_slider_, 6);
 
     qs_volume_label_ = lv_label_create(qs_sliders_card_);
     char v_buf[16];
@@ -3686,8 +3686,8 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 202, 6);
 
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 220, 106);
-            lv_obj_set_pos(qs_sliders_card_, 10, 36);
+            lv_obj_set_size(qs_sliders_card_, 220, 104);
+            lv_obj_set_pos(qs_sliders_card_, 10, 40);
         }
         if (b_icon) lv_obj_set_pos(b_icon, 10, 8);
         if (qs_brightness_slider_) {
@@ -3696,16 +3696,16 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
         if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 172, 14);
 
-        if (v_icon) lv_obj_set_pos(v_icon, 10, 64);
+        if (v_icon) lv_obj_set_pos(v_icon, 10, 62);
         if (qs_volume_slider_) {
             lv_obj_set_size(qs_volume_slider_, 120, 20);
-            lv_obj_set_pos(qs_volume_slider_, 42, 68);
+            lv_obj_set_pos(qs_volume_slider_, 42, 66);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 70);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 68);
 
         if (qs_color_card_) {
             lv_obj_set_size(qs_color_card_, 220, 80);
-            lv_obj_set_pos(qs_color_card_, 10, 146);
+            lv_obj_set_pos(qs_color_card_, 10, 148);
         }
         if (col_title) lv_obj_set_pos(col_title, 10, 4);
         if (qs_color_card_) {
@@ -3726,47 +3726,47 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
 
         if (qs_ai_btn_) {
             lv_obj_set_size(qs_ai_btn_, 220, 36);
-            lv_obj_set_pos(qs_ai_btn_, 10, 230);
+            lv_obj_set_pos(qs_ai_btn_, 10, 234);
         }
         if (qs_rotate_btn_) {
             lv_obj_set_size(qs_rotate_btn_, 105, 36);
-            lv_obj_set_pos(qs_rotate_btn_, 10, 272);
+            lv_obj_set_pos(qs_rotate_btn_, 10, 274);
         }
         if (qs_restart_btn_) {
             lv_obj_set_size(qs_restart_btn_, 105, 36);
-            lv_obj_set_pos(qs_restart_btn_, 125, 272);
+            lv_obj_set_pos(qs_restart_btn_, 125, 274);
         }
     } else {
         // 320 x 240 (Màn hình ngang theo bố cục mới: thanh trượt full màn -> chọn màu -> 3 nút chức năng)
-        if (qs_title_) lv_obj_set_pos(qs_title_, 14, 4);
-        if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 282, 2);
+        if (qs_title_) lv_obj_set_pos(qs_title_, 14, 6);
+        if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 282, 4);
 
-        // 1. Thanh kéo âm thanh & độ sáng kéo dài hết màn hình (width = 304, height = 88)
-        // Khoảng cách giữa 2 thanh trượt được nới rộng ra 28px để chống trượt nhầm
+        // 1. Thanh kéo âm thanh & độ sáng kéo dài hết màn hình (width = 304, height = 82)
+        // Xích xuống pos y = 32 để không che chữ 'Cài đặt nhanh' ở trên
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 304, 88);
-            lv_obj_set_pos(qs_sliders_card_, 8, 22);
+            lv_obj_set_size(qs_sliders_card_, 304, 82);
+            lv_obj_set_pos(qs_sliders_card_, 8, 32);
         }
-        if (b_icon) lv_obj_set_pos(b_icon, 8, 6);
+        if (b_icon) lv_obj_set_pos(b_icon, 8, 5);
         if (qs_brightness_slider_) {
             lv_obj_set_size(qs_brightness_slider_, 206, 20);
-            lv_obj_set_pos(qs_brightness_slider_, 38, 10);
+            lv_obj_set_pos(qs_brightness_slider_, 38, 9);
         }
-        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 252, 12);
+        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 252, 11);
 
-        if (v_icon) lv_obj_set_pos(v_icon, 8, 54);
+        if (v_icon) lv_obj_set_pos(v_icon, 8, 49);
         if (qs_volume_slider_) {
             lv_obj_set_size(qs_volume_slider_, 206, 20);
-            lv_obj_set_pos(qs_volume_slider_, 38, 58);
+            lv_obj_set_pos(qs_volume_slider_, 38, 53);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 252, 60);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 252, 55);
 
-        // 2. Phía dưới là bảng chọn màu chữ (width = 304, 10 chấm tròn thẳng hàng)
+        // 2. Phía dưới là bảng chọn màu chữ (width = 304, pos y = 120)
         if (qs_color_card_) {
-            lv_obj_set_size(qs_color_card_, 304, 50);
-            lv_obj_set_pos(qs_color_card_, 8, 114);
+            lv_obj_set_size(qs_color_card_, 304, 48);
+            lv_obj_set_pos(qs_color_card_, 8, 120);
         }
-        if (col_title) lv_obj_set_pos(col_title, 10, 3);
+        if (col_title) lv_obj_set_pos(col_title, 10, 2);
         if (qs_color_card_) {
             int dot_idx = 0;
             uint32_t cnt = lv_obj_get_child_count(qs_color_card_);
@@ -3775,24 +3775,24 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
                 if (c != col_title) {
                     lv_obj_set_size(c, 20, 20);
                     lv_obj_set_style_radius(c, 10, 0);
-                    lv_obj_set_pos(c, 16 + dot_idx * 28, 23);
+                    lv_obj_set_pos(c, 16 + dot_idx * 28, 21);
                     dot_idx++;
                 }
             }
         }
 
-        // 3. Cuối cùng là các chức năng trợ lý, xoay màn hình, khởi động lại
+        // 3. Cuối cùng là các chức năng trợ lý, xoay màn hình, khởi động lại (pos y = 174)
         if (qs_ai_btn_) {
-            lv_obj_set_size(qs_ai_btn_, 96, 36);
-            lv_obj_set_pos(qs_ai_btn_, 8, 168);
+            lv_obj_set_size(qs_ai_btn_, 96, 34);
+            lv_obj_set_pos(qs_ai_btn_, 8, 174);
         }
         if (qs_rotate_btn_) {
-            lv_obj_set_size(qs_rotate_btn_, 96, 36);
-            lv_obj_set_pos(qs_rotate_btn_, 112, 168);
+            lv_obj_set_size(qs_rotate_btn_, 96, 34);
+            lv_obj_set_pos(qs_rotate_btn_, 112, 174);
         }
         if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 96, 36);
-            lv_obj_set_pos(qs_restart_btn_, 216, 168);
+            lv_obj_set_size(qs_restart_btn_, 96, 34);
+            lv_obj_set_pos(qs_restart_btn_, 216, 174);
         }
     }
 

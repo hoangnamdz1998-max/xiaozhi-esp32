@@ -445,10 +445,17 @@ private:
                     auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
                     // Không cho phép vuốt ngang ở QuickSettings để thanh trượt âm thanh & độ sáng trượt mượt mà
                     bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || mode == LcdDisplay::kScreenCalendar || mode == LcdDisplay::kScreenWeatherDetail);
+                    bool allow_vert_swipe = true;
+                    if (mode == LcdDisplay::kScreenQuickSettings) {
+                        // Trong QuickSettings: tuyệt đối không ngắt touch khi đang thao tác trên vùng thanh trượt / bảng màu
+                        if (start_screen_y < 160 || delta_y > -45) {
+                            allow_vert_swipe = false;
+                        }
+                    }
 
                     if (!swiped && (now - down_start < 800)) {
                         // Check vertical swipe first (vuốt dưới lên / vuốt trên xuống)
-                        if (abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.2) {
+                        if (allow_vert_swipe && abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.2) {
                             swiped = true;
                             self->touch_lvgl_x_ = -100;
                             self->touch_lvgl_y_ = -100;
@@ -486,7 +493,13 @@ private:
 
                 auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
                 bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || mode == LcdDisplay::kScreenCalendar || mode == LcdDisplay::kScreenWeatherDetail);
-                bool is_vert_swipe = (abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.2);
+                bool allow_vert_swipe = true;
+                if (mode == LcdDisplay::kScreenQuickSettings) {
+                    if (start_screen_y < 160 || delta_y > -45) {
+                        allow_vert_swipe = false;
+                    }
+                }
+                bool is_vert_swipe = (allow_vert_swipe && abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.2);
                 bool is_horiz_swipe = (allow_horiz_swipe && abs(delta_x) > 25 && abs(delta_x) > abs(delta_y) * 1.2);
 
                 bool is_gesture = swiped || (press < 600 && (is_vert_swipe || is_horiz_swipe));
