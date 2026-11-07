@@ -386,8 +386,10 @@ private:
 
                 if (self->is_portrait_) {
                     // Portrait: width 240, height 320
-                    screen_x = (int16_t)raw_y;
-                    screen_y = 319 - (int16_t)raw_x;
+                    // Short physical axis (raw_x: 0..239) is screen_x
+                    // Long physical axis (raw_y: 0..319) is screen_y
+                    screen_x = (int16_t)raw_x;
+                    screen_y = (int16_t)raw_y;
                     if (screen_x < 0) screen_x = 0;
                     if (screen_x > 239) screen_x = 239;
                     if (screen_y < 0) screen_y = 0;
@@ -398,8 +400,10 @@ private:
                     self->touch_lvgl_y_ = 319 - screen_x;
                 } else {
                     // Landscape: width 320, height 240
-                    screen_x = (int16_t)raw_x;
-                    screen_y = (int16_t)raw_y;
+                    // Long physical axis (raw_y: 0..319) is screen_x
+                    // Short physical axis (raw_x: 0..239) is inverted for screen_y (0 at top, 239 at bottom)
+                    screen_x = (int16_t)raw_y;
+                    screen_y = 239 - (int16_t)raw_x;
                     if (screen_x < 0) screen_x = 0;
                     if (screen_x > 319) screen_x = 319;
                     if (screen_y < 0) screen_y = 0;
@@ -511,12 +515,6 @@ private:
             }
 
             if (tap_count > 0 && (now - last_tap >= 300)) {
-                auto state = app.GetDeviceState();
-                if (state != kDeviceStateStarting && state != kDeviceStateWifiConfiguring && state != kDeviceStateAudioTesting) {
-                    if (tap_count == 2) {
-                        app.ToggleChatState();
-                    }
-                }
                 tap_count = 0;
             }
 

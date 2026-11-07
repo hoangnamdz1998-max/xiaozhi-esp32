@@ -138,8 +138,8 @@ Keep detailed or fast-changing information in those files, not here. Add a neste
         + Ban ngày: Hiển thị icon Mặt Trời / Mây Mặt Trời (weather_icon_sun, weather_icon_sun_cloud), mô tả 'Trời nắng', 'Nắng nhẹ'.
         + Ban đêm (is_day == 0): Hiển thị icon Mặt Trăng khuyết / Mây Mặt Trăng (weather_icon_moon, weather_icon_moon_cloud), mô tả chuẩn xác 'Trời quang', 'Ít mây' thay vì hiển thị nắng.
 6. **Touch Gestures & Voice Interaction Timing**:
-   - **Double-tap (Chạm 2 lần)**: Đánh thức thiết bị khi đang ở màn hình chờ (idle), hoặc ngắt cuộc trò chuyện và quay lại màn hình chờ khi đang lắng nghe / đang nói.
-   - **Single-tap (Chạm 1 lần)**: Đã được vô hiệu hóa để tránh chạm nhầm.
+   - **Chế độ Chatbot**: Chỉ kích hoạt khi người dùng nhấn vào icon "Trợ lý AI" trong Menu ứng dụng hoặc nút "Trợ lý ảo" trong Cài đặt nhanh (đã vô hiệu hóa kích hoạt bằng 2 lần chạm).
+   - **Single-tap & Double-tap**: Đã được vô hiệu hóa để tránh kích hoạt nhầm khi thao tác vuốt.
    - **Triple-tap (Chạm 3 lần)**: Đổi chiều xoay màn hình (ngang / dọc).
    - **4 taps (Chạm 4 lần)**: Đổi hình nền tiếp theo từ thẻ nhớ SD.
    - **VAD Silence Timeout**: Thời gian dừng nói để AI phản hồi được cấu hình là 2 giây (`2,000,000 us`).
