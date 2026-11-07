@@ -182,9 +182,16 @@ protected:
     lv_obj_t* clock_sw_btn_ = nullptr;
     lv_obj_t* clock_timer_btn_ = nullptr;
 
-    // Stopwatch Screen (Bấm giờ)
+    // Stopwatch & Countdown Screen (Bấm giờ chạy mili-giây & Đếm ngược tùy chỉnh phút + chuông)
     lv_obj_t* stopwatch_box_ = nullptr;
     lv_obj_t* sw_back_btn_ = nullptr;
+    lv_obj_t* sw_tab_sw_btn_ = nullptr;
+    lv_obj_t* sw_tab_cd_btn_ = nullptr;
+    lv_obj_t* sw_container_ = nullptr;
+    lv_obj_t* cd_container_ = nullptr;
+    bool sw_mode_countdown_ = false;
+
+    // Stopwatch widgets
     lv_obj_t* sw_time_label_ = nullptr;
     lv_obj_t* sw_status_label_ = nullptr;
     lv_obj_t* sw_start_btn_ = nullptr;
@@ -195,24 +202,40 @@ protected:
     int64_t sw_elapsed_ms_ = 0;
     int64_t sw_last_tick_ms_ = 0;
 
-    // Multi-Timer Screen (Hẹn giờ đếm ngược nhiều mốc giờ)
+    // Countdown widgets (Đếm ngược)
+    lv_obj_t* cd_time_label_ = nullptr;
+    lv_obj_t* cd_status_label_ = nullptr;
+    lv_obj_t* cd_start_btn_ = nullptr;
+    lv_obj_t* cd_start_lbl_ = nullptr;
+    lv_obj_t* cd_reset_btn_ = nullptr;
+    lv_obj_t* cd_minus_btn_ = nullptr;
+    lv_obj_t* cd_plus_btn_ = nullptr;
+    int cd_minutes_ = 5;
+    int64_t cd_remain_ms_ = 5 * 60 * 1000;
+    int64_t cd_last_tick_ms_ = 0;
+    bool cd_running_ = false;
+    lv_timer_t* fast_tick_timer_ = nullptr;
+
+    // Alarm Clock Screen (Hẹn giờ báo thức theo giờ thực tế và chọn ngày trong tuần)
     lv_obj_t* timer_box_ = nullptr;
     lv_obj_t* timer_back_btn_ = nullptr;
-    struct MultiTimerSlot {
-        lv_obj_t* card = nullptr;
-        lv_obj_t* name_lbl = nullptr;
-        lv_obj_t* time_lbl = nullptr;
-        lv_obj_t* toggle_btn = nullptr;
-        lv_obj_t* toggle_lbl = nullptr;
-        lv_obj_t* reset_btn = nullptr;
-        int total_sec = 0;
-        int remaining_sec = 0;
-        bool running = false;
-    };
-    MultiTimerSlot timer_slots_[3];
-    uint32_t last_timer_tick_ms_ = 0;
+    lv_obj_t* alarm_time_label_ = nullptr;
+    lv_obj_t* alarm_status_label_ = nullptr;
+    lv_obj_t* alarm_hour_minus_btn_ = nullptr;
+    lv_obj_t* alarm_hour_plus_btn_ = nullptr;
+    lv_obj_t* alarm_min_minus_btn_ = nullptr;
+    lv_obj_t* alarm_min_plus_btn_ = nullptr;
+    lv_obj_t* alarm_toggle_btn_ = nullptr;
+    lv_obj_t* alarm_toggle_lbl_ = nullptr;
+    lv_obj_t* alarm_preset_btn_ = nullptr;
+    lv_obj_t* alarm_day_btns_[7] = {nullptr};
+    int alarm_hour_ = 7;
+    int alarm_min_ = 0;
+    uint8_t alarm_days_mask_ = 0x7F; // Bit 0=CN, 1=T2, 2=T3, 3=T4, 4=T5, 5=T6, 6=T7
+    bool alarm_enabled_ = true;
+    bool alarm_triggered_today_ = false;
 
-    // Exchange Rates Screen (Tỉ giá thị trường: Vàng, Đô, Crypto, Xăng)
+    // Exchange Rates Screen (Tỉ giá thị trường: Vàng SJC, USD, Crypto BTC/ETH, Xăng dầu)
     lv_obj_t* rates_box_ = nullptr;
     lv_obj_t* rates_back_btn_ = nullptr;
     lv_obj_t* rates_refresh_btn_ = nullptr;

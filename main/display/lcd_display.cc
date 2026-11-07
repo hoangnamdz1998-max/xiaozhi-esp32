@@ -25,48 +25,53 @@
 LV_FONT_DECLARE(font_noto_sans_basic_14_1);
 
 static uint32_t MapVietnameseChar(uint32_t unicode_letter) {
-    if (unicode_letter == 0x1EA9) return 0x1EA5; // ẩ -> ấ
+    // CHỈ ánh xạ các ký tự thực sự thiếu trong bộ font cơ bản noto_sans:
+    // Tuyệt đối giữ nguyên: ạ (0x1ea1), ả (0x1ea3), ấ (0x1ea5), ầ (0x1ea7), ậ (0x1ead), ắ (0x1eaf),
+    // ẻ (0x1ebb), ẽ (0x1ebd), ế (0x1ebf), ể (0x1ec3), ệ (0x1ec7), ị (0x1ecb),
+    // ố (0x1ed1), ồ (0x1ed3), ỗ (0x1ed7), ộ (0x1ed9), ớ (0x1edb), ờ (0x1edd), ở (0x1edf), ợ (0x1ee3),
+    // ụ (0x1ee5), ủ (0x1ee7), ư (0x01b0), ự (0x1eed), đ (0x0111), Đ (0x0110).
+
+    // 1. Nhóm 'a':
+    if (unicode_letter == 0x1EA9) return 0x1EA5; // ẩ -> ấ (trong 'Độ ẩm')
     if (unicode_letter == 0x1EA8) return 0x1EA4; // Ẩ -> Ấ
-    if (unicode_letter == 0x1EE9) return 0x01B0; // ứ -> ư
-    if (unicode_letter == 0x1EE8) return 'U';    // Ứ -> U
-    if (unicode_letter == 0x01A1) return 0x00F4; // ơ -> ô
-    if (unicode_letter == 0x01A0) return 0x00D4; // Ơ -> Ô
-    if (unicode_letter == 0x1EB9) return 0x00E9; // ẹ -> é
-    if (unicode_letter == 0x1EB8) return 0x00C9; // Ẹ -> É
-    if (unicode_letter == 0x1EB7) return 0x0103; // ặ -> ă
+    if (unicode_letter == 0x1EB7) return 0x0103; // ặ -> ă (trong 'Cài đặt')
     if (unicode_letter == 0x1EB6 || unicode_letter == 0x0102) return 'A'; // Ặ/Ă -> A
-    if (unicode_letter == 0x1EC1) return 0x00EA; // ề -> ê
+    if (unicode_letter == 0x1EA2) return 'A';    // Ả -> A (trong 'T.BẢY')
+    if (unicode_letter == 0x1EB1 || unicode_letter == 0x1EB3 || unicode_letter == 0x1EB5) return 0x0103; // ằ, ẳ, ẵ -> ă
+
+    // 2. Nhóm 'e':
+    if (unicode_letter == 0x1EB9) return 0x1EC7; // ẹ -> ệ (trong 'Hẹn giờ') - 0x1EC7 có sẵn trong font!
+    if (unicode_letter == 0x1EB8) return 0x00CA; // Ẹ -> Ê
+    if (unicode_letter == 0x1EC1) return 0x00EA; // ề -> ê (trong 'Hình nền', 'tiền')
     if (unicode_letter == 0x1EC0) return 0x00CA; // Ề -> Ê
-    if (unicode_letter == 0x1EF7) return 0x00FD; // ỷ -> ý
-    if (unicode_letter == 0x1EF6) return 0x00DD; // Ỷ -> Ý
-    if (unicode_letter == 0x1ECF) return 0x00F3; // ỏ -> ó
-    if (unicode_letter == 0x1ECE) return 0x00D3; // Ỏ -> Ó
-    if (unicode_letter == 0x1EA2) return 'A';    // Ả -> A
-    if (unicode_letter == 0x1EA1 || unicode_letter == 0x1EA3) return 'a';
-    if (unicode_letter == 0x1EA0) return 'A';
-    if (unicode_letter == 0x1EAF || unicode_letter == 0x1EB1 || unicode_letter == 0x1EB3 || unicode_letter == 0x1EB5) return 0x0103;
-    if (unicode_letter == 0x1EAE || unicode_letter == 0x1EB0 || unicode_letter == 0x1EB2 || unicode_letter == 0x1EB4) return 'A';
-    if (unicode_letter == 0x1EA5 || unicode_letter == 0x1EA7 || unicode_letter == 0x1EAB || unicode_letter == 0x1EAD) return 0x00E2; // â
-    if (unicode_letter == 0x1EA4 || unicode_letter == 0x1EA6 || unicode_letter == 0x1EAA || unicode_letter == 0x1EAC) return 0x00C2; // Â
-    if (unicode_letter == 0x1EBF || unicode_letter == 0x1EC3 || unicode_letter == 0x1EC5 || unicode_letter == 0x1EC7) return 0x00EA; // ê
-    if (unicode_letter == 0x1EBE || unicode_letter == 0x1EC2 || unicode_letter == 0x1EC4 || unicode_letter == 0x1EC6) return 0x00CA; // Ê
-    if (unicode_letter == 0x1EBB || unicode_letter == 0x1EBD) return 0x00E9; // é
-    if (unicode_letter == 0x1EBA || unicode_letter == 0x1EBC) return 0x00C9; // É
-    if (unicode_letter == 0x1EC9 || unicode_letter == 0x1ECB || unicode_letter == 0x0129) return 0x00ED; // í
-    if (unicode_letter == 0x1EC8 || unicode_letter == 0x1ECA || unicode_letter == 0x0128) return 0x00CD; // Í
-    if (unicode_letter == 0x1ED1 || unicode_letter == 0x1ED3 || unicode_letter == 0x1ED5 || unicode_letter == 0x1ED7 || unicode_letter == 0x1ED9) return 0x00F4; // ô
-    if (unicode_letter == 0x1ED0 || unicode_letter == 0x1ED2 || unicode_letter == 0x1ED4 || unicode_letter == 0x1ED6 || unicode_letter == 0x1ED8) return 0x00D4; // Ô
-    if (unicode_letter == 0x1EDB || unicode_letter == 0x1EDD || unicode_letter == 0x1EDF || unicode_letter == 0x1EE1 || unicode_letter == 0x1EE3) return 0x00F4;
-    if (unicode_letter == 0x1EDA || unicode_letter == 0x1EDC || unicode_letter == 0x1EDE || unicode_letter == 0x1EE0 || unicode_letter == 0x1EE2) return 0x00D4;
-    if (unicode_letter == 0x1ECD || unicode_letter == 0x00F5) return 0x00F3; // ó
-    if (unicode_letter == 0x1ECC || unicode_letter == 0x00D5) return 0x00D3; // Ó
-    if (unicode_letter == 0x01B0 || unicode_letter == 0x1EEB || unicode_letter == 0x1EED || unicode_letter == 0x1EEF || unicode_letter == 0x1EF1) return 'u';
-    if (unicode_letter == 0x01AF || unicode_letter == 0x1EEA || unicode_letter == 0x1EEC || unicode_letter == 0x1EEE || unicode_letter == 0x1EF0) return 'U';
-    if (unicode_letter == 0x1EE5 || unicode_letter == 0x1EE7 || unicode_letter == 0x0169) return 0x00FA; // ú
-    if (unicode_letter == 0x1EE4 || unicode_letter == 0x1EE6 || unicode_letter == 0x0168) return 0x00DA; // Ú
-    if (unicode_letter == 0x1EF5 || unicode_letter == 0x1EF9) return 0x00FD; // ý
-    if (unicode_letter == 0x1EF4 || unicode_letter == 0x1EF8) return 0x00DD; // Ý
-    if (unicode_letter == 0x20AB) return 'd'; // ₫
+    if (unicode_letter == 0x1EC5) return 0x1EBF; // ễ -> ế
+
+    // 3. Nhóm 'i':
+    if (unicode_letter == 0x1EC9 || unicode_letter == 0x0129) return 0x00ED; // ỉ, ĩ -> í
+    if (unicode_letter == 0x1EC8 || unicode_letter == 0x0128) return 0x00CD; // Ỉ, Ĩ -> Í
+
+    // 4. Nhóm 'o':
+    if (unicode_letter == 0x1ECF || unicode_letter == 0x1ECD) return 0x00F3; // ỏ, ọ -> ó
+    if (unicode_letter == 0x1ECE || unicode_letter == 0x1ECC) return 0x00D3; // Ỏ, Ọ -> Ó
+    if (unicode_letter == 0x1ED5) return 0x1ED1; // ổ -> ố
+    if (unicode_letter == 0x1ED4) return 0x1ED0; // Ổ -> Ố
+    if (unicode_letter == 0x01A1) return 0x1EDB; // ơ -> ớ (0x1EDB có sẵn trong font!)
+    if (unicode_letter == 0x01A0) return 0x00D4; // Ơ -> Ô
+    if (unicode_letter == 0x1EE1) return 0x1EDB; // ở -> ớ
+
+    // 5. Nhóm 'u':
+    if (unicode_letter == 0x1EE9) return 0x01B0; // ứ -> ư (trong 'Thứ Hai', 'Báo thức' - giữ móc ư)
+    if (unicode_letter == 0x1EE8) return 'U';    // Ứ -> U
+    if (unicode_letter == 0x1EEB || unicode_letter == 0x1EEF || unicode_letter == 0x1EF1) return 0x01B0; // ừ, ử, ữ -> ư
+    if (unicode_letter == 0x0169) return 0x00FA; // ũ -> ú
+
+    // 6. Nhóm 'y':
+    if (unicode_letter == 0x1EF7 || unicode_letter == 0x1EF9 || unicode_letter == 0x1EF5) return 0x00FD; // ỷ, ỹ, ỵ -> ý
+    if (unicode_letter == 0x1EF6 || unicode_letter == 0x1EF8 || unicode_letter == 0x1EF4) return 0x00DD; // Ỷ, Ỹ, Ỵ -> Ý
+
+    // 7. Ký hiệu tiền tệ:
+    if (unicode_letter == 0x20AB) return 0x0111; // ₫ -> đ (0x0111 có sẵn trong font)
+
     return unicode_letter;
 }
 
@@ -78,6 +83,12 @@ static bool CustomFontGetGlyphDsc16(const lv_font_t* font, lv_font_glyph_dsc_t* 
 
 static lv_font_t font_noto_sans_custom_14_1;
 static bool CustomFontGetGlyphDsc14(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
+    unicode_letter = MapVietnameseChar(unicode_letter);
+    return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
+}
+
+static lv_font_t font_noto_sans_custom_20_4;
+static bool CustomFontGetGlyphDsc20(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
     unicode_letter = MapVietnameseChar(unicode_letter);
     return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
 }
@@ -721,6 +732,8 @@ void LcdDisplay::SetupUI() {
     font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
     font_noto_sans_custom_14_1 = font_noto_sans_basic_14_1;
     font_noto_sans_custom_14_1.get_glyph_dsc = CustomFontGetGlyphDsc14;
+    font_noto_sans_custom_20_4 = font_noto_sans_basic_20_4;
+    font_noto_sans_custom_20_4.get_glyph_dsc = CustomFontGetGlyphDsc20;
 
     Settings settings("display", false);
     standby_text_color_ = (uint32_t)settings.GetInt("text_color", 0xFFFFFF);
@@ -1441,6 +1454,8 @@ void LcdDisplay::SetupUI() {
     font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
     font_noto_sans_custom_14_1 = font_noto_sans_basic_14_1;
     font_noto_sans_custom_14_1.get_glyph_dsc = CustomFontGetGlyphDsc14;
+    font_noto_sans_custom_20_4 = font_noto_sans_basic_20_4;
+    font_noto_sans_custom_20_4.get_glyph_dsc = CustomFontGetGlyphDsc20;
 
     Settings settings("display", false);
     standby_text_color_ = (uint32_t)settings.GetInt("text_color", 0xFFFFFF);
@@ -4172,15 +4187,15 @@ void LcdDisplay::CreateCalendarUI() {
 
         lv_obj_t* solar = lv_label_create(cell);
         calendar_cells_[i].solar_label = solar;
-        lv_obj_set_style_text_font(solar, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(solar, &font_noto_sans_basic_16_4, 0); // Lịch dương to rõ
         lv_obj_set_style_text_color(solar, lv_color_white(), 0);
-        lv_obj_align(solar, LV_ALIGN_TOP_MID, 0, 1);
+        lv_obj_align(solar, LV_ALIGN_TOP_MID, 0, -2);
 
         lv_obj_t* lunar = lv_label_create(cell);
         calendar_cells_[i].lunar_label = lunar;
         lv_obj_set_style_text_font(lunar, &font_noto_sans_basic_14_1, 0);
         lv_obj_set_style_text_color(lunar, lv_color_hex(0x90A4AE), 0);
-        lv_obj_align(lunar, LV_ALIGN_BOTTOM_MID, 0, -1);
+        lv_obj_align(lunar, LV_ALIGN_BOTTOM_MID, 0, 0); // Lịch âm xích xuống dưới đáy ô, không đè lên lịch dương
     }
 
     LayoutCalendarWidgets(height_ > width_);
@@ -4203,38 +4218,39 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             int id = (int)(intptr_t)lv_obj_get_user_data(child);
             if (id >= 100 && id < 107) {
                 int col = id - 100;
-                lv_obj_set_size(child, 33, 18);
+                lv_obj_set_size(child, 33, 16);
                 lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(child, 4 + col * 33, 50);
+                lv_obj_set_pos(child, 4 + col * 33, 46);
             }
         }
 
+        // 6 hàng ngày tháng: chiều cao ô 28px, khoảng cách rộng rãi cho lịch dương to và lịch âm bên dưới
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 32, 25);
-            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 70 + r * 26);
+            lv_obj_set_size(calendar_cells_[i].container, 32, 28);
+            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 64 + r * 28);
         }
 
         // Today Card phía dưới ở màn hình dọc
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 228, 86);
-            lv_obj_set_pos(cal_today_card_, 6, 228);
+            lv_obj_set_size(cal_today_card_, 228, 80);
+            lv_obj_set_pos(cal_today_card_, 6, 234);
             if (cal_today_title_) lv_obj_set_pos(cal_today_title_, 8, 4);
             if (cal_today_wday_) lv_obj_set_pos(cal_today_wday_, 80, 4);
             if (cal_today_lunar_) lv_obj_set_pos(cal_today_lunar_, 156, 4);
             if (cal_today_day_) lv_obj_add_flag(cal_today_day_, LV_OBJ_FLAG_HIDDEN);
             if (cal_today_event_) {
                 lv_obj_set_width(cal_today_event_, 212);
-                lv_obj_set_pos(cal_today_event_, 8, 26);
+                lv_obj_set_pos(cal_today_event_, 8, 24);
             }
         }
     } else {
         // 320 x 240: Có 1 bên là ngày hôm nay + sự kiện, bên phải là lịch tháng
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 102, 220);
-            lv_obj_set_pos(cal_today_card_, 6, 10);
+            lv_obj_set_size(cal_today_card_, 102, 224);
+            lv_obj_set_pos(cal_today_card_, 6, 8);
             if (cal_today_title_) lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, 0, 4);
             if (cal_today_day_) {
                 lv_obj_remove_flag(cal_today_day_, LV_OBJ_FLAG_HIDDEN);
@@ -4250,10 +4266,10 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
         }
 
         // Bên phải (x = 114..316): Các nút điều hướng và bảng ngày tháng
-        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 112, 10);
-        if (calendar_prev_btn_) lv_obj_set_pos(calendar_prev_btn_, 152, 10);
-        if (calendar_title_label_) lv_obj_set_pos(calendar_title_label_, 192, 14);
-        if (calendar_next_btn_) lv_obj_set_pos(calendar_next_btn_, 276, 10);
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 112, 6);
+        if (calendar_prev_btn_) lv_obj_set_pos(calendar_prev_btn_, 152, 6);
+        if (calendar_title_label_) lv_obj_set_pos(calendar_title_label_, 192, 10);
+        if (calendar_next_btn_) lv_obj_set_pos(calendar_next_btn_, 276, 6);
 
         uint32_t cnt = lv_obj_get_child_count(calendar_box_);
         for (uint32_t i = 0; i < cnt; ++i) {
@@ -4261,9 +4277,9 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             int id = (int)(intptr_t)lv_obj_get_user_data(child);
             if (id >= 100 && id < 107) {
                 int col = id - 100;
-                lv_obj_set_size(child, 28, 16);
+                lv_obj_set_size(child, 28, 14);
                 lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(child, 114 + col * 29, 44);
+                lv_obj_set_pos(child, 114 + col * 29, 36);
             }
         }
 
@@ -4271,8 +4287,8 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 28, 27);
-            lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 29, 64 + r * 28);
+            lv_obj_set_size(calendar_cells_[i].container, 28, 30);
+            lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 29, 52 + r * 30);
         }
     }
 }
@@ -4691,11 +4707,11 @@ void LcdDisplay::CreateClockUI() {
     lv_obj_set_style_text_font(clock_sub_label_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(clock_sub_label_, lv_color_hex(0x90A4AE), 0);
 
-    // Button Bấm giờ (Stopwatch)
+    // Button Bấm giờ (Stopwatch & Countdown)
     clock_sw_btn_ = lv_button_create(clock_box_);
     lv_obj_set_style_bg_color(clock_sw_btn_, lv_color_hex(0x161D27), 0);
     lv_obj_set_style_bg_opa(clock_sw_btn_, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(clock_sw_btn_, 10, 0);
+    lv_obj_set_style_radius(clock_sw_btn_, 8, 0);
     lv_obj_set_style_border_width(clock_sw_btn_, 1, 0);
     lv_obj_set_style_border_color(clock_sw_btn_, lv_color_hex(0x00E5FF), 0);
     lv_obj_t* sw_ico = lv_label_create(clock_sw_btn_);
@@ -4703,7 +4719,7 @@ void LcdDisplay::CreateClockUI() {
     lv_obj_set_style_text_font(sw_ico, &font_material_symbols_30_4, 0);
     lv_obj_set_style_text_color(sw_ico, lv_color_hex(0x00E5FF), 0);
     lv_obj_t* sw_txt = lv_label_create(clock_sw_btn_);
-    lv_label_set_text(sw_txt, "Bấm giờ");
+    lv_label_set_text(sw_txt, "Bấm giờ & Đếm ngược");
     lv_obj_set_style_text_font(sw_txt, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(sw_txt, lv_color_white(), 0);
     lv_obj_add_event_cb(clock_sw_btn_, [](lv_event_t* e) {
@@ -4712,11 +4728,11 @@ void LcdDisplay::CreateClockUI() {
         self->ShowStopwatch();
     }, LV_EVENT_CLICKED, this);
 
-    // Button Hẹn giờ (Timer)
+    // Button Hẹn giờ (Alarm Clock)
     clock_timer_btn_ = lv_button_create(clock_box_);
     lv_obj_set_style_bg_color(clock_timer_btn_, lv_color_hex(0x161D27), 0);
     lv_obj_set_style_bg_opa(clock_timer_btn_, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(clock_timer_btn_, 10, 0);
+    lv_obj_set_style_radius(clock_timer_btn_, 8, 0);
     lv_obj_set_style_border_width(clock_timer_btn_, 1, 0);
     lv_obj_set_style_border_color(clock_timer_btn_, lv_color_hex(0xFF9100), 0);
     lv_obj_t* tm_ico = lv_label_create(clock_timer_btn_);
@@ -4724,7 +4740,7 @@ void LcdDisplay::CreateClockUI() {
     lv_obj_set_style_text_font(tm_ico, &font_material_symbols_30_4, 0);
     lv_obj_set_style_text_color(tm_ico, lv_color_hex(0xFF9100), 0);
     lv_obj_t* tm_txt = lv_label_create(clock_timer_btn_);
-    lv_label_set_text(tm_txt, "Hẹn giờ");
+    lv_label_set_text(tm_txt, "Hẹn giờ báo thức");
     lv_obj_set_style_text_font(tm_txt, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(tm_txt, lv_color_white(), 0);
     lv_obj_add_event_cb(clock_timer_btn_, [](lv_event_t* e) {
@@ -4741,56 +4757,57 @@ void LcdDisplay::LayoutClockWidgets(bool is_portrait) {
     lv_obj_set_size(clock_box_, width_, height_);
 
     if (is_portrait) {
-        // 240 x 320
-        if (clock_back_btn_) lv_obj_set_pos(clock_back_btn_, 6, 14);
+        // 240 x 320: Thẻ đồng hồ chính cao rộng rãi, không bị che
+        if (clock_back_btn_) lv_obj_set_pos(clock_back_btn_, 6, 12);
         if (clock_card_) {
-            lv_obj_set_size(clock_card_, 224, 104);
-            lv_obj_set_pos(clock_card_, 8, 48);
+            lv_obj_set_size(clock_card_, 224, 114);
+            lv_obj_set_pos(clock_card_, 8, 44);
             if (clock_time_label_) lv_obj_align(clock_time_label_, LV_ALIGN_TOP_MID, 0, 10);
-            if (clock_date_label_) lv_obj_align(clock_date_label_, LV_ALIGN_TOP_MID, 0, 52);
-            if (clock_sub_label_) lv_obj_align(clock_sub_label_, LV_ALIGN_TOP_MID, 0, 74);
+            if (clock_date_label_) lv_obj_align(clock_date_label_, LV_ALIGN_TOP_MID, 0, 60);
+            if (clock_sub_label_) lv_obj_align(clock_sub_label_, LV_ALIGN_TOP_MID, 0, 84);
         }
+        // Các khu Bấm giờ & Hẹn giờ nhỏ gọn lại
         if (clock_sw_btn_) {
-            lv_obj_set_size(clock_sw_btn_, 224, 68);
-            lv_obj_set_pos(clock_sw_btn_, 8, 162);
+            lv_obj_set_size(clock_sw_btn_, 224, 46);
+            lv_obj_set_pos(clock_sw_btn_, 8, 172);
             lv_obj_t* ico = lv_obj_get_child(clock_sw_btn_, 0);
             lv_obj_t* txt = lv_obj_get_child(clock_sw_btn_, 1);
-            if (ico) lv_obj_align(ico, LV_ALIGN_LEFT_MID, 20, 0);
-            if (txt) lv_obj_align(txt, LV_ALIGN_LEFT_MID, 68, 0);
+            if (ico) lv_obj_align(ico, LV_ALIGN_LEFT_MID, 16, 0);
+            if (txt) lv_obj_align(txt, LV_ALIGN_LEFT_MID, 56, 0);
         }
         if (clock_timer_btn_) {
-            lv_obj_set_size(clock_timer_btn_, 224, 68);
-            lv_obj_set_pos(clock_timer_btn_, 8, 238);
+            lv_obj_set_size(clock_timer_btn_, 224, 46);
+            lv_obj_set_pos(clock_timer_btn_, 8, 228);
             lv_obj_t* ico = lv_obj_get_child(clock_timer_btn_, 0);
             lv_obj_t* txt = lv_obj_get_child(clock_timer_btn_, 1);
-            if (ico) lv_obj_align(ico, LV_ALIGN_LEFT_MID, 20, 0);
-            if (txt) lv_obj_align(txt, LV_ALIGN_LEFT_MID, 68, 0);
+            if (ico) lv_obj_align(ico, LV_ALIGN_LEFT_MID, 16, 0);
+            if (txt) lv_obj_align(txt, LV_ALIGN_LEFT_MID, 56, 0);
         }
     } else {
-        // 320 x 240
+        // 320 x 240: Thẻ đồng hồ chính ở trên, 2 nút nhỏ gọn ở dưới
         if (clock_back_btn_) lv_obj_set_pos(clock_back_btn_, 6, 8);
         if (clock_card_) {
-            lv_obj_set_size(clock_card_, 304, 88);
-            lv_obj_set_pos(clock_card_, 8, 36);
+            lv_obj_set_size(clock_card_, 304, 100);
+            lv_obj_set_pos(clock_card_, 8, 34);
             if (clock_time_label_) lv_obj_align(clock_time_label_, LV_ALIGN_TOP_MID, 0, 8);
-            if (clock_date_label_) lv_obj_align(clock_date_label_, LV_ALIGN_TOP_MID, 0, 48);
-            if (clock_sub_label_) lv_obj_align(clock_sub_label_, LV_ALIGN_TOP_MID, 0, 66);
+            if (clock_date_label_) lv_obj_align(clock_date_label_, LV_ALIGN_TOP_MID, 0, 52);
+            if (clock_sub_label_) lv_obj_align(clock_sub_label_, LV_ALIGN_TOP_MID, 0, 72);
         }
         if (clock_sw_btn_) {
-            lv_obj_set_size(clock_sw_btn_, 148, 96);
-            lv_obj_set_pos(clock_sw_btn_, 8, 132);
+            lv_obj_set_size(clock_sw_btn_, 146, 56);
+            lv_obj_set_pos(clock_sw_btn_, 8, 146);
             lv_obj_t* ico = lv_obj_get_child(clock_sw_btn_, 0);
             lv_obj_t* txt = lv_obj_get_child(clock_sw_btn_, 1);
-            if (ico) lv_obj_align(ico, LV_ALIGN_TOP_MID, 0, 14);
-            if (txt) lv_obj_align(txt, LV_ALIGN_TOP_MID, 0, 52);
+            if (ico) lv_obj_align(ico, LV_ALIGN_LEFT_MID, 12, 0);
+            if (txt) lv_obj_align(txt, LV_ALIGN_LEFT_MID, 46, 0);
         }
         if (clock_timer_btn_) {
-            lv_obj_set_size(clock_timer_btn_, 148, 96);
-            lv_obj_set_pos(clock_timer_btn_, 164, 132);
+            lv_obj_set_size(clock_timer_btn_, 146, 56);
+            lv_obj_set_pos(clock_timer_btn_, 166, 146);
             lv_obj_t* ico = lv_obj_get_child(clock_timer_btn_, 0);
             lv_obj_t* txt = lv_obj_get_child(clock_timer_btn_, 1);
-            if (ico) lv_obj_align(ico, LV_ALIGN_TOP_MID, 0, 14);
-            if (txt) lv_obj_align(txt, LV_ALIGN_TOP_MID, 0, 52);
+            if (ico) lv_obj_align(ico, LV_ALIGN_LEFT_MID, 12, 0);
+            if (txt) lv_obj_align(txt, LV_ALIGN_LEFT_MID, 46, 0);
         }
     }
 }
@@ -4809,14 +4826,29 @@ void LcdDisplay::UpdateClockUI() {
     char date_str[64];
     snprintf(date_str, sizeof(date_str), "%s, %02d/%02d/%04d", wdays[tm_now->tm_wday], tm_now->tm_mday, tm_now->tm_mon + 1, tm_now->tm_year + 1900);
     if (clock_date_label_) lv_label_set_text(clock_date_label_, date_str);
+
+    // Kiểm tra báo thức thực tế
+    if (alarm_enabled_ && tm_now != nullptr) {
+        int wday = tm_now->tm_wday; // 0=CN, 1=T2..6=T7
+        bool day_active = (alarm_days_mask_ & (1 << wday)) != 0;
+        if (day_active && tm_now->tm_hour == alarm_hour_ && tm_now->tm_min == alarm_min_) {
+            if (!alarm_triggered_today_) {
+                alarm_triggered_today_ = true;
+                ShowNotification("BÁO THỨC: ĐÃ ĐẾN GIỜ HẸN!", 5000);
+                Application::GetInstance().GetAudioService().PlaySound(Lang::Sounds::OGG_EXCLAMATION);
+            }
+        } else if (tm_now->tm_min != alarm_min_) {
+            alarm_triggered_today_ = false;
+        }
+    }
 }
 
-// ======================== STOPWATCH SCREEN ========================
+// ======================== STOPWATCH & COUNTDOWN SCREEN ========================
 void LcdDisplay::CreateStopwatchUI() {
     auto screen = lv_screen_active();
     stopwatch_box_ = lv_obj_create(screen);
     lv_obj_set_size(stopwatch_box_, width_, height_);
-    lv_obj_set_style_bg_color(stopwatch_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_color(stopwatch_box_, lv_color_hex(0x0f172a), 0);
     lv_obj_set_style_bg_opa(stopwatch_box_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(stopwatch_box_, 0, 0);
     lv_obj_set_style_border_width(stopwatch_box_, 0, 0);
@@ -4842,34 +4874,73 @@ void LcdDisplay::CreateStopwatchUI() {
         self->ShowClock();
     }, LV_EVENT_CLICKED, this);
 
-    // Title
-    lv_obj_t* title_lbl = lv_label_create(stopwatch_box_);
-    lv_label_set_text(title_lbl, "BẤM GIỜ");
-    lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
-    lv_obj_align(title_lbl, LV_ALIGN_TOP_MID, 0, 14);
+    // Tab switcher: [ BẤM GIỜ ]  [ ĐẾM NGƯỢC ]
+    sw_tab_sw_btn_ = lv_button_create(stopwatch_box_);
+    lv_obj_set_size(sw_tab_sw_btn_, 90, 30);
+    lv_obj_set_style_bg_color(sw_tab_sw_btn_, lv_color_hex(0x0284C7), 0);
+    lv_obj_set_style_bg_opa(sw_tab_sw_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(sw_tab_sw_btn_, 6, 0);
+    lv_obj_t* tab_sw_txt = lv_label_create(sw_tab_sw_btn_);
+    lv_label_set_text(tab_sw_txt, "Bấm giờ");
+    lv_obj_set_style_text_font(tab_sw_txt, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(tab_sw_txt, lv_color_white(), 0);
+    lv_obj_align(tab_sw_txt, LV_ALIGN_CENTER, 0, 0);
 
-    // Display Card
-    lv_obj_t* card = lv_obj_create(stopwatch_box_);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x161D27), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(card, 10, 0);
-    lv_obj_set_style_border_width(card, 1, 0);
-    lv_obj_set_style_border_color(card, lv_color_hex(0x283548), 0);
-    lv_obj_set_user_data(card, (void*)(intptr_t)300);
+    sw_tab_cd_btn_ = lv_button_create(stopwatch_box_);
+    lv_obj_set_size(sw_tab_cd_btn_, 90, 30);
+    lv_obj_set_style_bg_color(sw_tab_cd_btn_, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_bg_opa(sw_tab_cd_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(sw_tab_cd_btn_, 6, 0);
+    lv_obj_t* tab_cd_txt = lv_label_create(sw_tab_cd_btn_);
+    lv_label_set_text(tab_cd_txt, "Đếm ngược");
+    lv_obj_set_style_text_font(tab_cd_txt, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(tab_cd_txt, lv_color_hex(0x94A3B8), 0);
+    lv_obj_align(tab_cd_txt, LV_ALIGN_CENTER, 0, 0);
 
-    sw_time_label_ = lv_label_create(card);
+    lv_obj_add_event_cb(sw_tab_sw_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->sw_mode_countdown_ = false;
+        lv_obj_set_style_bg_color(self->sw_tab_sw_btn_, lv_color_hex(0x0284C7), 0);
+        lv_obj_set_style_bg_color(self->sw_tab_cd_btn_, lv_color_hex(0x1E293B), 0);
+        if (self->sw_container_) lv_obj_remove_flag(self->sw_container_, LV_OBJ_FLAG_HIDDEN);
+        if (self->cd_container_) lv_obj_add_flag(self->cd_container_, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_CLICKED, this);
+
+    lv_obj_add_event_cb(sw_tab_cd_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->sw_mode_countdown_ = true;
+        lv_obj_set_style_bg_color(self->sw_tab_sw_btn_, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_bg_color(self->sw_tab_cd_btn_, lv_color_hex(0x0284C7), 0);
+        if (self->sw_container_) lv_obj_add_flag(self->sw_container_, LV_OBJ_FLAG_HIDDEN);
+        if (self->cd_container_) lv_obj_remove_flag(self->cd_container_, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_CLICKED, this);
+
+    // ================= 1. Container BẤM GIỜ =================
+    sw_container_ = lv_obj_create(stopwatch_box_);
+    lv_obj_set_style_bg_opa(sw_container_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(sw_container_, 0, 0);
+    lv_obj_set_style_pad_all(sw_container_, 0, 0);
+    lv_obj_clear_flag(sw_container_, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* sw_card = lv_obj_create(sw_container_);
+    lv_obj_set_style_bg_color(sw_card, lv_color_hex(0x161D27), 0);
+    lv_obj_set_style_bg_opa(sw_card, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(sw_card, 10, 0);
+    lv_obj_set_style_border_width(sw_card, 1, 0);
+    lv_obj_set_style_border_color(sw_card, lv_color_hex(0x283548), 0);
+    lv_obj_set_user_data(sw_card, (void*)(intptr_t)310);
+
+    sw_time_label_ = lv_label_create(sw_card);
     lv_label_set_text(sw_time_label_, "00:00.0");
     lv_obj_set_style_text_font(sw_time_label_, &font_noto_sans_basic_30_4, 0);
     lv_obj_set_style_text_color(sw_time_label_, lv_color_white(), 0);
 
-    sw_status_label_ = lv_label_create(card);
-    lv_label_set_text(sw_status_label_, "Sẵn sàng");
+    sw_status_label_ = lv_label_create(sw_card);
+    lv_label_set_text(sw_status_label_, "Sẵn sàng bấm giờ");
     lv_obj_set_style_text_font(sw_status_label_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(sw_status_label_, lv_color_hex(0x90A4AE), 0);
+    lv_obj_set_style_text_color(sw_status_label_, lv_color_hex(0x94A3B8), 0);
 
-    // Start / Pause Button
-    sw_start_btn_ = lv_button_create(stopwatch_box_);
+    sw_start_btn_ = lv_button_create(sw_container_);
     lv_obj_set_style_bg_color(sw_start_btn_, lv_color_hex(0x1B5E20), 0);
     lv_obj_set_style_bg_opa(sw_start_btn_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(sw_start_btn_, 8, 0);
@@ -4894,8 +4965,7 @@ void LcdDisplay::CreateStopwatchUI() {
         }
     }, LV_EVENT_CLICKED, this);
 
-    // Reset Button
-    sw_reset_btn_ = lv_button_create(stopwatch_box_);
+    sw_reset_btn_ = lv_button_create(sw_container_);
     lv_obj_set_style_bg_color(sw_reset_btn_, lv_color_hex(0x374151), 0);
     lv_obj_set_style_bg_opa(sw_reset_btn_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(sw_reset_btn_, 8, 0);
@@ -4911,9 +4981,208 @@ void LcdDisplay::CreateStopwatchUI() {
         self->sw_elapsed_ms_ = 0;
         lv_obj_set_style_bg_color(self->sw_start_btn_, lv_color_hex(0x1B5E20), 0);
         lv_label_set_text(self->sw_start_lbl_, "Bắt đầu");
-        lv_label_set_text(self->sw_status_label_, "Sẵn sàng");
+        lv_label_set_text(self->sw_status_label_, "Sẵn sàng bấm giờ");
         if (self->sw_time_label_) lv_label_set_text(self->sw_time_label_, "00:00.0");
     }, LV_EVENT_CLICKED, this);
+
+    // ================= 2. Container ĐẾM NGƯỢC =================
+    cd_container_ = lv_obj_create(stopwatch_box_);
+    lv_obj_set_style_bg_opa(cd_container_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(cd_container_, 0, 0);
+    lv_obj_set_style_pad_all(cd_container_, 0, 0);
+    lv_obj_clear_flag(cd_container_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(cd_container_, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_t* cd_card = lv_obj_create(cd_container_);
+    lv_obj_set_style_bg_color(cd_card, lv_color_hex(0x161D27), 0);
+    lv_obj_set_style_bg_opa(cd_card, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(cd_card, 10, 0);
+    lv_obj_set_style_border_width(cd_card, 1, 0);
+    lv_obj_set_style_border_color(cd_card, lv_color_hex(0x283548), 0);
+    lv_obj_set_user_data(cd_card, (void*)(intptr_t)320);
+
+    cd_time_label_ = lv_label_create(cd_card);
+    lv_label_set_text(cd_time_label_, "05:00");
+    lv_obj_set_style_text_font(cd_time_label_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_color(cd_time_label_, lv_color_white(), 0);
+
+    cd_status_label_ = lv_label_create(cd_card);
+    lv_label_set_text(cd_status_label_, "Cài đặt: 5 phút");
+    lv_obj_set_style_text_font(cd_status_label_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(cd_status_label_, lv_color_hex(0x94A3B8), 0);
+
+    // Nút chỉnh phút: [- 1p] và [+ 1p]
+    cd_minus_btn_ = lv_button_create(cd_container_);
+    lv_obj_set_style_bg_color(cd_minus_btn_, lv_color_hex(0x223344), 0);
+    lv_obj_set_style_radius(cd_minus_btn_, 6, 0);
+    lv_obj_t* m_lbl = lv_label_create(cd_minus_btn_);
+    lv_label_set_text(m_lbl, "- 1p");
+    lv_obj_set_style_text_font(m_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(m_lbl, lv_color_white(), 0);
+    lv_obj_align(m_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(cd_minus_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self->cd_running_) return;
+        if (self->cd_minutes_ > 1) self->cd_minutes_--;
+        self->cd_remain_ms_ = (int64_t)self->cd_minutes_ * 60 * 1000;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:00", self->cd_minutes_);
+        if (self->cd_time_label_) lv_label_set_text(self->cd_time_label_, buf);
+        char sbuf[32];
+        snprintf(sbuf, sizeof(sbuf), "Đã chọn: %d phút", self->cd_minutes_);
+        if (self->cd_status_label_) lv_label_set_text(self->cd_status_label_, sbuf);
+    }, LV_EVENT_CLICKED, this);
+
+    cd_plus_btn_ = lv_button_create(cd_container_);
+    lv_obj_set_style_bg_color(cd_plus_btn_, lv_color_hex(0x223344), 0);
+    lv_obj_set_style_radius(cd_plus_btn_, 6, 0);
+    lv_obj_t* p_lbl = lv_label_create(cd_plus_btn_);
+    lv_label_set_text(p_lbl, "+ 1p");
+    lv_obj_set_style_text_font(p_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(p_lbl, lv_color_white(), 0);
+    lv_obj_align(p_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(cd_plus_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self->cd_running_) return;
+        if (self->cd_minutes_ < 99) self->cd_minutes_++;
+        self->cd_remain_ms_ = (int64_t)self->cd_minutes_ * 60 * 1000;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:00", self->cd_minutes_);
+        if (self->cd_time_label_) lv_label_set_text(self->cd_time_label_, buf);
+        char sbuf[32];
+        snprintf(sbuf, sizeof(sbuf), "Đã chọn: %d phút", self->cd_minutes_);
+        if (self->cd_status_label_) lv_label_set_text(self->cd_status_label_, sbuf);
+    }, LV_EVENT_CLICKED, this);
+
+    // 4 nút preset nhanh: 1p, 5p, 15p, 25p
+    int presets[4] = {1, 5, 15, 25};
+    const char* preset_names[4] = {"1p", "5p", "15p", "25p"};
+    for (int i = 0; i < 4; ++i) {
+        lv_obj_t* btn = lv_button_create(cd_container_);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_radius(btn, 6, 0);
+        lv_obj_set_user_data(btn, (void*)(intptr_t)(presets[i]));
+        lv_obj_t* l = lv_label_create(btn);
+        lv_label_set_text(l, preset_names[i]);
+        lv_obj_set_style_text_font(l, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(l, lv_color_hex(0x38BDF8), 0);
+        lv_obj_align(l, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_add_event_cb(btn, [](lv_event_t* e) {
+            auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+            if (self->cd_running_) return;
+            int m = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+            self->cd_minutes_ = m;
+            self->cd_remain_ms_ = (int64_t)m * 60 * 1000;
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%02d:00", m);
+            if (self->cd_time_label_) lv_label_set_text(self->cd_time_label_, buf);
+            char sbuf[32];
+            snprintf(sbuf, sizeof(sbuf), "Đã chọn: %d phút", m);
+            if (self->cd_status_label_) lv_label_set_text(self->cd_status_label_, sbuf);
+        }, LV_EVENT_CLICKED, this);
+    }
+
+    // Action buttons: Bắt đầu / Đặt lại
+    cd_start_btn_ = lv_button_create(cd_container_);
+    lv_obj_set_style_bg_color(cd_start_btn_, lv_color_hex(0x1B5E20), 0);
+    lv_obj_set_style_radius(cd_start_btn_, 8, 0);
+    cd_start_lbl_ = lv_label_create(cd_start_btn_);
+    lv_label_set_text(cd_start_lbl_, "Bắt đầu");
+    lv_obj_set_style_text_font(cd_start_lbl_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(cd_start_lbl_, lv_color_white(), 0);
+    lv_obj_align(cd_start_lbl_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(cd_start_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 300) return;
+        self->cd_running_ = !self->cd_running_;
+        if (self->cd_running_) {
+            if (self->cd_remain_ms_ <= 0) self->cd_remain_ms_ = (int64_t)self->cd_minutes_ * 60 * 1000;
+            self->cd_last_tick_ms_ = esp_timer_get_time() / 1000;
+            lv_obj_set_style_bg_color(self->cd_start_btn_, lv_color_hex(0xE65100), 0);
+            lv_label_set_text(self->cd_start_lbl_, "Tạm dừng");
+            lv_label_set_text(self->cd_status_label_, "Đang đếm ngược...");
+            lv_obj_set_style_text_color(self->cd_status_label_, lv_color_hex(0x38BDF8), 0);
+        } else {
+            lv_obj_set_style_bg_color(self->cd_start_btn_, lv_color_hex(0x1B5E20), 0);
+            lv_label_set_text(self->cd_start_lbl_, "Tiếp tục");
+            lv_label_set_text(self->cd_status_label_, "Đã tạm dừng");
+        }
+    }, LV_EVENT_CLICKED, this);
+
+    cd_reset_btn_ = lv_button_create(cd_container_);
+    lv_obj_set_style_bg_color(cd_reset_btn_, lv_color_hex(0x374151), 0);
+    lv_obj_set_style_radius(cd_reset_btn_, 8, 0);
+    lv_obj_t* cd_r_lbl = lv_label_create(cd_reset_btn_);
+    lv_label_set_text(cd_r_lbl, "Đặt lại");
+    lv_obj_set_style_text_font(cd_r_lbl, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(cd_r_lbl, lv_color_white(), 0);
+    lv_obj_align(cd_r_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(cd_reset_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 300) return;
+        self->cd_running_ = false;
+        self->cd_remain_ms_ = (int64_t)self->cd_minutes_ * 60 * 1000;
+        lv_obj_set_style_bg_color(self->cd_start_btn_, lv_color_hex(0x1B5E20), 0);
+        lv_label_set_text(self->cd_start_lbl_, "Bắt đầu");
+        char sbuf[32];
+        snprintf(sbuf, sizeof(sbuf), "Cài đặt: %d phút", self->cd_minutes_);
+        lv_label_set_text(self->cd_status_label_, sbuf);
+        lv_obj_set_style_text_color(self->cd_status_label_, lv_color_hex(0x94A3B8), 0);
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:00", self->cd_minutes_);
+        if (self->cd_time_label_) lv_label_set_text(self->cd_time_label_, buf);
+    }, LV_EVENT_CLICKED, this);
+
+    // Fast tick timer (50ms): cho số chạy mượt mà theo từng giây/mili-giây và đếm ngược loa tiếng!
+    if (fast_tick_timer_ == nullptr) {
+        fast_tick_timer_ = lv_timer_create([](lv_timer_t* t) {
+            auto* self = static_cast<LcdDisplay*>(lv_timer_get_user_data(t));
+            if (self == nullptr) return;
+
+            // 1. Chạy số Bấm giờ mili-giây
+            if (self->sw_running_) {
+                int64_t now_ms = esp_timer_get_time() / 1000;
+                self->sw_elapsed_ms_ += (now_ms - self->sw_last_tick_ms_);
+                self->sw_last_tick_ms_ = now_ms;
+                int total_tenth = (int)(self->sw_elapsed_ms_ / 100);
+                int tenths = total_tenth % 10;
+                int total_secs = total_tenth / 10;
+                int secs = total_secs % 60;
+                int mins = total_secs / 60;
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%02d:%02d.%d", mins, secs, tenths);
+                if (self->sw_time_label_) lv_label_set_text(self->sw_time_label_, buf);
+            }
+
+            // 2. Chạy Đếm ngược & Báo loa khi về 0
+            if (self->cd_running_) {
+                int64_t now_ms = esp_timer_get_time() / 1000;
+                int64_t diff = now_ms - self->cd_last_tick_ms_;
+                self->cd_last_tick_ms_ = now_ms;
+                self->cd_remain_ms_ -= diff;
+                if (self->cd_remain_ms_ <= 0) {
+                    self->cd_remain_ms_ = 0;
+                    self->cd_running_ = false;
+                    if (self->cd_time_label_) lv_label_set_text(self->cd_time_label_, "00:00");
+                    if (self->cd_status_label_) {
+                        lv_label_set_text(self->cd_status_label_, "HẾT GIỜ!");
+                        lv_obj_set_style_text_color(self->cd_status_label_, lv_color_hex(0xFF1744), 0);
+                    }
+                    if (self->cd_start_lbl_) lv_label_set_text(self->cd_start_lbl_, "Bắt đầu");
+                    if (self->cd_start_btn_) lv_obj_set_style_bg_color(self->cd_start_btn_, lv_color_hex(0x1B5E20), 0);
+                    self->ShowNotification("Đếm ngược: ĐÃ HẾT GIỜ!", 4000);
+                    Application::GetInstance().GetAudioService().PlaySound(Lang::Sounds::OGG_EXCLAMATION);
+                } else {
+                    int total_secs = (int)(self->cd_remain_ms_ / 1000);
+                    int secs = total_secs % 60;
+                    int mins = total_secs / 60;
+                    char buf[16];
+                    snprintf(buf, sizeof(buf), "%02d:%02d", mins, secs);
+                    if (self->cd_time_label_) lv_label_set_text(self->cd_time_label_, buf);
+                }
+            }
+        }, 50, this);
+    }
 
     LayoutStopwatchWidgets(height_ > width_);
 }
@@ -4922,67 +5191,161 @@ void LcdDisplay::LayoutStopwatchWidgets(bool is_portrait) {
     if (stopwatch_box_ == nullptr) return;
     lv_obj_set_size(stopwatch_box_, width_, height_);
 
-    lv_obj_t* card = nullptr;
-    uint32_t cnt = lv_obj_get_child_count(stopwatch_box_);
-    for (uint32_t i = 0; i < cnt; ++i) {
-        lv_obj_t* child = lv_obj_get_child(stopwatch_box_, i);
-        if ((int)(intptr_t)lv_obj_get_user_data(child) == 300) card = child;
-    }
-
     if (is_portrait) {
         // 240 x 320
-        if (sw_back_btn_) lv_obj_set_pos(sw_back_btn_, 6, 14);
-        if (card) {
-            lv_obj_set_size(card, 224, 120);
-            lv_obj_set_pos(card, 8, 50);
-            if (sw_time_label_) lv_obj_align(sw_time_label_, LV_ALIGN_CENTER, 0, -10);
-            if (sw_status_label_) lv_obj_align(sw_status_label_, LV_ALIGN_CENTER, 0, 32);
+        if (sw_back_btn_) lv_obj_set_pos(sw_back_btn_, 6, 12);
+        if (sw_tab_sw_btn_) lv_obj_set_pos(sw_tab_sw_btn_, 46, 12);
+        if (sw_tab_cd_btn_) lv_obj_set_pos(sw_tab_cd_btn_, 142, 12);
+
+        // Bấm giờ panel
+        if (sw_container_) {
+            lv_obj_set_size(sw_container_, 240, 266);
+            lv_obj_set_pos(sw_container_, 0, 48);
+            lv_obj_t* sw_card = nullptr;
+            uint32_t cnt = lv_obj_get_child_count(sw_container_);
+            for (uint32_t i = 0; i < cnt; ++i) {
+                lv_obj_t* child = lv_obj_get_child(sw_container_, i);
+                if ((int)(intptr_t)lv_obj_get_user_data(child) == 310) sw_card = child;
+            }
+            if (sw_card) {
+                lv_obj_set_size(sw_card, 224, 114);
+                lv_obj_set_pos(sw_card, 8, 6);
+                if (sw_time_label_) lv_obj_align(sw_time_label_, LV_ALIGN_CENTER, 0, -12);
+                if (sw_status_label_) lv_obj_align(sw_status_label_, LV_ALIGN_CENTER, 0, 28);
+            }
+            if (sw_start_btn_) {
+                lv_obj_set_size(sw_start_btn_, 224, 48);
+                lv_obj_set_pos(sw_start_btn_, 8, 134);
+            }
+            if (sw_reset_btn_) {
+                lv_obj_set_size(sw_reset_btn_, 224, 44);
+                lv_obj_set_pos(sw_reset_btn_, 8, 192);
+            }
         }
-        if (sw_start_btn_) {
-            lv_obj_set_size(sw_start_btn_, 224, 52);
-            lv_obj_set_pos(sw_start_btn_, 8, 186);
-        }
-        if (sw_reset_btn_) {
-            lv_obj_set_size(sw_reset_btn_, 224, 48);
-            lv_obj_set_pos(sw_reset_btn_, 8, 246);
+
+        // Đếm ngược panel
+        if (cd_container_) {
+            lv_obj_set_size(cd_container_, 240, 266);
+            lv_obj_set_pos(cd_container_, 0, 48);
+            lv_obj_t* cd_card = nullptr;
+            uint32_t cnt = lv_obj_get_child_count(cd_container_);
+            for (uint32_t i = 0; i < cnt; ++i) {
+                lv_obj_t* child = lv_obj_get_child(cd_container_, i);
+                if ((int)(intptr_t)lv_obj_get_user_data(child) == 320) cd_card = child;
+            }
+            if (cd_card) {
+                lv_obj_set_size(cd_card, 224, 88);
+                lv_obj_set_pos(cd_card, 8, 4);
+                if (cd_time_label_) lv_obj_align(cd_time_label_, LV_ALIGN_CENTER, 0, -10);
+                if (cd_status_label_) lv_obj_align(cd_status_label_, LV_ALIGN_CENTER, 0, 24);
+            }
+            if (cd_minus_btn_) {
+                lv_obj_set_size(cd_minus_btn_, 50, 32);
+                lv_obj_set_pos(cd_minus_btn_, 8, 98);
+            }
+            if (cd_plus_btn_) {
+                lv_obj_set_size(cd_plus_btn_, 50, 32);
+                lv_obj_set_pos(cd_plus_btn_, 182, 98);
+            }
+            int p_idx = 0;
+            uint32_t ccnt = lv_obj_get_child_count(cd_container_);
+            for (uint32_t i = 0; i < ccnt; ++i) {
+                lv_obj_t* child = lv_obj_get_child(cd_container_, i);
+                int ud = (int)(intptr_t)lv_obj_get_user_data(child);
+                if (ud == 1 || ud == 5 || ud == 15 || ud == 25) {
+                    lv_obj_set_size(child, 26, 32);
+                    lv_obj_set_pos(child, 62 + p_idx * 29, 98);
+                    p_idx++;
+                }
+            }
+            if (cd_start_btn_) {
+                lv_obj_set_size(cd_start_btn_, 224, 46);
+                lv_obj_set_pos(cd_start_btn_, 8, 140);
+            }
+            if (cd_reset_btn_) {
+                lv_obj_set_size(cd_reset_btn_, 224, 40);
+                lv_obj_set_pos(cd_reset_btn_, 8, 194);
+            }
         }
     } else {
         // 320 x 240
-        if (sw_back_btn_) lv_obj_set_pos(sw_back_btn_, 6, 8);
-        if (card) {
-            lv_obj_set_size(card, 304, 100);
-            lv_obj_set_pos(card, 8, 36);
-            if (sw_time_label_) lv_obj_align(sw_time_label_, LV_ALIGN_CENTER, 0, -10);
-            if (sw_status_label_) lv_obj_align(sw_status_label_, LV_ALIGN_CENTER, 0, 30);
+        if (sw_back_btn_) lv_obj_set_pos(sw_back_btn_, 6, 6);
+        if (sw_tab_sw_btn_) lv_obj_set_pos(sw_tab_sw_btn_, 56, 6);
+        if (sw_tab_cd_btn_) lv_obj_set_pos(sw_tab_cd_btn_, 156, 6);
+
+        if (sw_container_) {
+            lv_obj_set_size(sw_container_, 320, 196);
+            lv_obj_set_pos(sw_container_, 0, 40);
+            lv_obj_t* sw_card = nullptr;
+            uint32_t cnt = lv_obj_get_child_count(sw_container_);
+            for (uint32_t i = 0; i < cnt; ++i) {
+                lv_obj_t* child = lv_obj_get_child(sw_container_, i);
+                if ((int)(intptr_t)lv_obj_get_user_data(child) == 310) sw_card = child;
+            }
+            if (sw_card) {
+                lv_obj_set_size(sw_card, 304, 94);
+                lv_obj_set_pos(sw_card, 8, 4);
+                if (sw_time_label_) lv_obj_align(sw_time_label_, LV_ALIGN_CENTER, 0, -10);
+                if (sw_status_label_) lv_obj_align(sw_status_label_, LV_ALIGN_CENTER, 0, 24);
+            }
+            if (sw_start_btn_) {
+                lv_obj_set_size(sw_start_btn_, 146, 52);
+                lv_obj_set_pos(sw_start_btn_, 8, 108);
+            }
+            if (sw_reset_btn_) {
+                lv_obj_set_size(sw_reset_btn_, 146, 52);
+                lv_obj_set_pos(sw_reset_btn_, 166, 108);
+            }
         }
-        if (sw_start_btn_) {
-            lv_obj_set_size(sw_start_btn_, 146, 54);
-            lv_obj_set_pos(sw_start_btn_, 8, 150);
-        }
-        if (sw_reset_btn_) {
-            lv_obj_set_size(sw_reset_btn_, 146, 54);
-            lv_obj_set_pos(sw_reset_btn_, 166, 150);
+
+        if (cd_container_) {
+            lv_obj_set_size(cd_container_, 320, 196);
+            lv_obj_set_pos(cd_container_, 0, 40);
+            lv_obj_t* cd_card = nullptr;
+            uint32_t cnt = lv_obj_get_child_count(cd_container_);
+            for (uint32_t i = 0; i < cnt; ++i) {
+                lv_obj_t* child = lv_obj_get_child(cd_container_, i);
+                if ((int)(intptr_t)lv_obj_get_user_data(child) == 320) cd_card = child;
+            }
+            if (cd_card) {
+                lv_obj_set_size(cd_card, 304, 78);
+                lv_obj_set_pos(cd_card, 8, 4);
+                if (cd_time_label_) lv_obj_align(cd_time_label_, LV_ALIGN_CENTER, 0, -10);
+                if (cd_status_label_) lv_obj_align(cd_status_label_, LV_ALIGN_CENTER, 0, 22);
+            }
+            if (cd_minus_btn_) {
+                lv_obj_set_size(cd_minus_btn_, 44, 28);
+                lv_obj_set_pos(cd_minus_btn_, 8, 88);
+            }
+            if (cd_plus_btn_) {
+                lv_obj_set_size(cd_plus_btn_, 44, 28);
+                lv_obj_set_pos(cd_plus_btn_, 268, 88);
+            }
+            int p_idx = 0;
+            uint32_t ccnt = lv_obj_get_child_count(cd_container_);
+            for (uint32_t i = 0; i < ccnt; ++i) {
+                lv_obj_t* child = lv_obj_get_child(cd_container_, i);
+                int ud = (int)(intptr_t)lv_obj_get_user_data(child);
+                if (ud == 1 || ud == 5 || ud == 15 || ud == 25) {
+                    lv_obj_set_size(child, 48, 28);
+                    lv_obj_set_pos(child, 58 + p_idx * 52, 88);
+                    p_idx++;
+                }
+            }
+            if (cd_start_btn_) {
+                lv_obj_set_size(cd_start_btn_, 146, 46);
+                lv_obj_set_pos(cd_start_btn_, 8, 124);
+            }
+            if (cd_reset_btn_) {
+                lv_obj_set_size(cd_reset_btn_, 146, 46);
+                lv_obj_set_pos(cd_reset_btn_, 166, 124);
+            }
         }
     }
 }
 
 void LcdDisplay::UpdateStopwatchUI() {
-    if (stopwatch_box_ == nullptr) return;
-    if (sw_running_) {
-        int64_t now_ms = esp_timer_get_time() / 1000;
-        sw_elapsed_ms_ += (now_ms - sw_last_tick_ms_);
-        sw_last_tick_ms_ = now_ms;
-
-        int total_tenth = sw_elapsed_ms_ / 100;
-        int tenths = total_tenth % 10;
-        int total_secs = total_tenth / 10;
-        int secs = total_secs % 60;
-        int mins = total_secs / 60;
-
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%02d:%02d.%d", mins, secs, tenths);
-        if (sw_time_label_) lv_label_set_text(sw_time_label_, buf);
-    }
+    // Fast timer đã cập nhật nhãn trực tiếp
 }
 
 // ======================== TIMER SCREEN ========================
@@ -5018,157 +5381,295 @@ void LcdDisplay::CreateTimerUI() {
 
     // Title
     lv_obj_t* title_lbl = lv_label_create(timer_box_);
-    lv_label_set_text(title_lbl, "HẸN GIỜ ĐA NĂNG");
+    lv_label_set_text(title_lbl, "HẸN GIỜ BÁO THỨC");
     lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
-    lv_obj_align(title_lbl, LV_ALIGN_TOP_MID, 0, 14);
+    lv_obj_align(title_lbl, LV_ALIGN_TOP_MID, 0, 12);
 
-    // 3 bộ hẹn giờ chạy song song
-    const char* slot_names[3] = {"Hẹn giờ 1 (1 phút)", "Hẹn giờ 2 (5 phút)", "Hẹn giờ 3 (15 phút)"};
-    int slot_times[3] = {60, 300, 900};
+    // 1. Thẻ hiển thị Giờ Báo Thức & Điều chỉnh
+    lv_obj_t* time_card = lv_obj_create(timer_box_);
+    lv_obj_set_style_bg_color(time_card, lv_color_hex(0x161D27), 0);
+    lv_obj_set_style_bg_opa(time_card, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(time_card, 10, 0);
+    lv_obj_set_style_border_width(time_card, 1, 0);
+    lv_obj_set_style_border_color(time_card, lv_color_hex(0x283548), 0);
+    lv_obj_set_style_pad_all(time_card, 0, 0);
+    lv_obj_clear_flag(time_card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_user_data(time_card, (void*)(intptr_t)401);
 
-    for (int i = 0; i < 3; ++i) {
-        auto& s = timer_slots_[i];
-        s.total_sec = slot_times[i];
-        s.remaining_sec = slot_times[i];
-        s.running = false;
+    alarm_time_label_ = lv_label_create(time_card);
+    char abuf[16];
+    snprintf(abuf, sizeof(abuf), "%02d:%02d", alarm_hour_, alarm_min_);
+    lv_label_set_text(alarm_time_label_, abuf);
+    lv_obj_set_style_text_font(alarm_time_label_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_color(alarm_time_label_, lv_color_hex(0x60A5FA), 0);
 
-        s.card = lv_obj_create(timer_box_);
-        lv_obj_set_style_bg_color(s.card, lv_color_hex(0x161D27), 0);
-        lv_obj_set_style_bg_opa(s.card, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(s.card, 8, 0);
-        lv_obj_set_style_border_width(s.card, 1, 0);
-        lv_obj_set_style_border_color(s.card, lv_color_hex(0x283548), 0);
-        lv_obj_clear_flag(s.card, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_clear_flag(s.card, LV_OBJ_FLAG_CLICKABLE);
+    auto make_adj_btn = [&](lv_obj_t* parent, const char* text) -> lv_obj_t* {
+        lv_obj_t* btn = lv_button_create(parent);
+        lv_obj_set_style_bg_color(btn, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(btn, 6, 0);
+        lv_obj_set_style_border_width(btn, 1, 0);
+        lv_obj_set_style_border_color(btn, lv_color_hex(0x334155), 0);
+        lv_obj_set_style_pad_all(btn, 0, 0);
+        lv_obj_t* lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, text);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+        return btn;
+    };
 
-        s.name_lbl = lv_label_create(s.card);
-        lv_label_set_text(s.name_lbl, slot_names[i]);
-        lv_obj_set_style_text_font(s.name_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(s.name_lbl, lv_color_hex(0x64B5F6), 0);
+    alarm_hour_minus_btn_ = make_adj_btn(time_card, "-1h");
+    alarm_hour_plus_btn_  = make_adj_btn(time_card, "+1h");
+    alarm_min_minus_btn_  = make_adj_btn(time_card, "-5p");
+    alarm_min_plus_btn_   = make_adj_btn(time_card, "+5p");
 
-        s.time_lbl = lv_label_create(s.card);
-        char tbuf[16];
-        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", s.remaining_sec / 60, s.remaining_sec % 60);
-        lv_label_set_text(s.time_lbl, tbuf);
-        lv_obj_set_style_text_font(s.time_lbl, &font_noto_sans_basic_20_4, 0);
-        lv_obj_set_style_text_color(s.time_lbl, lv_color_white(), 0);
+    lv_obj_add_event_cb(alarm_hour_minus_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->alarm_hour_ = (self->alarm_hour_ + 23) % 24;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:%02d", self->alarm_hour_, self->alarm_min_);
+        if (self->alarm_time_label_) lv_label_set_text(self->alarm_time_label_, buf);
+        self->UpdateTimerUI();
+    }, LV_EVENT_CLICKED, this);
 
-        s.toggle_btn = lv_button_create(s.card);
-        lv_obj_set_size(s.toggle_btn, 64, 28);
-        lv_obj_set_style_bg_color(s.toggle_btn, lv_color_hex(0x1B5E20), 0);
-        lv_obj_set_style_bg_opa(s.toggle_btn, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(s.toggle_btn, 6, 0);
-        s.toggle_lbl = lv_label_create(s.toggle_btn);
-        lv_label_set_text(s.toggle_lbl, "Bật");
-        lv_obj_set_style_text_font(s.toggle_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(s.toggle_lbl, lv_color_white(), 0);
-        lv_obj_align(s.toggle_lbl, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_user_data(s.toggle_btn, (void*)(intptr_t)i);
-        lv_obj_add_event_cb(s.toggle_btn, [](lv_event_t* e) {
+    lv_obj_add_event_cb(alarm_hour_plus_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->alarm_hour_ = (self->alarm_hour_ + 1) % 24;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:%02d", self->alarm_hour_, self->alarm_min_);
+        if (self->alarm_time_label_) lv_label_set_text(self->alarm_time_label_, buf);
+        self->UpdateTimerUI();
+    }, LV_EVENT_CLICKED, this);
+
+    lv_obj_add_event_cb(alarm_min_minus_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->alarm_min_ = (self->alarm_min_ + 55) % 60;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:%02d", self->alarm_hour_, self->alarm_min_);
+        if (self->alarm_time_label_) lv_label_set_text(self->alarm_time_label_, buf);
+        self->UpdateTimerUI();
+    }, LV_EVENT_CLICKED, this);
+
+    lv_obj_add_event_cb(alarm_min_plus_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->alarm_min_ = (self->alarm_min_ + 5) % 60;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%02d:%02d", self->alarm_hour_, self->alarm_min_);
+        if (self->alarm_time_label_) lv_label_set_text(self->alarm_time_label_, buf);
+        self->UpdateTimerUI();
+    }, LV_EVENT_CLICKED, this);
+
+    // 2. Thẻ chọn ngày trong tuần
+    lv_obj_t* days_card = lv_obj_create(timer_box_);
+    lv_obj_set_style_bg_color(days_card, lv_color_hex(0x161D27), 0);
+    lv_obj_set_style_bg_opa(days_card, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(days_card, 10, 0);
+    lv_obj_set_style_border_width(days_card, 1, 0);
+    lv_obj_set_style_border_color(days_card, lv_color_hex(0x283548), 0);
+    lv_obj_set_style_pad_all(days_card, 0, 0);
+    lv_obj_clear_flag(days_card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_user_data(days_card, (void*)(intptr_t)402);
+
+    const char* day_names[7] = {"CN", "T2", "T3", "T4", "T5", "T6", "T7"};
+    for (int i = 0; i < 7; ++i) {
+        alarm_day_btns_[i] = lv_button_create(days_card);
+        lv_obj_set_style_radius(alarm_day_btns_[i], 6, 0);
+        lv_obj_set_style_pad_all(alarm_day_btns_[i], 0, 0);
+        lv_obj_set_user_data(alarm_day_btns_[i], (void*)(intptr_t)i);
+
+        bool active = (alarm_days_mask_ & (1 << i)) != 0;
+        lv_obj_set_style_bg_color(alarm_day_btns_[i], active ? lv_color_hex(0x2563EB) : lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_bg_opa(alarm_day_btns_[i], LV_OPA_COVER, 0);
+
+        lv_obj_t* dlbl = lv_label_create(alarm_day_btns_[i]);
+        lv_label_set_text(dlbl, day_names[i]);
+        lv_obj_set_style_text_font(dlbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(dlbl, active ? lv_color_white() : lv_color_hex(0x94A3B8), 0);
+        lv_obj_align(dlbl, LV_ALIGN_CENTER, 0, 0);
+
+        lv_obj_add_event_cb(alarm_day_btns_[i], [](lv_event_t* e) {
             auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-            auto& slot = self->timer_slots_[idx];
-            slot.running = !slot.running;
-            if (slot.running) {
-                if (slot.remaining_sec <= 0) slot.remaining_sec = slot.total_sec;
-                lv_obj_set_style_bg_color(slot.toggle_btn, lv_color_hex(0xE65100), 0);
-                lv_label_set_text(slot.toggle_lbl, "Dừng");
-            } else {
-                lv_obj_set_style_bg_color(slot.toggle_btn, lv_color_hex(0x1B5E20), 0);
-                lv_label_set_text(slot.toggle_lbl, "Bật");
-            }
-        }, LV_EVENT_CLICKED, this);
-
-        s.reset_btn = lv_button_create(s.card);
-        lv_obj_set_size(s.reset_btn, 44, 28);
-        lv_obj_set_style_bg_color(s.reset_btn, lv_color_hex(0x374151), 0);
-        lv_obj_set_style_bg_opa(s.reset_btn, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(s.reset_btn, 6, 0);
-        lv_obj_t* r_lbl = lv_label_create(s.reset_btn);
-        lv_label_set_text(r_lbl, "Lại");
-        lv_obj_set_style_text_font(r_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(r_lbl, lv_color_white(), 0);
-        lv_obj_align(r_lbl, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_user_data(s.reset_btn, (void*)(intptr_t)i);
-        lv_obj_add_event_cb(s.reset_btn, [](lv_event_t* e) {
-            auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-            auto& slot = self->timer_slots_[idx];
-            slot.running = false;
-            slot.remaining_sec = slot.total_sec;
-            lv_obj_set_style_bg_color(slot.toggle_btn, lv_color_hex(0x1B5E20), 0);
-            lv_label_set_text(slot.toggle_lbl, "Bật");
-            char buf[16];
-            snprintf(buf, sizeof(buf), "%02d:%02d", slot.remaining_sec / 60, slot.remaining_sec % 60);
-            lv_label_set_text(slot.time_lbl, buf);
-            lv_obj_set_style_text_color(slot.time_lbl, lv_color_white(), 0);
+            int day_idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+            self->alarm_days_mask_ ^= (1 << day_idx);
+            bool act = (self->alarm_days_mask_ & (1 << day_idx)) != 0;
+            lv_obj_t* b = self->alarm_day_btns_[day_idx];
+            lv_obj_set_style_bg_color(b, act ? lv_color_hex(0x2563EB) : lv_color_hex(0x1E293B), 0);
+            lv_obj_t* l = lv_obj_get_child(b, 0);
+            if (l) lv_obj_set_style_text_color(l, act ? lv_color_white() : lv_color_hex(0x94A3B8), 0);
+            self->UpdateTimerUI();
         }, LV_EVENT_CLICKED, this);
     }
 
+    alarm_preset_btn_ = lv_button_create(days_card);
+    lv_obj_set_style_bg_color(alarm_preset_btn_, lv_color_hex(0x334155), 0);
+    lv_obj_set_style_bg_opa(alarm_preset_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(alarm_preset_btn_, 6, 0);
+    lv_obj_set_style_pad_all(alarm_preset_btn_, 0, 0);
+    lv_obj_t* pre_lbl = lv_label_create(alarm_preset_btn_);
+    lv_label_set_text(pre_lbl, "Chọn nhanh: Hàng ngày");
+    lv_obj_set_style_text_font(pre_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(pre_lbl, lv_color_white(), 0);
+    lv_obj_align(pre_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(alarm_preset_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self->alarm_days_mask_ == 0x7F) {
+            self->alarm_days_mask_ = 0x3E; // T2..T6
+        } else if (self->alarm_days_mask_ == 0x3E) {
+            self->alarm_days_mask_ = 0x41; // CN, T7
+        } else {
+            self->alarm_days_mask_ = 0x7F; // All
+        }
+        for (int i = 0; i < 7; ++i) {
+            bool act = (self->alarm_days_mask_ & (1 << i)) != 0;
+            lv_obj_t* b = self->alarm_day_btns_[i];
+            lv_obj_set_style_bg_color(b, act ? lv_color_hex(0x2563EB) : lv_color_hex(0x1E293B), 0);
+            lv_obj_t* l = lv_obj_get_child(b, 0);
+            if (l) lv_obj_set_style_text_color(l, act ? lv_color_white() : lv_color_hex(0x94A3B8), 0);
+        }
+        self->UpdateTimerUI();
+    }, LV_EVENT_CLICKED, this);
+
+    // 3. Nút Bật / Tắt Báo Thức
+    alarm_toggle_btn_ = lv_button_create(timer_box_);
+    lv_obj_set_style_bg_color(alarm_toggle_btn_, alarm_enabled_ ? lv_color_hex(0x10B981) : lv_color_hex(0x4B5563), 0);
+    lv_obj_set_style_bg_opa(alarm_toggle_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(alarm_toggle_btn_, 8, 0);
+    lv_obj_set_style_pad_all(alarm_toggle_btn_, 0, 0);
+    alarm_toggle_lbl_ = lv_label_create(alarm_toggle_btn_);
+    lv_label_set_text(alarm_toggle_lbl_, alarm_enabled_ ? "Báo thức: ĐANG BẬT" : "Báo thức: ĐANG TẮT");
+    lv_obj_set_style_text_font(alarm_toggle_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(alarm_toggle_lbl_, lv_color_white(), 0);
+    lv_obj_align(alarm_toggle_lbl_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(alarm_toggle_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->alarm_enabled_ = !self->alarm_enabled_;
+        lv_obj_set_style_bg_color(self->alarm_toggle_btn_, self->alarm_enabled_ ? lv_color_hex(0x10B981) : lv_color_hex(0x4B5563), 0);
+        lv_label_set_text(self->alarm_toggle_lbl_, self->alarm_enabled_ ? "Báo thức: ĐANG BẬT" : "Báo thức: ĐANG TẮT");
+        self->UpdateTimerUI();
+    }, LV_EVENT_CLICKED, this);
+
+    alarm_status_label_ = lv_label_create(timer_box_);
+    lv_obj_set_style_text_font(alarm_status_label_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(alarm_status_label_, lv_color_hex(0x94A3B8), 0);
+
     LayoutTimerWidgets(height_ > width_);
+    UpdateTimerUI();
 }
 
 void LcdDisplay::LayoutTimerWidgets(bool is_portrait) {
     if (timer_box_ == nullptr) return;
     lv_obj_set_size(timer_box_, width_, height_);
 
+    lv_obj_t* time_card = nullptr;
+    lv_obj_t* days_card = nullptr;
+    uint32_t cnt = lv_obj_get_child_count(timer_box_);
+    for (uint32_t i = 0; i < cnt; ++i) {
+        lv_obj_t* child = lv_obj_get_child(timer_box_, i);
+        intptr_t id = (intptr_t)lv_obj_get_user_data(child);
+        if (id == 401) time_card = child;
+        else if (id == 402) days_card = child;
+    }
+
     if (is_portrait) {
         // 240 x 320
-        if (timer_back_btn_) lv_obj_set_pos(timer_back_btn_, 6, 14);
-        for (int i = 0; i < 3; ++i) {
-            auto& s = timer_slots_[i];
-            if (!s.card) continue;
-            lv_obj_set_size(s.card, 224, 76);
-            lv_obj_set_pos(s.card, 8, 50 + i * 86);
-            if (s.name_lbl) lv_obj_set_pos(s.name_lbl, 8, 6);
-            if (s.time_lbl) lv_obj_set_pos(s.time_lbl, 8, 36);
-            if (s.toggle_btn) lv_obj_set_pos(s.toggle_btn, 108, 34);
-            if (s.reset_btn) lv_obj_set_pos(s.reset_btn, 174, 34);
+        if (timer_back_btn_) lv_obj_set_pos(timer_back_btn_, 6, 10);
+        if (time_card) {
+            lv_obj_set_size(time_card, 224, 102);
+            lv_obj_set_pos(time_card, 8, 44);
+            if (alarm_time_label_) lv_obj_align(alarm_time_label_, LV_ALIGN_TOP_MID, 0, 10);
+            if (alarm_hour_minus_btn_) { lv_obj_set_size(alarm_hour_minus_btn_, 48, 28); lv_obj_set_pos(alarm_hour_minus_btn_, 8, 62); }
+            if (alarm_hour_plus_btn_)  { lv_obj_set_size(alarm_hour_plus_btn_, 48, 28);  lv_obj_set_pos(alarm_hour_plus_btn_, 60, 62); }
+            if (alarm_min_minus_btn_)  { lv_obj_set_size(alarm_min_minus_btn_, 48, 28);  lv_obj_set_pos(alarm_min_minus_btn_, 116, 62); }
+            if (alarm_min_plus_btn_)   { lv_obj_set_size(alarm_min_plus_btn_, 48, 28);   lv_obj_set_pos(alarm_min_plus_btn_, 168, 62); }
+        }
+        if (days_card) {
+            lv_obj_set_size(days_card, 224, 94);
+            lv_obj_set_pos(days_card, 8, 154);
+            for (int i = 0; i < 7; ++i) {
+                if (alarm_day_btns_[i]) {
+                    lv_obj_set_size(alarm_day_btns_[i], 28, 26);
+                    lv_obj_set_pos(alarm_day_btns_[i], 6 + i * 31, 14);
+                }
+            }
+            if (alarm_preset_btn_) {
+                lv_obj_set_size(alarm_preset_btn_, 212, 28);
+                lv_obj_set_pos(alarm_preset_btn_, 6, 54);
+            }
+        }
+        if (alarm_toggle_btn_) {
+            lv_obj_set_size(alarm_toggle_btn_, 224, 34);
+            lv_obj_set_pos(alarm_toggle_btn_, 8, 256);
+        }
+        if (alarm_status_label_) {
+            lv_obj_align(alarm_status_label_, LV_ALIGN_BOTTOM_MID, 0, -8);
         }
     } else {
         // 320 x 240
-        if (timer_back_btn_) lv_obj_set_pos(timer_back_btn_, 6, 8);
-        for (int i = 0; i < 3; ++i) {
-            auto& s = timer_slots_[i];
-            if (!s.card) continue;
-            lv_obj_set_size(s.card, 304, 56);
-            lv_obj_set_pos(s.card, 8, 40 + i * 64);
-            if (s.name_lbl) lv_obj_set_pos(s.name_lbl, 10, 8);
-            if (s.time_lbl) lv_obj_set_pos(s.time_lbl, 10, 26);
-            if (s.toggle_btn) lv_obj_set_pos(s.toggle_btn, 178, 14);
-            if (s.reset_btn) lv_obj_set_pos(s.reset_btn, 248, 14);
+        if (timer_back_btn_) lv_obj_set_pos(timer_back_btn_, 6, 6);
+        if (time_card) {
+            lv_obj_set_size(time_card, 148, 150);
+            lv_obj_set_pos(time_card, 8, 38);
+            if (alarm_time_label_) lv_obj_align(alarm_time_label_, LV_ALIGN_TOP_MID, 0, 10);
+            if (alarm_hour_minus_btn_) { lv_obj_set_size(alarm_hour_minus_btn_, 62, 28); lv_obj_set_pos(alarm_hour_minus_btn_, 8, 64); }
+            if (alarm_hour_plus_btn_)  { lv_obj_set_size(alarm_hour_plus_btn_, 62, 28);  lv_obj_set_pos(alarm_hour_plus_btn_, 78, 64); }
+            if (alarm_min_minus_btn_)  { lv_obj_set_size(alarm_min_minus_btn_, 62, 28);  lv_obj_set_pos(alarm_min_minus_btn_, 8, 102); }
+            if (alarm_min_plus_btn_)   { lv_obj_set_size(alarm_min_plus_btn_, 62, 28);   lv_obj_set_pos(alarm_min_plus_btn_, 78, 102); }
+        }
+        if (days_card) {
+            lv_obj_set_size(days_card, 152, 150);
+            lv_obj_set_pos(days_card, 162, 38);
+            for (int i = 0; i < 4; ++i) {
+                if (alarm_day_btns_[i]) {
+                    lv_obj_set_size(alarm_day_btns_[i], 32, 26);
+                    lv_obj_set_pos(alarm_day_btns_[i], 6 + i * 36, 12);
+                }
+            }
+            for (int i = 4; i < 7; ++i) {
+                if (alarm_day_btns_[i]) {
+                    lv_obj_set_size(alarm_day_btns_[i], 32, 26);
+                    lv_obj_set_pos(alarm_day_btns_[i], 6 + (i - 4) * 36, 44);
+                }
+            }
+            if (alarm_preset_btn_) {
+                lv_obj_set_size(alarm_preset_btn_, 140, 28);
+                lv_obj_set_pos(alarm_preset_btn_, 6, 80);
+            }
+            if (alarm_status_label_) {
+                lv_obj_set_pos(alarm_status_label_, 6, 118);
+            }
+        }
+        if (alarm_toggle_btn_) {
+            lv_obj_set_size(alarm_toggle_btn_, 306, 32);
+            lv_obj_set_pos(alarm_toggle_btn_, 8, 196);
         }
     }
 }
 
 void LcdDisplay::UpdateTimerUI() {
     if (timer_box_ == nullptr) return;
-    uint32_t now_ms = esp_timer_get_time() / 1000;
-    if (now_ms - last_timer_tick_ms_ < 1000) return;
-    last_timer_tick_ms_ = now_ms;
 
-    for (int i = 0; i < 3; ++i) {
-        auto& s = timer_slots_[i];
-        if (s.running) {
-            if (s.remaining_sec > 0) {
-                s.remaining_sec--;
-                char tbuf[16];
-                snprintf(tbuf, sizeof(tbuf), "%02d:%02d", s.remaining_sec / 60, s.remaining_sec % 60);
-                if (s.time_lbl) lv_label_set_text(s.time_lbl, tbuf);
-            }
-            if (s.remaining_sec == 0) {
-                s.running = false;
-                if (s.time_lbl) {
-                    lv_label_set_text(s.time_lbl, "HẾT GIỜ!");
-                    lv_obj_set_style_text_color(s.time_lbl, lv_color_hex(0xFF5252), 0);
-                }
-                if (s.toggle_btn) {
-                    lv_obj_set_style_bg_color(s.toggle_btn, lv_color_hex(0x1B5E20), 0);
-                    if (s.toggle_lbl) lv_label_set_text(s.toggle_lbl, "Bật");
-                }
-                ShowNotification("Hẹn giờ đã hết thời gian!", 3000);
-            }
+    if (alarm_preset_btn_) {
+        lv_obj_t* pl = lv_obj_get_child(alarm_preset_btn_, 0);
+        if (pl) {
+            if (alarm_days_mask_ == 0x7F) lv_label_set_text(pl, "Chọn nhanh: Hàng ngày");
+            else if (alarm_days_mask_ == 0x3E) lv_label_set_text(pl, "Chọn nhanh: T2 - T6");
+            else if (alarm_days_mask_ == 0x41) lv_label_set_text(pl, "Chọn nhanh: Cuối tuần");
+            else lv_label_set_text(pl, "Chọn nhanh: Tuỳ chỉnh");
+        }
+    }
+
+    if (alarm_status_label_) {
+        if (!alarm_enabled_) {
+            lv_label_set_text(alarm_status_label_, "Đã tắt báo thức");
+        } else {
+            char buf[64];
+            const char* ddesc = (alarm_days_mask_ == 0x7F) ? "Hàng ngày" :
+                                (alarm_days_mask_ == 0x3E) ? "T2 - T6" :
+                                (alarm_days_mask_ == 0x41) ? "Cuối tuần" : "Tuỳ chọn";
+            snprintf(buf, sizeof(buf), "Sẽ reo lúc %02d:%02d (%s)", alarm_hour_, alarm_min_, ddesc);
+            lv_label_set_text(alarm_status_label_, buf);
         }
     }
 }
@@ -5178,7 +5679,7 @@ void LcdDisplay::CreateExchangeRatesUI() {
     auto screen = lv_screen_active();
     rates_box_ = lv_obj_create(screen);
     lv_obj_set_size(rates_box_, width_, height_);
-    lv_obj_set_style_bg_color(rates_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_color(rates_box_, lv_color_hex(0x0f172a), 0);
     lv_obj_set_style_bg_opa(rates_box_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(rates_box_, 0, 0);
     lv_obj_set_style_border_width(rates_box_, 0, 0);
@@ -5235,9 +5736,8 @@ void LcdDisplay::CreateExchangeRatesUI() {
     lv_obj_set_style_text_color(rates_time_label_, lv_color_hex(0x90A4AE), 0);
     lv_obj_align(rates_time_label_, LV_ALIGN_TOP_MID, 0, 28);
 
-    // 4 vùng dữ liệu: Giá Vàng, Giá Đô, Giá Crypto, Giá Xăng
-    const char* titles[4] = {"VÀNG MIẾNG SJC", "ĐÔ LA MỸ (USD)", "CRYPTO (BITCOIN)", "XĂNG RON 95-III"};
-    uint32_t border_colors[4] = {0xFFD700, 0x10B981, 0xF59E0B, 0x0288D1};
+    // 4 vùng dữ liệu: VÀNG SJC, USD, CRYPTO, XĂNG DẦU (đồng bộ tông màu màn hình chờ)
+    const char* titles[4] = {"VÀNG SJC", "USD", "CRYPTO", "XĂNG DẦU"};
 
     for (int i = 0; i < 4; ++i) {
         auto& c = rate_cards_[i];
@@ -5246,7 +5746,7 @@ void LcdDisplay::CreateExchangeRatesUI() {
         lv_obj_set_style_bg_opa(c.card, LV_OPA_COVER, 0);
         lv_obj_set_style_radius(c.card, 8, 0);
         lv_obj_set_style_border_width(c.card, 1, 0);
-        lv_obj_set_style_border_color(c.card, lv_color_hex(border_colors[i]), 0);
+        lv_obj_set_style_border_color(c.card, lv_color_hex(0x283548), 0);
         lv_obj_set_style_pad_all(c.card, 6, 0);
         lv_obj_clear_flag(c.card, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_clear_flag(c.card, LV_OBJ_FLAG_CLICKABLE);
@@ -5254,7 +5754,7 @@ void LcdDisplay::CreateExchangeRatesUI() {
         c.title_lbl = lv_label_create(c.card);
         lv_label_set_text(c.title_lbl, titles[i]);
         lv_obj_set_style_text_font(c.title_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(c.title_lbl, lv_color_hex(border_colors[i]), 0);
+        lv_obj_set_style_text_color(c.title_lbl, lv_color_hex(0x60A5FA), 0);
 
         c.val1_lbl = lv_label_create(c.card);
         lv_obj_set_style_text_font(c.val1_lbl, &font_noto_sans_custom_14_1, 0);
@@ -5262,11 +5762,11 @@ void LcdDisplay::CreateExchangeRatesUI() {
 
         c.val2_lbl = lv_label_create(c.card);
         lv_obj_set_style_text_font(c.val2_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(c.val2_lbl, lv_color_hex(0xB0BEC5), 0);
+        lv_obj_set_style_text_color(c.val2_lbl, lv_color_hex(0xCBD5E1), 0);
 
         c.trend_lbl = lv_label_create(c.card);
         lv_obj_set_style_text_font(c.trend_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(c.trend_lbl, lv_color_hex(0x34C759), 0);
+        lv_obj_set_style_text_color(c.trend_lbl, lv_color_hex(0x34D399), 0);
     }
 
     LayoutExchangeRatesWidgets(height_ > width_);
@@ -5326,23 +5826,23 @@ void LcdDisplay::UpdateExchangeRatesUI() {
     }
 
     // 1. Vàng SJC
-    if (rate_cards_[0].val1_lbl) lv_label_set_text(rate_cards_[0].val1_lbl, "Mua: 87.50 tr");
-    if (rate_cards_[0].val2_lbl) lv_label_set_text(rate_cards_[0].val2_lbl, "Bán: 89.50 tr");
+    if (rate_cards_[0].val1_lbl) lv_label_set_text(rate_cards_[0].val1_lbl, "Mua: 87.5 tr");
+    if (rate_cards_[0].val2_lbl) lv_label_set_text(rate_cards_[0].val2_lbl, "Bán: 89.5 tr");
     if (rate_cards_[0].trend_lbl) lv_label_set_text(rate_cards_[0].trend_lbl, "+0.5% (Tăng)");
 
     // 2. USD
-    if (rate_cards_[1].val1_lbl) lv_label_set_text(rate_cards_[1].val1_lbl, "Mua: 25.450 d");
-    if (rate_cards_[1].val2_lbl) lv_label_set_text(rate_cards_[1].val2_lbl, "Bán: 25.485 d");
-    if (rate_cards_[1].trend_lbl) lv_label_set_text(rate_cards_[1].trend_lbl, "+15 d (Ổn định)");
+    if (rate_cards_[1].val1_lbl) lv_label_set_text(rate_cards_[1].val1_lbl, "Mua: 25.450");
+    if (rate_cards_[1].val2_lbl) lv_label_set_text(rate_cards_[1].val2_lbl, "Bán: 25.485");
+    if (rate_cards_[1].trend_lbl) lv_label_set_text(rate_cards_[1].trend_lbl, "+15 (Ổn định)");
 
-    // 3. Crypto BTC
-    if (rate_cards_[2].val1_lbl) lv_label_set_text(rate_cards_[2].val1_lbl, "BTC: $76.450");
-    if (rate_cards_[2].val2_lbl) lv_label_set_text(rate_cards_[2].val2_lbl, "~1.94 tỷ d");
+    // 3. Crypto (BTC & ETH)
+    if (rate_cards_[2].val1_lbl) lv_label_set_text(rate_cards_[2].val1_lbl, "BTC: $76,450");
+    if (rate_cards_[2].val2_lbl) lv_label_set_text(rate_cards_[2].val2_lbl, "ETH: $2,980");
     if (rate_cards_[2].trend_lbl) lv_label_set_text(rate_cards_[2].trend_lbl, "+2.8% (Tăng)");
 
-    // 4. Xăng RON 95
-    if (rate_cards_[3].val1_lbl) lv_label_set_text(rate_cards_[3].val1_lbl, "RON 95: 20.850 d");
-    if (rate_cards_[3].val2_lbl) lv_label_set_text(rate_cards_[3].val2_lbl, "E5: 19.750 d/L");
-    if (rate_cards_[3].trend_lbl) lv_label_set_text(rate_cards_[3].trend_lbl, "DO: 18.630 d/L");
+    // 4. Xăng dầu
+    if (rate_cards_[3].val1_lbl) lv_label_set_text(rate_cards_[3].val1_lbl, "RON95: 20.85k");
+    if (rate_cards_[3].val2_lbl) lv_label_set_text(rate_cards_[3].val2_lbl, "E5: 19.75k");
+    if (rate_cards_[3].trend_lbl) lv_label_set_text(rate_cards_[3].trend_lbl, "DO: 18.63k");
 }
 
