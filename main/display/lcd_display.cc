@@ -28,12 +28,21 @@ static lv_font_t font_noto_sans_custom_16_4;
 static bool CustomFontGetGlyphDsc16(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
     if (unicode_letter == 0x1EA9) unicode_letter = 0x1EA5; // ẩ -> ấ (Fixes 'Độ ẩm')
     if (unicode_letter == 0x1EA8) unicode_letter = 0x1EA4; // Ẩ -> Ấ
-    if (unicode_letter == 0x1EE9) unicode_letter = 0x1EED; // ứ -> 1EED (Patched with true ứ glyph)
-    if (unicode_letter == 0x1EE8) unicode_letter = 0x1EED; // Ứ -> 1EED
-    if (unicode_letter == 0x01A1) unicode_letter = 'o';    // ơ -> o
-    if (unicode_letter == 0x01A0) unicode_letter = 'O';    // Ơ -> O
+    if (unicode_letter == 0x1EE9) unicode_letter = 0x01B0; // ứ -> ư (0x1B0 có trong font)
+    if (unicode_letter == 0x1EE8) unicode_letter = 'U';    // Ứ -> U
+    if (unicode_letter == 0x01A1) unicode_letter = 0x00F4; // ơ -> ô
+    if (unicode_letter == 0x01A0) unicode_letter = 0x00D4; // Ơ -> Ô
     if (unicode_letter == 0x1EB9) unicode_letter = 0x00E9; // ẹ -> é
     if (unicode_letter == 0x1EB8) unicode_letter = 0x00C9; // Ẹ -> É
+    if (unicode_letter == 0x1EB7) unicode_letter = 0x0103; // ặ -> ă (Fixes 'Cài đặt')
+    if (unicode_letter == 0x1EB6) unicode_letter = 0x0102; // Ặ -> Ă
+    if (unicode_letter == 0x1EC1) unicode_letter = 0x00EA; // ề -> ê (Fixes 'Hình nền')
+    if (unicode_letter == 0x1EC0) unicode_letter = 0x00CA; // Ề -> Ê
+    if (unicode_letter == 0x1EF7) unicode_letter = 0x00FD; // ỷ -> ý (Fixes 'Tỷ giá')
+    if (unicode_letter == 0x1EF6) unicode_letter = 0x00DD; // Ỷ -> Ý
+    if (unicode_letter == 0x1ECF) unicode_letter = 0x00F3; // ỏ -> ó
+    if (unicode_letter == 0x1ECE) unicode_letter = 0x00D3; // Ỏ -> Ó
+    if (unicode_letter == 0x1EA2) unicode_letter = 'A';    // Ả -> A (Fixes 'T.BẢY')
     return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
 }
 
@@ -41,12 +50,21 @@ static lv_font_t font_noto_sans_custom_14_1;
 static bool CustomFontGetGlyphDsc14(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
     if (unicode_letter == 0x1EA9) unicode_letter = 0x1EA5; // ẩ -> ấ
     if (unicode_letter == 0x1EA8) unicode_letter = 0x1EA4; // Ẩ -> Ấ
-    if (unicode_letter == 0x1EE9) unicode_letter = 0x1EED; // ứ
-    if (unicode_letter == 0x1EE8) unicode_letter = 0x1EED; // Ứ
-    if (unicode_letter == 0x01A1) unicode_letter = 'o';    // ơ -> o
-    if (unicode_letter == 0x01A0) unicode_letter = 'O';    // Ơ -> O
+    if (unicode_letter == 0x1EE9) unicode_letter = 0x01B0; // ứ -> ư (0x1B0 có trong font)
+    if (unicode_letter == 0x1EE8) unicode_letter = 'U';    // Ứ -> U
+    if (unicode_letter == 0x01A1) unicode_letter = 0x00F4; // ơ -> ô
+    if (unicode_letter == 0x01A0) unicode_letter = 0x00D4; // Ơ -> Ô
     if (unicode_letter == 0x1EB9) unicode_letter = 0x00E9; // ẹ -> é
     if (unicode_letter == 0x1EB8) unicode_letter = 0x00C9; // Ẹ -> É
+    if (unicode_letter == 0x1EB7) unicode_letter = 0x0103; // ặ -> ă (Fixes 'Cài đặt')
+    if (unicode_letter == 0x1EB6) unicode_letter = 0x0102; // Ặ -> Ă
+    if (unicode_letter == 0x1EC1) unicode_letter = 0x00EA; // ề -> ê (Fixes 'Hình nền')
+    if (unicode_letter == 0x1EC0) unicode_letter = 0x00CA; // Ề -> Ê
+    if (unicode_letter == 0x1EF7) unicode_letter = 0x00FD; // ỷ -> ý (Fixes 'Tỷ giá')
+    if (unicode_letter == 0x1EF6) unicode_letter = 0x00DD; // Ỷ -> Ý
+    if (unicode_letter == 0x1ECF) unicode_letter = 0x00F3; // ỏ -> ó
+    if (unicode_letter == 0x1ECE) unicode_letter = 0x00D3; // Ỏ -> Ó
+    if (unicode_letter == 0x1EA2) unicode_letter = 'A';    // Ả -> A (Fixes 'T.BẢY')
     return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
 }
 
@@ -2505,7 +2523,9 @@ void LcdDisplay::OnSwipeLeft() {
     DisplayLockGuard lock(this);
     if (!lock) return;
     if (screen_mode_ == kScreenMenu) {
-        SetMenuPage(1); // Swipe left moves to page 2 (5 icons)
+        if (menu_page_ < 2) {
+            SetMenuPage(menu_page_ + 1); // Swipe left moves forward (page 0 -> 1 -> 2)
+        }
     }
 }
 
@@ -2513,7 +2533,9 @@ void LcdDisplay::OnSwipeRight() {
     DisplayLockGuard lock(this);
     if (!lock) return;
     if (screen_mode_ == kScreenMenu) {
-        SetMenuPage(0); // Swipe right moves to page 1 (9 icons)
+        if (menu_page_ > 0) {
+            SetMenuPage(menu_page_ - 1); // Swipe right moves backward (page 2 -> 1 -> 0)
+        }
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail) {
         ShowMenu();
     }
@@ -2531,6 +2553,7 @@ void LcdDisplay::OnSwipeUp() {
     if (state == kDeviceStateListening || state == kDeviceStateSpeaking || state == kDeviceStateConnecting) {
         app.ToggleChatState();
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+        if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
         if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
         screen_mode_ = kScreenStandby;
         return;
@@ -2577,8 +2600,10 @@ void LcdDisplay::ShowStandby() {
     auto& app = Application::GetInstance();
     if (app.GetDeviceState() == kDeviceStateIdle) {
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+        if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
         if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     } else {
+        if (container_ != nullptr) lv_obj_remove_flag(container_, LV_OBJ_FLAG_HIDDEN);
         if (content_ != nullptr) lv_obj_remove_flag(content_, LV_OBJ_FLAG_HIDDEN);
     }
 }
@@ -2587,7 +2612,11 @@ void LcdDisplay::ShowMenu() {
     DisplayLockGuard lock(this);
     if (!lock) return;
     screen_mode_ = kScreenMenu;
-    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Đảm bảo ẩn hoàn toàn chatbot container và content
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+    if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+
     if (quick_settings_box_ != nullptr) {
         lv_anim_delete(quick_settings_box_, nullptr);
         lv_obj_set_y(quick_settings_box_, 0);
@@ -2595,10 +2624,14 @@ void LcdDisplay::ShowMenu() {
     }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
-    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
 
-    SetMenuPage(0); // Start at first page with 9 icons
+    // Nền màn hình chuẩn đen tuyền, không thấy chatbot
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
+
+    SetMenuPage(0); // Bắt đầu ở trang 1
     if (menu_box_ != nullptr) {
+        lv_obj_move_foreground(menu_box_);
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_remove_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_y(menu_box_, height_);
@@ -2614,6 +2647,8 @@ void LcdDisplay::ShowMenu() {
         lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
         lv_anim_start(&a);
     }
+
+    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
 }
 
 void LcdDisplay::ShowQuickSettings() {
@@ -2749,47 +2784,35 @@ void LcdDisplay::SetStandbyTextColor(uint32_t color_hex) {
 
 void LcdDisplay::SetMenuPage(int page) {
     if (page < 0) page = 0;
-    if (page > 1) page = 1;
+    if (page > 2) page = 2;
     menu_page_ = page;
 
-    for (int i = 0; i < 14; ++i) {
+    for (int i = 0; i < 22; ++i) {
         if (menu_items_[i] == nullptr) continue;
         if (page == 0) {
-            if (i < 9) {
-                lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            } else {
-                lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            }
+            if (i < 9) lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
+        } else if (page == 1) {
+            if (i >= 9 && i < 18) lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
         } else {
-            if (i >= 9) {
-                lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            } else {
-                lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            }
+            if (i >= 18) lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
         }
     }
 
-    if (menu_dots_[0] != nullptr && menu_dots_[1] != nullptr) {
-        if (page == 0) {
-            lv_obj_set_style_bg_color(menu_dots_[0], lv_color_white(), 0);
-            lv_obj_set_style_bg_opa(menu_dots_[0], LV_OPA_COVER, 0);
-            lv_obj_set_size(menu_dots_[0], 14, 6);
-            lv_obj_set_style_radius(menu_dots_[0], 3, 0);
-
-            lv_obj_set_style_bg_color(menu_dots_[1], lv_color_hex(0x64748B), 0);
-            lv_obj_set_style_bg_opa(menu_dots_[1], LV_OPA_70, 0);
-            lv_obj_set_size(menu_dots_[1], 6, 6);
-            lv_obj_set_style_radius(menu_dots_[1], 3, 0);
+    for (int i = 0; i < 3; ++i) {
+        if (menu_dots_[i] == nullptr) continue;
+        if (i == page) {
+            lv_obj_set_style_bg_color(menu_dots_[i], lv_color_white(), 0);
+            lv_obj_set_style_bg_opa(menu_dots_[i], LV_OPA_COVER, 0);
+            lv_obj_set_size(menu_dots_[i], 14, 6);
+            lv_obj_set_style_radius(menu_dots_[i], 3, 0);
         } else {
-            lv_obj_set_style_bg_color(menu_dots_[0], lv_color_hex(0x64748B), 0);
-            lv_obj_set_style_bg_opa(menu_dots_[0], LV_OPA_70, 0);
-            lv_obj_set_size(menu_dots_[0], 6, 6);
-            lv_obj_set_style_radius(menu_dots_[0], 3, 0);
-
-            lv_obj_set_style_bg_color(menu_dots_[1], lv_color_white(), 0);
-            lv_obj_set_style_bg_opa(menu_dots_[1], LV_OPA_COVER, 0);
-            lv_obj_set_size(menu_dots_[1], 14, 6);
-            lv_obj_set_style_radius(menu_dots_[1], 3, 0);
+            lv_obj_set_style_bg_color(menu_dots_[i], lv_color_hex(0x64748B), 0);
+            lv_obj_set_style_bg_opa(menu_dots_[i], LV_OPA_70, 0);
+            lv_obj_set_size(menu_dots_[i], 6, 6);
+            lv_obj_set_style_radius(menu_dots_[i], 3, 0);
         }
     }
 }
@@ -2806,26 +2829,26 @@ void LcdDisplay::CreateMenuUI() {
     lv_obj_clear_flag(menu_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
 
-    menu_title_ = lv_label_create(menu_box_);
-    lv_label_set_text(menu_title_, "ỨNG DỤNG");
-    lv_obj_set_style_text_font(menu_title_, &font_noto_sans_basic_16_4, 0);
-    lv_obj_set_style_text_color(menu_title_, lv_color_white(), 0);
-
-    const char* titles[14] = {
+    const char* titles[22] = {
+        // Trang 1 (9 icons)
         "Lịch", "Đồng hồ", "Thời tiết",
         "Tỷ giá", "Trợ lý AI", "Cài đặt",
         "Âm nhạc", "Hình nền", "Thư viện",
+        // Trang 2 (9 icons)
         "Ghi chú", "Báo thức", "Sức khỏe",
-        "Tin tức", "Thiết bị"
+        "Tin tức", "Thiết bị", "Đài FM",
+        "Mã QR", "La bàn", "Máy tính",
+        // Trang 3 (4 icons)
+        "Đèn pin", "Trò chơi", "Dịch thuật", "Hẹn giờ"
     };
 
     time_t now_cal = time(nullptr);
     struct tm* tm_now = localtime(&now_cal);
     int cur_day = (tm_now != nullptr && tm_now->tm_mday >= 1) ? tm_now->tm_mday : 7;
     int cur_wday = (tm_now != nullptr) ? tm_now->tm_wday : 6;
-    const char* wday_names[7] = {"CN", "T.HAI", "T.BA", "T.TƯ", "T.NĂM", "T.SÁU", "T.BẢY"};
+    const char* wday_names[7] = {"CN", "T.2", "T.3", "T.4", "T.5", "T.6", "T.7"};
 
-    for (int i = 0; i < 14; ++i) {
+    for (int i = 0; i < 22; ++i) {
         lv_obj_t* btn = lv_obj_create(menu_box_);
         menu_items_[i] = btn;
         lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
@@ -2987,6 +3010,78 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 14) {
+            // Đài FM
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x8B5CF6), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, "FM");
+            lv_obj_set_style_text_font(icon, &font_noto_sans_basic_20_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 15) {
+            // Mã QR
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x0284C7), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, "[QR]");
+            lv_obj_set_style_text_font(icon, &font_noto_sans_basic_16_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 16) {
+            // La bàn
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x1E293B), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_NAVIGATION);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_hex(0xEF4444), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 17) {
+            // Máy tính
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0xF59E0B), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_CALCULATE);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 18) {
+            // Đèn pin
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0xEAB308), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_BRIGHTNESS_6);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 19) {
+            // Trò chơi
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0xEC4899), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_SPORTS_ESPORTS);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 20) {
+            // Dịch thuật
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x06B6D4), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_LANGUAGE);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
+        } else if (i == 21) {
+            // Hẹn giờ
+            lv_obj_set_style_bg_color(tile, lv_color_hex(0x10B981), 0);
+            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
+            lv_obj_t* icon = lv_label_create(tile);
+            lv_label_set_text(icon, MATERIAL_SYMBOLS_WATCH);
+            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
+            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
+            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
         }
 
         // Title label below tile
@@ -3040,12 +3135,34 @@ void LcdDisplay::CreateMenuUI() {
                 char dev_buf[64];
                 snprintf(dev_buf, sizeof(dev_buf), "ESP32-S3 | RAM: %lu KB", (unsigned long)(esp_get_free_heap_size() / 1024));
                 self->ShowNotification(dev_buf, 2000);
+            } else if (index == 14) {
+                self->ShowNotification("Đài FM Trực Tuyến", 1500);
+            } else if (index == 15) {
+                self->ShowNotification("Mã QR: Quét kết nối", 1800);
+            } else if (index == 16) {
+                self->ShowNotification("La bàn: Hướng Bắc 0°", 1500);
+            } else if (index == 17) {
+                self->ShowNotification("Máy tính cá nhân", 1500);
+            } else if (index == 18) {
+                if (Board::GetInstance().GetBacklight()) {
+                    Board::GetInstance().GetBacklight()->SetBrightness(100, false);
+                }
+                self->ShowNotification("Đèn pin: Bật sáng 100%", 1500);
+            } else if (index == 19) {
+                int dice = (esp_random() % 6) + 1;
+                char gbuf[32];
+                snprintf(gbuf, sizeof(gbuf), "Xúc xắc: %d điểm!", dice);
+                self->ShowNotification(gbuf, 1800);
+            } else if (index == 20) {
+                self->ShowNotification("Dịch thuật AI", 1500);
+            } else if (index == 21) {
+                self->ShowNotification("Hẹn giờ đếm ngược", 1500);
             }
         }, LV_EVENT_CLICKED, this);
     }
 
-    // Indicator dots
-    for (int i = 0; i < 2; ++i) {
+    // Indicator dots (3 pages)
+    for (int i = 0; i < 3; ++i) {
         menu_dots_[i] = lv_obj_create(menu_box_);
         lv_obj_set_size(menu_dots_[i], 6, 6);
         lv_obj_set_style_radius(menu_dots_[i], 3, 0);
@@ -3062,17 +3179,13 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
     if (menu_box_ == nullptr) return;
     lv_obj_set_size(menu_box_, width_, height_);
 
-    if (menu_title_ != nullptr) {
-        lv_obj_align(menu_title_, LV_ALIGN_TOP_MID, 0, is_portrait ? 12 : 5);
-    }
-
     if (is_portrait) {
-        // 240 x 320: 3 columns x 3 rows
+        // 240 x 320: 3 columns x 3 rows (Không còn chữ "ỨNG DỤNG", lề trên thoáng đãng)
         int col_x[3] = {4, 83, 162};
-        int row_y[3] = {36, 116, 196};
-        for (int i = 0; i < 14; ++i) {
+        int row_y[3] = {20, 104, 188};
+        for (int i = 0; i < 22; ++i) {
             if (menu_items_[i] == nullptr) continue;
-            int page_idx = (i < 9) ? i : (i - 9);
+            int page_idx = (i < 9) ? i : ((i < 18) ? (i - 9) : (i - 18));
             int r = page_idx / 3;
             int c = page_idx % 3;
             lv_obj_set_size(menu_items_[i], 74, 72);
@@ -3089,17 +3202,18 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
                 lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, 0);
             }
         }
-        if (menu_dots_[0] && menu_dots_[1]) {
-            lv_obj_set_pos(menu_dots_[0], 120 - 12, 286);
-            lv_obj_set_pos(menu_dots_[1], 120 + 4, 286);
+        if (menu_dots_[0] && menu_dots_[1] && menu_dots_[2]) {
+            lv_obj_set_pos(menu_dots_[0], 120 - 18, 282);
+            lv_obj_set_pos(menu_dots_[1], 120 - 4, 282);
+            lv_obj_set_pos(menu_dots_[2], 120 + 10, 282);
         }
     } else {
         // 320 x 240: 3 columns x 3 rows
         int col_x[3] = {16, 116, 216};
-        int row_y[3] = {24, 86, 148};
-        for (int i = 0; i < 14; ++i) {
+        int row_y[3] = {16, 80, 144};
+        for (int i = 0; i < 22; ++i) {
             if (menu_items_[i] == nullptr) continue;
-            int page_idx = (i < 9) ? i : (i - 9);
+            int page_idx = (i < 9) ? i : ((i < 18) ? (i - 9) : (i - 18));
             int r = page_idx / 3;
             int c = page_idx % 3;
             lv_obj_set_size(menu_items_[i], 88, 58);
@@ -3116,9 +3230,10 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
                 lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, 0);
             }
         }
-        if (menu_dots_[0] && menu_dots_[1]) {
-            lv_obj_set_pos(menu_dots_[0], 160 - 12, 216);
-            lv_obj_set_pos(menu_dots_[1], 160 + 4, 216);
+        if (menu_dots_[0] && menu_dots_[1] && menu_dots_[2]) {
+            lv_obj_set_pos(menu_dots_[0], 160 - 18, 216);
+            lv_obj_set_pos(menu_dots_[1], 160 - 4, 216);
+            lv_obj_set_pos(menu_dots_[2], 160 + 10, 216);
         }
     }
 
@@ -3274,8 +3389,19 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_text_color(col_title, lv_color_hex(0x94A3B8), 0);
     lv_obj_set_user_data(col_title, (void*)(intptr_t)103);
 
-    const uint32_t colors[5] = {0xFFFFFF, 0xFDE047, 0x38BDF8, 0x4ADE80, 0xFB923C};
-    for (int i = 0; i < 5; ++i) {
+    const uint32_t colors[10] = {
+        0xFFFFFF, // Trắng sáng
+        0xFDE047, // Vàng chanh
+        0x38BDF8, // Xanh da trời
+        0x4ADE80, // Xanh lá
+        0xFB923C, // Cam tươi
+        0xF472B6, // Hồng phấn
+        0xC084FC, // Tím Lavender
+        0xF87171, // Đỏ san hô
+        0x2DD4BF, // Xanh Teal
+        0xFEF08A  // Vàng nhạt kem
+    };
+    for (int i = 0; i < 10; ++i) {
         lv_obj_t* dot = lv_obj_create(qs_color_card_);
         lv_obj_set_style_bg_color(dot, lv_color_hex(colors[i]), 0);
         lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
@@ -3284,7 +3410,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
         lv_obj_set_style_pad_all(dot, 0, 0);
         lv_obj_clear_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(dot, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_ext_click_area(dot, 10);
+        lv_obj_set_ext_click_area(dot, 8);
         lv_obj_set_user_data(dot, (void*)(intptr_t)colors[i]);
 
         lv_obj_add_event_cb(dot, [](lv_event_t* e) {
@@ -3410,35 +3536,37 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 52);
 
         if (qs_color_card_) {
-            lv_obj_set_size(qs_color_card_, 220, 66);
-            lv_obj_set_pos(qs_color_card_, 10, 140);
+            lv_obj_set_size(qs_color_card_, 220, 84);
+            lv_obj_set_pos(qs_color_card_, 10, 138);
         }
-        if (col_title) lv_obj_set_pos(col_title, 10, 6);
+        if (col_title) lv_obj_set_pos(col_title, 10, 5);
         if (qs_color_card_) {
             int dot_idx = 0;
             uint32_t cnt = lv_obj_get_child_count(qs_color_card_);
             for (uint32_t i = 0; i < cnt; ++i) {
                 lv_obj_t* c = lv_obj_get_child(qs_color_card_, i);
                 if (c != col_title) {
-                    lv_obj_set_size(c, 28, 28);
-                    lv_obj_set_style_radius(c, 14, 0);
-                    lv_obj_set_pos(c, 12 + dot_idx * 40, 28);
+                    int row = dot_idx / 5;
+                    int col = dot_idx % 5;
+                    lv_obj_set_size(c, 24, 24);
+                    lv_obj_set_style_radius(c, 12, 0);
+                    lv_obj_set_pos(c, 12 + col * 40, 24 + row * 28);
                     dot_idx++;
                 }
             }
         }
 
         if (qs_ai_btn_) {
-            lv_obj_set_size(qs_ai_btn_, 220, 40);
-            lv_obj_set_pos(qs_ai_btn_, 10, 214);
+            lv_obj_set_size(qs_ai_btn_, 220, 36);
+            lv_obj_set_pos(qs_ai_btn_, 10, 226);
         }
         if (qs_rotate_btn_) {
-            lv_obj_set_size(qs_rotate_btn_, 105, 40);
-            lv_obj_set_pos(qs_rotate_btn_, 10, 264);
+            lv_obj_set_size(qs_rotate_btn_, 105, 36);
+            lv_obj_set_pos(qs_rotate_btn_, 10, 268);
         }
         if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 105, 40);
-            lv_obj_set_pos(qs_restart_btn_, 125, 264);
+            lv_obj_set_size(qs_restart_btn_, 105, 36);
+            lv_obj_set_pos(qs_restart_btn_, 125, 268);
         }
     } else {
         // 320 x 240
@@ -3446,8 +3574,8 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 280, 4);
 
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 155, 116);
-            lv_obj_set_pos(qs_sliders_card_, 10, 36);
+            lv_obj_set_size(qs_sliders_card_, 155, 96);
+            lv_obj_set_pos(qs_sliders_card_, 10, 32);
         }
         if (b_icon) lv_obj_set_pos(b_icon, 8, 12);
         if (qs_brightness_slider_) {
@@ -3464,35 +3592,37 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 118, 58);
 
         if (qs_color_card_) {
-            lv_obj_set_size(qs_color_card_, 155, 68);
-            lv_obj_set_pos(qs_color_card_, 10, 160);
+            lv_obj_set_size(qs_color_card_, 155, 96);
+            lv_obj_set_pos(qs_color_card_, 10, 134);
         }
-        if (col_title) lv_obj_set_pos(col_title, 8, 6);
+        if (col_title) lv_obj_set_pos(col_title, 8, 5);
         if (qs_color_card_) {
             int dot_idx = 0;
             uint32_t cnt = lv_obj_get_child_count(qs_color_card_);
             for (uint32_t i = 0; i < cnt; ++i) {
                 lv_obj_t* c = lv_obj_get_child(qs_color_card_, i);
                 if (c != col_title) {
-                    lv_obj_set_size(c, 24, 24);
-                    lv_obj_set_style_radius(c, 12, 0);
-                    lv_obj_set_pos(c, 8 + dot_idx * 28, 32);
+                    int row = dot_idx / 5;
+                    int col = dot_idx % 5;
+                    lv_obj_set_size(c, 22, 22);
+                    lv_obj_set_style_radius(c, 11, 0);
+                    lv_obj_set_pos(c, 8 + col * 28, 24 + row * 26);
                     dot_idx++;
                 }
             }
         }
 
         if (qs_ai_btn_) {
-            lv_obj_set_size(qs_ai_btn_, 135, 42);
-            lv_obj_set_pos(qs_ai_btn_, 175, 36);
+            lv_obj_set_size(qs_ai_btn_, 135, 38);
+            lv_obj_set_pos(qs_ai_btn_, 175, 32);
         }
         if (qs_rotate_btn_) {
-            lv_obj_set_size(qs_rotate_btn_, 135, 42);
-            lv_obj_set_pos(qs_rotate_btn_, 175, 86);
+            lv_obj_set_size(qs_rotate_btn_, 135, 38);
+            lv_obj_set_pos(qs_rotate_btn_, 175, 78);
         }
         if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 135, 42);
-            lv_obj_set_pos(qs_restart_btn_, 175, 136);
+            lv_obj_set_size(qs_restart_btn_, 135, 38);
+            lv_obj_set_pos(qs_restart_btn_, 175, 124);
         }
     }
 }

@@ -95,11 +95,11 @@ public:
 protected:
     ScreenMode screen_mode_ = kScreenStandby;
 
-    // App Menu (14 items across 2 pages)
+    // App Menu (22 items across 3 pages)
     lv_obj_t* menu_box_ = nullptr;
     lv_obj_t* menu_title_ = nullptr;
-    lv_obj_t* menu_items_[14] = {nullptr};
-    lv_obj_t* menu_dots_[2] = {nullptr};
+    lv_obj_t* menu_items_[22] = {nullptr};
+    lv_obj_t* menu_dots_[3] = {nullptr};
     int menu_page_ = 0;
 
     // Quick Settings Screen
