@@ -75,6 +75,7 @@ public:
     virtual void OnSwipeDown() {}
     virtual void ShowMenu() {}
     virtual void ShowStandby() {}
+    virtual void ShowQuickSettings() {}
     virtual void ShowCalendar() {}
     virtual void ShowWeatherDetail() {}
     virtual void UpdateWeatherFull(const WeatherInfo& info) { (void)info; }

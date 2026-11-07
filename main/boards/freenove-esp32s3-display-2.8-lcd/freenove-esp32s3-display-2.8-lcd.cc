@@ -333,7 +333,7 @@ private:
         ESP_LOGI(TAG, "Screen orientation: %s (%d)", is_portrait_ ? "Portrait" : "Landscape", orient);
     }
 
-    void ToggleRotation(const std::string& mode = "toggle") {
+    virtual void ToggleRotation(const std::string& mode = "toggle") override {
         bool target_portrait;
         if (mode == "portrait" || mode == "doc") {
             target_portrait = true;
@@ -368,87 +368,86 @@ private:
         uint32_t down_start = 0;
         bool down = false;
         bool swiped = false;
-        uint16_t start_x = 0, start_y = 0;
-        uint16_t last_x = 0, last_y = 0;
+        int16_t start_screen_x = 0, start_screen_y = 0;
+        int16_t last_screen_x = 0, last_screen_y = 0;
         int tap_count = 0;
 
         while (true) {
             bool t;
-            uint16_t x, y;
-            self->touch_.Read(t, x, y);
+            uint16_t raw_x, raw_y;
+            self->touch_.Read(t, raw_x, raw_y);
 
             uint32_t now = esp_timer_get_time() / 1000;
 
             if (t) {
-                // Compute screen coordinates
-                int16_t sc_x = (int16_t)y;
-                int16_t sc_y = 319 - (int16_t)x;
-                if (sc_x < 0) {
-                    sc_x = 0;
-                } else if (sc_x > 239) {
-                    sc_x = 239;
-                }
-                if (sc_y < 0) {
-                    sc_y = 0;
-                } else if (sc_y > 319) {
-                    sc_y = 319;
+                // Compute logical screen coordinates based on orientation
+                int16_t screen_x = 0;
+                int16_t screen_y = 0;
+
+                if (self->is_portrait_) {
+                    // Portrait: width 240, height 320
+                    screen_x = (int16_t)raw_y;
+                    screen_y = 319 - (int16_t)raw_x;
+                    if (screen_x < 0) screen_x = 0;
+                    if (screen_x > 239) screen_x = 239;
+                    if (screen_y < 0) screen_y = 0;
+                    if (screen_y > 319) screen_y = 319;
+
+                    // Reverse LVGL 9 rotate_point(LV_DISPLAY_ROTATION_90) so point lands on (screen_x, screen_y)
+                    self->touch_lvgl_x_ = screen_y;
+                    self->touch_lvgl_y_ = 319 - screen_x;
+                } else {
+                    // Landscape: width 320, height 240
+                    screen_x = (int16_t)raw_x;
+                    screen_y = (int16_t)raw_y;
+                    if (screen_x < 0) screen_x = 0;
+                    if (screen_x > 319) screen_x = 319;
+                    if (screen_y < 0) screen_y = 0;
+                    if (screen_y > 239) screen_y = 239;
+
+                    self->touch_lvgl_x_ = screen_x;
+                    self->touch_lvgl_y_ = screen_y;
                 }
 
                 if (!down) {
                     down = true;
                     down_start = now;
-                    start_x = sc_x;
-                    start_y = sc_y;
-                    last_x = sc_x;
-                    last_y = sc_y;
+                    start_screen_x = screen_x;
+                    start_screen_y = screen_y;
+                    last_screen_x = screen_x;
+                    last_screen_y = screen_y;
                     swiped = false;
-                    self->raw_touch_x_ = x;
-                    self->raw_touch_y_ = y;
-
-                    if (self->is_portrait_) {
-                        self->touch_lvgl_x_ = sc_y;
-                        self->touch_lvgl_y_ = 239 - sc_x;
-                    } else {
-                        self->touch_lvgl_x_ = x;
-                        self->touch_lvgl_y_ = y;
-                    }
+                    self->raw_touch_x_ = raw_x;
+                    self->raw_touch_y_ = raw_y;
                     self->touch_pressed_ = true;
                 } else {
-                    last_x = sc_x;
-                    last_y = sc_y;
-                    self->raw_touch_x_ = x;
-                    self->raw_touch_y_ = y;
+                    last_screen_x = screen_x;
+                    last_screen_y = screen_y;
+                    self->raw_touch_x_ = raw_x;
+                    self->raw_touch_y_ = raw_y;
 
-                    if (self->is_portrait_) {
-                        self->touch_lvgl_x_ = sc_y;
-                        self->touch_lvgl_y_ = 239 - sc_x;
-                    } else {
-                        self->touch_lvgl_x_ = x;
-                        self->touch_lvgl_y_ = y;
-                    }
-
-                    int delta_x = (int)sc_x - (int)start_x;
-                    int delta_y = (int)sc_y - (int)start_y;
+                    int delta_x = (int)screen_x - (int)start_screen_x;
+                    int delta_y = (int)screen_y - (int)start_screen_y;
 
                     if (!swiped && (now - down_start < 800)) {
                         // Check vertical swipe first (vuốt dưới lên / vuốt trên xuống)
-                        if (abs(delta_y) > 40 && abs(delta_y) > abs(delta_x) * 1.2) {
+                        if (abs(delta_y) > 35 && abs(delta_y) > abs(delta_x) * 1.2) {
                             swiped = true;
-                            self->touch_pressed_ = false;
-                            if (delta_y < -40) {
+                            self->touch_pressed_ = false; // release pointer so button under finger won't trigger
+                            if (delta_y < -35) {
                                 ESP_LOGI(TAG, "Vuot duoi len (Swipe UP, dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeUp();
-                            } else if (delta_y > 40) {
+                            } else if (delta_y > 35) {
                                 ESP_LOGI(TAG, "Vuot tren xuong (Swipe DOWN, dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeDown();
                             }
-                        } else if (abs(delta_x) > 40 && abs(delta_x) > abs(delta_y) * 1.2) {
+                        } else if (abs(delta_x) > 35 && abs(delta_x) > abs(delta_y) * 1.2) {
                             swiped = true;
                             self->touch_pressed_ = false;
-                            if (delta_x < -40) {
+                            if (delta_x < -35) {
                                 ESP_LOGI(TAG, "Vuot sang trai (Swipe LEFT, dx=%d)", delta_x);
                                 if (self->display_) self->display_->OnSwipeLeft();
-                            } else if (delta_x > 40) {
+                            } else if (delta_x > 35) {
                                 ESP_LOGI(TAG, "Vuot sang phai (Swipe RIGHT, dx=%d)", delta_x);
                                 if (self->display_) self->display_->OnSwipeRight();
                             }
@@ -461,25 +460,25 @@ private:
                 down = false;
                 self->touch_pressed_ = false;
                 uint32_t press = now - down_start;
-                int delta_x = (int)last_x - (int)start_x;
-                int delta_y = (int)last_y - (int)start_y;
+                int delta_x = (int)last_screen_x - (int)start_screen_x;
+                int delta_y = (int)last_screen_y - (int)start_screen_y;
 
-                bool is_gesture = swiped || (press < 600 && (abs(delta_y) > 40 || abs(delta_x) > 40));
+                bool is_gesture = swiped || (press < 600 && (abs(delta_y) > 35 || abs(delta_x) > 35));
                 if (is_gesture) {
                     if (!swiped) {
-                        if (abs(delta_y) > 40 && abs(delta_y) > abs(delta_x) * 1.2) {
-                            if (delta_y < -40) {
+                        if (abs(delta_y) > 35 && abs(delta_y) > abs(delta_x) * 1.2) {
+                            if (delta_y < -35) {
                                 ESP_LOGI(TAG, "Vuot duoi len on release (dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeUp();
-                            } else if (delta_y > 40) {
+                            } else if (delta_y > 35) {
                                 ESP_LOGI(TAG, "Vuot tren xuong on release (dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeDown();
                             }
-                        } else if (abs(delta_x) > 40 && abs(delta_x) > abs(delta_y) * 1.2) {
-                            if (delta_x < -40) {
+                        } else if (abs(delta_x) > 35 && abs(delta_x) > abs(delta_y) * 1.2) {
+                            if (delta_x < -35) {
                                 ESP_LOGI(TAG, "Vuot sang trai on release (dx=%d)", delta_x);
                                 if (self->display_) self->display_->OnSwipeLeft();
-                            } else if (delta_x > 40) {
+                            } else if (delta_x > 35) {
                                 ESP_LOGI(TAG, "Vuot sang phai on release (dx=%d)", delta_x);
                                 if (self->display_) self->display_->OnSwipeRight();
                             }
@@ -521,7 +520,7 @@ private:
                 tap_count = 0;
             }
 
-            vTaskDelay(pdMS_TO_TICKS(25));
+            vTaskDelay(pdMS_TO_TICKS(20));
         }
     }
 

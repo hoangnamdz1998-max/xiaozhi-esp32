@@ -74,6 +74,7 @@ public:
     enum ScreenMode {
         kScreenStandby,
         kScreenMenu,
+        kScreenQuickSettings,
         kScreenCalendar,
         kScreenWeatherDetail
     };
@@ -84,17 +85,42 @@ public:
     virtual void OnSwipeDown() override;
     virtual void ShowMenu() override;
     virtual void ShowStandby() override;
+    virtual void ShowQuickSettings() override;
     virtual void ShowCalendar() override;
     virtual void ShowWeatherDetail() override;
+    void SetMenuPage(int page);
+    void SetStandbyTextColor(uint32_t color_hex);
     ScreenMode GetScreenMode() const { return screen_mode_; }
 
 protected:
     ScreenMode screen_mode_ = kScreenStandby;
 
-    // App Menu ("TRANG CHÍNH 2")
+    // App Menu (14 items across 2 pages)
     lv_obj_t* menu_box_ = nullptr;
     lv_obj_t* menu_title_ = nullptr;
-    lv_obj_t* menu_items_[9] = {nullptr};
+    lv_obj_t* menu_items_[14] = {nullptr};
+    lv_obj_t* menu_dots_[2] = {nullptr};
+    int menu_page_ = 0;
+
+    // Quick Settings Screen
+    lv_obj_t* quick_settings_box_ = nullptr;
+    lv_obj_t* qs_brightness_slider_ = nullptr;
+    lv_obj_t* qs_brightness_label_ = nullptr;
+    lv_obj_t* qs_volume_slider_ = nullptr;
+    lv_obj_t* qs_volume_label_ = nullptr;
+    lv_obj_t* qs_color_card_ = nullptr;
+    lv_obj_t* qs_sliders_card_ = nullptr;
+    lv_obj_t* qs_actions_card_ = nullptr;
+    lv_obj_t* qs_ai_btn_ = nullptr;
+    lv_obj_t* qs_rotate_btn_ = nullptr;
+    lv_obj_t* qs_restart_btn_ = nullptr;
+    lv_obj_t* qs_close_btn_ = nullptr;
+    lv_obj_t* qs_title_ = nullptr;
+
+    uint32_t standby_text_color_ = 0xFFFFFF;
+
+    void CreateQuickSettingsUI();
+    void LayoutQuickSettingsWidgets(bool is_portrait);
 
     // Calendar Screen
     lv_obj_t* calendar_box_ = nullptr;

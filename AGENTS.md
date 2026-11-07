@@ -143,3 +143,17 @@ Keep detailed or fast-changing information in those files, not here. Add a neste
    - **Triple-tap (Chạm 3 lần)**: Đổi chiều xoay màn hình (ngang / dọc).
    - **4 taps (Chạm 4 lần)**: Đổi hình nền tiếp theo từ thẻ nhớ SD.
    - **VAD Silence Timeout**: Thời gian dừng nói để AI phản hồi được cấu hình là 2 giây (`2,000,000 us`).
+7. **Hệ thống Cử chỉ vuốt, Màn hình 14 Icon (2 trang) & Cài đặt nhanh (Quick Settings)**:
+   - **Đồng bộ cảm ứng Ngang (320x240) và Dọc (240x320)**: Tần số lấy mẫu 20ms, thuật toán nhận diện vuốt delta trực quan độc lập góc xoay, giải mã nghịch đảo ma trận toạ độ của LVGL 9 khi xoay 90 độ, đảm bảo chạm và vuốt mượt mà 100%.
+   - **Kịch bản vuốt linh hoạt**:
+     - Tại màn hình chờ (Standby): Vuốt dưới lên -> Mở màn hình Menu icon. Vuốt trên xuống -> Mở Cài đặt nhanh (Quick Settings).
+     - Tại màn hình Menu icon: Vuốt sang trái -> Sang Trang 2 (5 icon). Vuốt sang phải -> Quay lại Trang 1 (9 icon). Vuốt dưới lên -> Quay về màn hình chờ ban đầu. Vuốt trên xuống -> Mở Cài đặt nhanh.
+     - Tại màn hình Cài đặt nhanh: Vuốt dưới lên (hoặc nút đóng X) -> Quay về màn hình chờ.
+   - **Giao diện Menu 14 Icon phong cách iPhone**:
+     - Chia 2 trang (Trang 1: 9 icon, Trang 2: 5 icon) kèm 2 chấm tròn chỉ báo trang đang xem ở cạnh dưới.
+     - Tỷ lệ icon squircle cân đối, chữ tiếng Việt có dấu đầy đủ (`font_noto_sans_custom_14_1`), không che lấp chữ.
+   - **Màn hình Cài đặt nhanh (Quick Settings)**:
+     - Thanh kéo độ sáng màn hình (Backlight 5-100%).
+     - Thanh kéo âm lượng (Volume 0-100%).
+     - Bộ chọn 5 màu chữ màn hình (Trắng, Vàng, Xanh dương, Xanh lá, Cam) lưu trực tiếp vào NVS.
+     - Nút hành động nhanh: Trợ lý ảo (bắt đầu hội thoại AI), Xoay màn hình (chuyển ngang/dọc), Khởi động lại thiết bị.

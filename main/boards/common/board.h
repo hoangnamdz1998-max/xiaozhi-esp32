@@ -76,6 +76,7 @@ public:
     virtual Camera* GetCamera();
     virtual Music* GetMusic() { return nullptr; }
     virtual void NextWallpaper() {}
+    virtual void ToggleRotation(const std::string& mode = "toggle") { (void)mode; }
     virtual NetworkInterface* GetNetwork() = 0;
     virtual void StartNetwork() = 0;
     virtual void SetNetworkEventCallback(NetworkEventCallback callback) { (void)callback; }
