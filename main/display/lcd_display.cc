@@ -4043,42 +4043,88 @@ void LcdDisplay::ApplyTheme() {
     ShowNotification(is_light_theme_ ? "Đã chuyển nền Sáng!" : "Đã chuyển nền Tối!", 1200);
 }
 
-static const char* GetHolidayOrEvent(int s_day, int s_month, int l_day, int l_month, int wday) {
-    // Dương lịch
-    if (s_day == 1 && s_month == 1) return "Tết Dương Lịch";
-    if (s_day == 14 && s_month == 2) return "Lễ Tình Nhân (Valentine)";
-    if (s_day == 8 && s_month == 3) return "Quốc tế Phụ nữ (8/3)";
-    if (s_day == 26 && s_month == 3) return "Ngày Thành lập Đoàn TNCS";
-    if (s_day == 30 && s_month == 4) return "Giải phóng miền Nam (30/4)";
-    if (s_day == 1 && s_month == 5) return "Quốc tế Lao động (1/5)";
-    if (s_day == 1 && s_month == 6) return "Quốc tế Thiếu nhi (1/6)";
-    if (s_day == 27 && s_month == 7) return "Ngày Thương binh Liệt sĩ";
-    if (s_day == 19 && s_month == 8) return "Cách mạng Tháng Tám";
-    if (s_day == 2 && s_month == 9) return "Quốc khánh Việt Nam (2/9)";
-    if (s_day == 10 && s_month == 10) return "Giải phóng Thủ đô (10/10)";
-    if (s_day == 20 && s_month == 10) return "Ngày Phụ nữ Việt Nam (20/10)";
-    if (s_day == 20 && s_month == 11) return "Ngày Nhà giáo Việt Nam (20/11)";
-    if (s_day == 22 && s_month == 12) return "Ngày Quân đội Nhân dân VN";
-    if (s_day == 24 && s_month == 12) return "Đêm Giáng sinh (Noel)";
-    if (s_day == 25 && s_month == 12) return "Lễ Giáng sinh (Noel)";
-    if (s_day == 31 && s_month == 12) return "Đêm Giao thừa Dương lịch";
+static void GetHolidayOrEvent(int s_day, int s_month, int s_year, int l_day, int l_month, int wday, char* out_buf, size_t out_size, bool& is_good_day) {
+    const char* holiday = nullptr;
 
-    // Âm lịch
-    if (l_day == 23 && l_month == 12) return "Tiễn Ông Táo về trời";
-    if (l_day >= 29 && l_month == 12) return "Đêm Giao thừa Âm lịch";
-    if (l_day == 1 && l_month == 1) return "Mùng 1 Tết Nguyên Đán";
-    if (l_day == 2 && l_month == 1) return "Mùng 2 Tết Nguyên Đán";
-    if (l_day == 3 && l_month == 1) return "Mùng 3 Tết Nguyên Đán";
-    if (l_day == 15 && l_month == 1) return "Tết Nguyên Tiêu (Rằm T.1)";
-    if (l_day == 10 && l_month == 3) return "Giỗ Tổ Hùng Vương (10/3 ÂL)";
-    if (l_day == 15 && l_month == 4) return "Lễ Phật Đản (Rằm T.4)";
-    if (l_day == 5 && l_month == 5) return "Tết Đoan Ngọ (5/5 ÂL)";
-    if (l_day == 15 && l_month == 7) return "Vu Lan Báo Hiếu (Rằm T.7)";
-    if (l_day == 15 && l_month == 8) return "Tết Trung Thu (Rằm T.8)";
+    // Ngày Lễ Dương Lịch
+    if (s_day == 1 && s_month == 1) holiday = "Tết Dương Lịch";
+    else if (s_day == 14 && s_month == 2) holiday = "Lễ Tình Nhân (Valentine)";
+    else if (s_day == 8 && s_month == 3) holiday = "Quốc tế Phụ nữ (8/3)";
+    else if (s_day == 26 && s_month == 3) holiday = "Ngày Thành lập Đoàn TNCS";
+    else if (s_day == 30 && s_month == 4) holiday = "Giải phóng miền Nam (30/4)";
+    else if (s_day == 1 && s_month == 5) holiday = "Quốc tế Lao động (1/5)";
+    else if (s_day == 1 && s_month == 6) holiday = "Quốc tế Thiếu nhi (1/6)";
+    else if (s_day == 27 && s_month == 7) holiday = "Ngày Thương binh Liệt sĩ";
+    else if (s_day == 19 && s_month == 8) holiday = "Cách mạng Tháng Tám";
+    else if (s_day == 2 && s_month == 9) holiday = "Quốc khánh Việt Nam (2/9)";
+    else if (s_day == 10 && s_month == 10) holiday = "Giải phóng Thủ đô (10/10)";
+    else if (s_day == 20 && s_month == 10) holiday = "Ngày Phụ nữ VN (20/10)";
+    else if (s_day == 20 && s_month == 11) holiday = "Ngày Nhà giáo VN (20/11)";
+    else if (s_day == 22 && s_month == 12) holiday = "Ngày QĐND Việt Nam (22/12)";
+    else if (s_day == 24 && s_month == 12) holiday = "Đêm Giáng sinh (Noel)";
+    else if (s_day == 25 && s_month == 12) holiday = "Lễ Giáng sinh (Noel)";
+    else if (s_day == 31 && s_month == 12) holiday = "Đêm Giao thừa Dương lịch";
 
-    if (wday == 0) return "Chủ nhật: Thư giãn & nạp năng lượng!";
-    if (wday == 6) return "Thứ bảy: Cuối tuần vui vẻ bên gia đình!";
-    return "Chúc bạn ngày mới tràn đầy niềm vui!";
+    // Ngày Lễ Âm Lịch
+    else if (l_day == 23 && l_month == 12) holiday = "Tiễn Ông Táo về trời";
+    else if (l_day >= 29 && l_month == 12) holiday = "Đêm Giao thừa Âm lịch";
+    else if (l_day == 1 && l_month == 1) holiday = "Mùng 1 Tết Nguyên Đán";
+    else if (l_day == 2 && l_month == 1) holiday = "Mùng 2 Tết Nguyên Đán";
+    else if (l_day == 3 && l_month == 1) holiday = "Mùng 3 Tết Nguyên Đán";
+    else if (l_day == 4 && l_month == 1) holiday = "Mùng 4 Tết Nguyên Đán";
+    else if (l_day == 15 && l_month == 1) holiday = "Tết Nguyên Tiêu (Rằm T.1)";
+    else if (l_day == 10 && l_month == 3) holiday = "Giỗ Tổ Hùng Vương (10/3 ÂL)";
+    else if (l_day == 15 && l_month == 4) holiday = "Lễ Phật Đản (Rằm T.4)";
+    else if (l_day == 5 && l_month == 5) holiday = "Tết Đoan Ngọ (5/5 ÂL)";
+    else if (l_day == 15 && l_month == 7) holiday = "Vu Lan Báo Hiếu (Rằm T.7)";
+    else if (l_day == 15 && l_month == 8) holiday = "Tết Trung Thu (Rằm T.8)";
+    else if (l_day == 1 && l_month == 10) holiday = "Tết Trùng Cửu (1/10 ÂL)";
+    else if (l_day == 15 && l_month == 10) holiday = "Tết Hạ Nguyên (Rằm T.10)";
+
+    if (holiday != nullptr) {
+        snprintf(out_buf, out_size, "Lễ: %s", holiday);
+        is_good_day = true;
+        return;
+    }
+
+    // Không phải ngày lễ -> Tính Ngày Hoàng Đạo / Hắc Đạo và Can Chi ngày
+    int jd = VietnameseLunarCalendar::JdFromDate(s_day, s_month, s_year);
+    int can_idx = (jd + 9) % 10;
+    int chi_idx = (jd + 1) % 12;
+
+    const char* CAN[10] = {"Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"};
+    const char* CHI[12] = {"Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"};
+
+    struct StarInfo {
+        const char* name;
+        bool is_hoang_dao;
+    };
+    static const StarInfo STARS[12] = {
+        {"Thanh Long", true},
+        {"Minh Đường", true},
+        {"Thiên Hình", false},
+        {"Chu Tước",   false},
+        {"Kim Quỹ",    true},
+        {"Kim Đường",  true},
+        {"Bạch Hổ",    false},
+        {"Ngọc Đường", true},
+        {"Thiên Lao",  false},
+        {"Huyền Vũ",   false},
+        {"Tư Mệnh",    true},
+        {"Câu Trận",   false}
+    };
+
+    // Khởi sao Thanh Long theo tháng âm lịch
+    int start_chi = ((l_month - 1) % 6) * 2;
+    int star_idx = (chi_idx - start_chi + 12) % 12;
+    const StarInfo& star = STARS[star_idx];
+    is_good_day = star.is_hoang_dao;
+
+    if (star.is_hoang_dao) {
+        snprintf(out_buf, out_size, "Hoàng Đạo: %s (%s %s)", star.name, CAN[can_idx], CHI[chi_idx]);
+    } else {
+        snprintf(out_buf, out_size, "Hắc Đạo: %s (%s %s)", star.name, CAN[can_idx], CHI[chi_idx]);
+    }
 }
 
 void LcdDisplay::CreateCalendarUI() {
@@ -4315,10 +4361,10 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // Today Card phía dưới ở màn hình dọc: nâng lên y = 244, cao 72px không bị che mất sự kiện
+        // Today Card phía dưới ở màn hình dọc: nâng lên y = 238, cao 74px cách đáy màn hình 8px, không bị che mất sự kiện
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 228, 72);
-            lv_obj_set_pos(cal_today_card_, 6, 244);
+            lv_obj_set_size(cal_today_card_, 228, 74);
+            lv_obj_set_pos(cal_today_card_, 6, 238);
             if (cal_today_title_) {
                 lv_obj_set_style_text_align(cal_today_title_, LV_TEXT_ALIGN_CENTER, 0);
                 lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, -42, 2);
@@ -4329,17 +4375,17 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
             if (cal_today_month_year_) {
                 lv_obj_set_style_text_align(cal_today_month_year_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_month_year_, LV_ALIGN_TOP_MID, -42, 18);
+                lv_obj_align(cal_today_month_year_, LV_ALIGN_TOP_MID, -42, 19);
             }
             if (cal_today_lunar_) {
                 lv_obj_set_style_text_align(cal_today_lunar_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_lunar_, LV_ALIGN_TOP_MID, 42, 18);
+                lv_obj_align(cal_today_lunar_, LV_ALIGN_TOP_MID, 42, 19);
             }
             if (cal_today_day_) lv_obj_add_flag(cal_today_day_, LV_OBJ_FLAG_HIDDEN);
             if (cal_today_event_) {
                 lv_obj_set_width(cal_today_event_, 216);
                 lv_obj_set_style_text_align(cal_today_event_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 36);
+                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 38);
             }
         }
     } else {
@@ -4441,7 +4487,9 @@ void LcdDisplay::UpdateCalendarUI() {
 
     const char* full_wdays[] = {"Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
     LunarDate lunar_show = VietnameseLunarCalendar::SolarToLunar(show_day, curr_cal_month_, curr_cal_year_, 7.0);
-    const char* event_str = GetHolidayOrEvent(show_day, curr_cal_month_, lunar_show.day, lunar_show.month, show_wday);
+    char event_buf[64];
+    bool is_good_day = true;
+    GetHolidayOrEvent(show_day, curr_cal_month_, curr_cal_year_, lunar_show.day, lunar_show.month, show_wday, event_buf, sizeof(event_buf), is_good_day);
 
     bool is_current_today = (show_day == today_day && curr_cal_month_ == today_month && curr_cal_year_ == today_year);
 
@@ -4472,8 +4520,12 @@ void LcdDisplay::UpdateCalendarUI() {
         lv_obj_set_style_text_color(cal_today_lunar_, is_light_theme_ ? lv_color_hex(0x15803D) : lv_color_hex(0x81C784), 0);
     }
     if (cal_today_event_) {
-        lv_label_set_text(cal_today_event_, event_str);
-        lv_obj_set_style_text_color(cal_today_event_, is_light_theme_ ? lv_color_hex(0x9A3412) : lv_color_hex(0xFFE082), 0);
+        lv_label_set_text(cal_today_event_, event_buf);
+        if (is_good_day) {
+            lv_obj_set_style_text_color(cal_today_event_, is_light_theme_ ? lv_color_hex(0xB45309) : lv_color_hex(0xFFE082), 0);
+        } else {
+            lv_obj_set_style_text_color(cal_today_event_, is_light_theme_ ? lv_color_hex(0x64748B) : lv_color_hex(0x94A3B8), 0);
+        }
     }
 
     struct tm t = {};

@@ -55,7 +55,6 @@ public:
         return {lunarDay, lunarMonth, lunarYear, is_leap};
     }
 
-private:
     static int JdFromDate(int dd, int mm, int yy) {
         int a = (14 - mm) / 12;
         int y = yy + 4800 - a;
@@ -66,6 +65,8 @@ private:
         }
         return jd;
     }
+
+private:
 
     static double NewMoon(int k) {
         double t = k / 1236.85;
