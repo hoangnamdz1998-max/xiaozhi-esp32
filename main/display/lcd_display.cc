@@ -2023,7 +2023,13 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         return;
     }
 
-    lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    if (screen_mode_ == kScreenMenu || screen_mode_ == kScreenQuickSettings || 
+        screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
+        (screen_mode_ == kScreenStandby && state == kDeviceStateIdle)) {
+        lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (emoji_box_ != nullptr) {
         lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
     }
@@ -2522,6 +2528,12 @@ void LcdDisplay::UpdateWeatherFull(const WeatherInfo& info) {
 void LcdDisplay::OnSwipeLeft() {
     DisplayLockGuard lock(this);
     if (!lock) return;
+    last_swipe_time_ = esp_timer_get_time() / 1000;
+    lv_indev_t* indev = lv_indev_get_next(NULL);
+    while (indev) {
+        lv_indev_reset(indev, NULL);
+        indev = lv_indev_get_next(indev);
+    }
     if (screen_mode_ == kScreenMenu) {
         if (menu_page_ < 2) {
             SetMenuPage(menu_page_ + 1); // Swipe left moves forward (page 0 -> 1 -> 2)
@@ -2532,6 +2544,12 @@ void LcdDisplay::OnSwipeLeft() {
 void LcdDisplay::OnSwipeRight() {
     DisplayLockGuard lock(this);
     if (!lock) return;
+    last_swipe_time_ = esp_timer_get_time() / 1000;
+    lv_indev_t* indev = lv_indev_get_next(NULL);
+    while (indev) {
+        lv_indev_reset(indev, NULL);
+        indev = lv_indev_get_next(indev);
+    }
     if (screen_mode_ == kScreenMenu) {
         if (menu_page_ > 0) {
             SetMenuPage(menu_page_ - 1); // Swipe right moves backward (page 2 -> 1 -> 0)
@@ -2544,6 +2562,12 @@ void LcdDisplay::OnSwipeRight() {
 void LcdDisplay::OnSwipeUp() {
     DisplayLockGuard lock(this);
     if (!lock) return;
+    last_swipe_time_ = esp_timer_get_time() / 1000;
+    lv_indev_t* indev = lv_indev_get_next(NULL);
+    while (indev) {
+        lv_indev_reset(indev, NULL);
+        indev = lv_indev_get_next(indev);
+    }
 
     auto& app = Application::GetInstance();
     auto state = app.GetDeviceState();
@@ -2554,6 +2578,8 @@ void LcdDisplay::OnSwipeUp() {
         app.ToggleChatState();
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
         if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+        if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
         screen_mode_ = kScreenStandby;
         return;
@@ -2573,6 +2599,12 @@ void LcdDisplay::OnSwipeUp() {
 void LcdDisplay::OnSwipeDown() {
     DisplayLockGuard lock(this);
     if (!lock) return;
+    last_swipe_time_ = esp_timer_get_time() / 1000;
+    lv_indev_t* indev = lv_indev_get_next(NULL);
+    while (indev) {
+        lv_indev_reset(indev, NULL);
+        indev = lv_indev_get_next(indev);
+    }
     if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenMenu) {
         ShowQuickSettings(); // Swipe down from standby or icon menu opens Quick Settings
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail) {
@@ -2601,10 +2633,13 @@ void LcdDisplay::ShowStandby() {
     if (app.GetDeviceState() == kDeviceStateIdle) {
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
         if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+        if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
         if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     } else {
         if (container_ != nullptr) lv_obj_remove_flag(container_, LV_OBJ_FLAG_HIDDEN);
         if (content_ != nullptr) lv_obj_remove_flag(content_, LV_OBJ_FLAG_HIDDEN);
+        if (wallpaper_image_ != nullptr) lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
@@ -2613,9 +2648,11 @@ void LcdDisplay::ShowMenu() {
     if (!lock) return;
     screen_mode_ = kScreenMenu;
 
-    // Đảm bảo ẩn hoàn toàn chatbot container và content
+    // Đảm bảo ẩn hoàn toàn chatbot container, content, wallpaper và emoji
     if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
     if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (quick_settings_box_ != nullptr) {
         lv_anim_delete(quick_settings_box_, nullptr);
@@ -2656,6 +2693,10 @@ void LcdDisplay::ShowQuickSettings() {
     if (!lock) return;
     screen_mode_ = kScreenQuickSettings;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_set_y(menu_box_, 0);
@@ -2663,7 +2704,9 @@ void LcdDisplay::ShowQuickSettings() {
     }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
-    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
 
     if (qs_brightness_slider_ != nullptr && Board::GetInstance().GetBacklight() != nullptr) {
         int b = Board::GetInstance().GetBacklight()->brightness();
@@ -2707,6 +2750,10 @@ void LcdDisplay::ShowCalendar() {
     if (!lock) return;
     screen_mode_ = kScreenCalendar;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_set_y(menu_box_, 0);
@@ -2718,7 +2765,9 @@ void LcdDisplay::ShowCalendar() {
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
     }
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
-    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
 
     time_t now = time(nullptr);
     struct tm* tm_info = localtime(&now);
@@ -2738,6 +2787,10 @@ void LcdDisplay::ShowWeatherDetail() {
     if (!lock) return;
     screen_mode_ = kScreenWeatherDetail;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_set_y(menu_box_, 0);
@@ -2749,7 +2802,9 @@ void LcdDisplay::ShowWeatherDetail() {
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
     }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
-    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
 
     UpdateWeatherDetailUI();
 
@@ -3097,6 +3152,10 @@ void LcdDisplay::CreateMenuUI() {
         lv_obj_set_user_data(btn, (void*)(intptr_t)i);
         lv_obj_add_event_cb(btn, [](lv_event_t* e) {
             auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+            uint32_t now_ms = esp_timer_get_time() / 1000;
+            if (now_ms - self->last_swipe_time_ < 500) {
+                return;
+            }
             auto* current_btn = lv_event_get_current_target_obj(e);
             int index = (int)(intptr_t)lv_obj_get_user_data(current_btn);
             if (index == 0) {
@@ -3271,6 +3330,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_align(close_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(qs_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         self->ShowStandby();
     }, LV_EVENT_CLICKED, this);
 
@@ -3437,6 +3497,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_align(ai_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(qs_ai_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         self->ShowStandby();
         Application::GetInstance().ToggleChatState();
     }, LV_EVENT_CLICKED, this);
@@ -3454,6 +3515,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_text_color(rot_lbl, lv_color_white(), 0);
     lv_obj_align(rot_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(qs_rotate_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         Board::GetInstance().ToggleRotation("toggle");
     }, LV_EVENT_CLICKED, this);
 
@@ -3471,6 +3534,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_align(rst_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(qs_restart_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         self->ShowNotification("Đang khởi động lại...", 2000);
         esp_timer_handle_t timer;
         esp_timer_create_args_t args = {
@@ -3652,6 +3716,7 @@ void LcdDisplay::CreateCalendarUI() {
     lv_obj_align(back_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(calendar_back_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
 
@@ -3670,6 +3735,7 @@ void LcdDisplay::CreateCalendarUI() {
     lv_obj_align(prev_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(calendar_prev_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         if (self->curr_cal_month_ == 1) {
             self->curr_cal_month_ = 12;
             self->curr_cal_year_--;
@@ -3694,6 +3760,7 @@ void LcdDisplay::CreateCalendarUI() {
     lv_obj_align(next_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(calendar_next_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         if (self->curr_cal_month_ == 12) {
             self->curr_cal_month_ = 1;
             self->curr_cal_year_++;
@@ -3912,6 +3979,7 @@ void LcdDisplay::CreateWeatherDetailUI() {
     lv_obj_align(back_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(back_btn, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
 

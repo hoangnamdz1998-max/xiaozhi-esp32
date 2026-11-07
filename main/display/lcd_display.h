@@ -101,6 +101,7 @@ protected:
     lv_obj_t* menu_items_[22] = {nullptr};
     lv_obj_t* menu_dots_[3] = {nullptr};
     int menu_page_ = 0;
+    uint32_t last_swipe_time_ = 0;
 
     // Quick Settings Screen
     lv_obj_t* quick_settings_box_ = nullptr;
