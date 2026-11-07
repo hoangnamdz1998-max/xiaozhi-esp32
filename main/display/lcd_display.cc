@@ -4266,21 +4266,21 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
 
     if (is_portrait) {
         // 240 x 320: Tất cả xích xuống, nút chuyển tháng không sát mép trên
-        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 8);
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 6);
         if (calendar_prev_btn_) {
             lv_obj_set_size(calendar_prev_btn_, 36, 26);
-            lv_obj_set_pos(calendar_prev_btn_, 56, 8);
+            lv_obj_set_pos(calendar_prev_btn_, 56, 6);
         }
         if (calendar_next_btn_) {
             lv_obj_set_size(calendar_next_btn_, 36, 26);
-            lv_obj_set_pos(calendar_next_btn_, 194, 8);
+            lv_obj_set_pos(calendar_next_btn_, 194, 6);
         }
 
-        // Chữ Tháng Năm nằm ở hàng riêng biệt, cao 28px không mất nét chữ g
+        // Chữ Tháng Năm nằm ở hàng riêng biệt, cao 26px không mất nét chữ g
         if (calendar_title_label_) {
-            lv_obj_set_size(calendar_title_label_, 220, 28);
+            lv_obj_set_size(calendar_title_label_, 220, 26);
             lv_obj_set_style_text_align(calendar_title_label_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(calendar_title_label_, 10, 36);
+            lv_obj_set_pos(calendar_title_label_, 10, 32);
         }
 
         // Hàng Thứ (CN..T7): cao 18px để không mất chân chữ
@@ -4292,33 +4292,33 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
                 int col = id - 100;
                 lv_obj_set_size(child, 33, 18);
                 lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(child, 4 + col * 33, 62);
+                lv_obj_set_pos(child, 4 + col * 33, 54);
             }
         }
 
-        // 6 hàng ngày tháng (cao 26px để lịch âm hoàn toàn không bị mất phần dưới, lịch dương to rõ)
+        // 6 hàng ngày tháng (cao 28px: số dương y=-4, số âm y=12, khoảng hở 4px rõ rệt, không mất chân)
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 32, 26);
-            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 76 + r * 25);
+            lv_obj_set_size(calendar_cells_[i].container, 32, 28);
+            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 72 + r * 28);
             if (calendar_cells_[i].solar_label) {
                 lv_obj_set_width(calendar_cells_[i].solar_label, 32);
                 lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -2);
+                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -4);
             }
             if (calendar_cells_[i].lunar_label) {
                 lv_obj_set_width(calendar_cells_[i].lunar_label, 32);
                 lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 9);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 12);
             }
         }
 
-        // Today Card phía dưới ở màn hình dọc: nâng lên y = 228, cao 88px không bị che mất sự kiện
+        // Today Card phía dưới ở màn hình dọc: nâng lên y = 244, cao 72px không bị che mất sự kiện
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 228, 88);
-            lv_obj_set_pos(cal_today_card_, 6, 228);
+            lv_obj_set_size(cal_today_card_, 228, 72);
+            lv_obj_set_pos(cal_today_card_, 6, 244);
             if (cal_today_title_) {
                 lv_obj_set_style_text_align(cal_today_title_, LV_TEXT_ALIGN_CENTER, 0);
                 lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, -42, 2);
@@ -4329,22 +4329,22 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
             if (cal_today_month_year_) {
                 lv_obj_set_style_text_align(cal_today_month_year_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_month_year_, LV_ALIGN_TOP_MID, -42, 20);
+                lv_obj_align(cal_today_month_year_, LV_ALIGN_TOP_MID, -42, 18);
             }
             if (cal_today_lunar_) {
                 lv_obj_set_style_text_align(cal_today_lunar_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_lunar_, LV_ALIGN_TOP_MID, 42, 20);
+                lv_obj_align(cal_today_lunar_, LV_ALIGN_TOP_MID, 42, 18);
             }
             if (cal_today_day_) lv_obj_add_flag(cal_today_day_, LV_OBJ_FLAG_HIDDEN);
             if (cal_today_event_) {
                 lv_obj_set_width(cal_today_event_, 216);
                 lv_obj_set_style_text_align(cal_today_event_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 38);
+                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 36);
             }
         }
     } else {
         // 320 x 240 (Ngang): Tất cả xích xuống, nút chuyển tháng dễ bấm, hàng thứ đủ chân, lịch âm không đè dương
-        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 8);
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 6);
 
         if (cal_today_card_) {
             lv_obj_set_size(cal_today_card_, 102, 194);
@@ -4364,24 +4364,24 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // Hàng 1 (y = 8): Nút < và > chuyển tháng xích xuống, to hơn dễ bấm, không sát mép
+        // Hàng 1 (y = 6): Nút < và > chuyển tháng
         if (calendar_prev_btn_) {
             lv_obj_set_size(calendar_prev_btn_, 36, 26);
-            lv_obj_set_pos(calendar_prev_btn_, 114, 8);
+            lv_obj_set_pos(calendar_prev_btn_, 114, 6);
         }
         if (calendar_next_btn_) {
             lv_obj_set_size(calendar_next_btn_, 36, 26);
-            lv_obj_set_pos(calendar_next_btn_, 274, 8);
+            lv_obj_set_pos(calendar_next_btn_, 274, 6);
         }
 
-        // Hàng 2 (y = 34): Tháng Năm ở hàng riêng biệt rộng rãi 196px, cao 28px không mất nét chữ g
+        // Hàng 2 (y = 30): Tháng Năm ở hàng riêng biệt rộng rãi 196px
         if (calendar_title_label_) {
-            lv_obj_set_size(calendar_title_label_, 196, 28);
+            lv_obj_set_size(calendar_title_label_, 196, 24);
             lv_obj_set_style_text_align(calendar_title_label_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(calendar_title_label_, 114, 34);
+            lv_obj_set_pos(calendar_title_label_, 114, 30);
         }
 
-        // Hàng 3 (y = 58): Hàng chữ Thứ cao 18px để không bị mất chân chữ
+        // Hàng 3 (y = 52): Hàng chữ Thứ cao 18px để không bị mất chân chữ
         uint32_t cnt = lv_obj_get_child_count(calendar_box_);
         for (uint32_t i = 0; i < cnt; ++i) {
             lv_obj_t* child = lv_obj_get_child(calendar_box_, i);
@@ -4390,26 +4390,26 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
                 int col = id - 100;
                 lv_obj_set_size(child, 28, 18);
                 lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(child, 114 + col * 28, 58);
+                lv_obj_set_pos(child, 114 + col * 28, 52);
             }
         }
 
-        // Hàng 4..9 (y = 76..238): 6 hàng ngày tháng cao 27px, lịch âm không bị mất phần dưới
+        // Hàng 4..9 (y = 68..236): 6 hàng ngày tháng cao 28px, số dương y=-4, số âm y=12
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 28, 27);
-            lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 28, 76 + r * 27);
+            lv_obj_set_size(calendar_cells_[i].container, 28, 28);
+            lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 28, 68 + r * 28);
             if (calendar_cells_[i].solar_label) {
                 lv_obj_set_width(calendar_cells_[i].solar_label, 28);
                 lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -2);
+                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -4);
             }
             if (calendar_cells_[i].lunar_label) {
                 lv_obj_set_width(calendar_cells_[i].lunar_label, 28);
                 lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 10);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 12);
             }
         }
     }
