@@ -124,9 +124,13 @@ protected:
     lv_obj_t* qs_actions_card_ = nullptr;
     lv_obj_t* qs_ai_btn_ = nullptr;
     lv_obj_t* qs_rotate_btn_ = nullptr;
+    lv_obj_t* qs_theme_btn_ = nullptr;
     lv_obj_t* qs_restart_btn_ = nullptr;
     lv_obj_t* qs_close_btn_ = nullptr;
     lv_obj_t* qs_title_ = nullptr;
+
+    bool is_light_theme_ = false;
+    void ApplyTheme();
 
     uint32_t standby_text_color_ = 0xFFFFFF;
 
