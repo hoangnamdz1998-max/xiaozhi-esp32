@@ -2536,7 +2536,7 @@ void LcdDisplay::OnSwipeLeft() {
     }
     if (screen_mode_ == kScreenMenu) {
         if (menu_page_ < 2) {
-            SetMenuPage(menu_page_ + 1); // Swipe left moves forward (page 0 -> 1 -> 2)
+            SetMenuPage(menu_page_ + 1, true, true); // Swipe left: trượt trang sang trái (0 -> 1 -> 2)
         }
     }
 }
@@ -2552,7 +2552,7 @@ void LcdDisplay::OnSwipeRight() {
     }
     if (screen_mode_ == kScreenMenu) {
         if (menu_page_ > 0) {
-            SetMenuPage(menu_page_ - 1); // Swipe right moves backward (page 2 -> 1 -> 0)
+            SetMenuPage(menu_page_ - 1, true, false); // Swipe right: trượt trang sang phải (2 -> 1 -> 0)
         }
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail) {
         ShowMenu();
@@ -2837,25 +2837,13 @@ void LcdDisplay::SetStandbyTextColor(uint32_t color_hex) {
     }
 }
 
-void LcdDisplay::SetMenuPage(int page) {
+void LcdDisplay::SetMenuPage(int page, bool animate, bool swipe_left) {
     if (page < 0) page = 0;
     if (page > 2) page = 2;
+    int old_page = menu_page_;
     menu_page_ = page;
 
-    for (int i = 0; i < 22; ++i) {
-        if (menu_items_[i] == nullptr) continue;
-        if (page == 0) {
-            if (i < 9) lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-        } else if (page == 1) {
-            if (i >= 9 && i < 18) lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-        } else {
-            if (i >= 18) lv_obj_remove_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_add_flag(menu_items_[i], LV_OBJ_FLAG_HIDDEN);
-        }
-    }
-
+    // Cập nhật dấu chấm trang
     for (int i = 0; i < 3; ++i) {
         if (menu_dots_[i] == nullptr) continue;
         if (i == page) {
@@ -2870,6 +2858,72 @@ void LcdDisplay::SetMenuPage(int page) {
             lv_obj_set_style_radius(menu_dots_[i], 3, 0);
         }
     }
+
+    if (!animate || old_page == page) {
+        for (int p = 0; p < 3; ++p) {
+            if (menu_page_box_[p] == nullptr) continue;
+            lv_anim_delete(menu_page_box_[p], nullptr);
+            lv_obj_set_x(menu_page_box_[p], 0);
+            if (p == page) {
+                lv_obj_remove_flag(menu_page_box_[p], LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(menu_page_box_[p], LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+        return;
+    }
+
+    // Huỷ các animation đang chạy trên các trang và ẩn trang không liên quan
+    for (int p = 0; p < 3; ++p) {
+        if (menu_page_box_[p] == nullptr) continue;
+        lv_anim_delete(menu_page_box_[p], nullptr);
+        if (p != old_page && p != page) {
+            lv_obj_add_flag(menu_page_box_[p], LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_x(menu_page_box_[p], 0);
+        }
+    }
+
+    // swipe_left: vuốt ngón tay sang trái -> trang mới vào từ bên phải (+width_ -> 0), trang cũ trượt ra bên trái (0 -> -width_)
+    // !swipe_left: vuốt ngón tay sang phải -> trang mới vào từ bên trái (-width_ -> 0), trang cũ trượt ra bên phải (0 -> +width_)
+    int new_start_x = swipe_left ? width_ : -width_;
+    int old_target_x = swipe_left ? -width_ : width_;
+
+    if (menu_page_box_[old_page]) {
+        lv_obj_remove_flag(menu_page_box_[old_page], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_x(menu_page_box_[old_page], 0);
+        lv_anim_t a_old;
+        lv_anim_init(&a_old);
+        lv_anim_set_var(&a_old, menu_page_box_[old_page]);
+        lv_anim_set_values(&a_old, 0, old_target_x);
+        lv_anim_set_duration(&a_old, 220);
+        lv_anim_set_exec_cb(&a_old, [](void* var, int32_t val) {
+            lv_obj_set_x((lv_obj_t*)var, val);
+        });
+        lv_anim_set_path_cb(&a_old, lv_anim_path_ease_out);
+        lv_anim_set_completed_cb(&a_old, [](lv_anim_t* a) {
+            auto* obj = static_cast<lv_obj_t*>(a->var);
+            if (obj) {
+                lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_set_x(obj, 0);
+            }
+        });
+        lv_anim_start(&a_old);
+    }
+
+    if (menu_page_box_[page]) {
+        lv_obj_remove_flag(menu_page_box_[page], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_x(menu_page_box_[page], new_start_x);
+        lv_anim_t a_new;
+        lv_anim_init(&a_new);
+        lv_anim_set_var(&a_new, menu_page_box_[page]);
+        lv_anim_set_values(&a_new, new_start_x, 0);
+        lv_anim_set_duration(&a_new, 220);
+        lv_anim_set_exec_cb(&a_new, [](void* var, int32_t val) {
+            lv_obj_set_x((lv_obj_t*)var, val);
+        });
+        lv_anim_set_path_cb(&a_new, lv_anim_path_ease_out);
+        lv_anim_start(&a_new);
+    }
 }
 
 void LcdDisplay::CreateMenuUI() {
@@ -2883,6 +2937,18 @@ void LcdDisplay::CreateMenuUI() {
     lv_obj_set_style_pad_all(menu_box_, 0, 0);
     lv_obj_clear_flag(menu_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Tạo 3 page containers để trượt animation mượt mà khi chuyển trang
+    for (int p = 0; p < 3; ++p) {
+        menu_page_box_[p] = lv_obj_create(menu_box_);
+        lv_obj_set_size(menu_page_box_[p], width_, height_);
+        lv_obj_set_pos(menu_page_box_[p], 0, 0);
+        lv_obj_set_style_bg_opa(menu_page_box_[p], LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(menu_page_box_[p], 0, 0);
+        lv_obj_set_style_pad_all(menu_page_box_[p], 0, 0);
+        lv_obj_clear_flag(menu_page_box_[p], LV_OBJ_FLAG_SCROLLABLE);
+        if (p > 0) lv_obj_add_flag(menu_page_box_[p], LV_OBJ_FLAG_HIDDEN);
+    }
 
     const char* titles[22] = {
         // Trang 1 (9 icons)
@@ -2904,7 +2970,8 @@ void LcdDisplay::CreateMenuUI() {
     const char* wday_names[7] = {"CN", "T.2", "T.3", "T.4", "T.5", "T.6", "T.7"};
 
     for (int i = 0; i < 22; ++i) {
-        lv_obj_t* btn = lv_obj_create(menu_box_);
+        int p = (i < 9) ? 0 : ((i < 18) ? 1 : 2);
+        lv_obj_t* btn = lv_obj_create(menu_page_box_[p]);
         menu_items_[i] = btn;
         lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(btn, 0, 0);
@@ -3238,6 +3305,13 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
     if (menu_box_ == nullptr) return;
     lv_obj_set_size(menu_box_, width_, height_);
 
+    for (int p = 0; p < 3; ++p) {
+        if (menu_page_box_[p]) {
+            lv_obj_set_size(menu_page_box_[p], width_, height_);
+            lv_obj_set_pos(menu_page_box_[p], 0, 0);
+        }
+    }
+
     if (is_portrait) {
         // 240 x 320: 3 columns x 3 rows (Không còn chữ "ỨNG DỤNG", lề trên thoáng đãng)
         int col_x[3] = {4, 83, 162};
@@ -3296,7 +3370,10 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
         }
     }
 
-    SetMenuPage(menu_page_);
+    for (int i = 0; i < 3; ++i) {
+        if (menu_dots_[i]) lv_obj_move_foreground(menu_dots_[i]);
+    }
+    SetMenuPage(menu_page_, false);
 }
 
 void LcdDisplay::CreateQuickSettingsUI() {

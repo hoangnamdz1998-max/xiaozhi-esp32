@@ -88,7 +88,7 @@ public:
     virtual void ShowQuickSettings() override;
     virtual void ShowCalendar() override;
     virtual void ShowWeatherDetail() override;
-    void SetMenuPage(int page);
+    void SetMenuPage(int page, bool animate = false, bool swipe_left = true);
     void SetStandbyTextColor(uint32_t color_hex);
     ScreenMode GetScreenMode() const { return screen_mode_; }
 
@@ -97,6 +97,7 @@ protected:
 
     // App Menu (22 items across 3 pages)
     lv_obj_t* menu_box_ = nullptr;
+    lv_obj_t* menu_page_box_[3] = {nullptr};
     lv_obj_t* menu_title_ = nullptr;
     lv_obj_t* menu_items_[22] = {nullptr};
     lv_obj_t* menu_dots_[3] = {nullptr};
