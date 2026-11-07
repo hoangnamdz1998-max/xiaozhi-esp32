@@ -35,7 +35,7 @@ static bool CustomFontGetGlyphDsc16(const lv_font_t* font, lv_font_glyph_dsc_t* 
     if (unicode_letter == 0x1EB9) unicode_letter = 0x00E9; // ẹ -> é
     if (unicode_letter == 0x1EB8) unicode_letter = 0x00C9; // Ẹ -> É
     if (unicode_letter == 0x1EB7) unicode_letter = 0x0103; // ặ -> ă (Fixes 'Cài đặt')
-    if (unicode_letter == 0x1EB6) unicode_letter = 0x0102; // Ặ -> Ă
+    if (unicode_letter == 0x1EB6 || unicode_letter == 0x0102) unicode_letter = 'A'; // Ặ/Ă -> A
     if (unicode_letter == 0x1EC1) unicode_letter = 0x00EA; // ề -> ê (Fixes 'Hình nền')
     if (unicode_letter == 0x1EC0) unicode_letter = 0x00CA; // Ề -> Ê
     if (unicode_letter == 0x1EF7) unicode_letter = 0x00FD; // ỷ -> ý (Fixes 'Tỷ giá')
@@ -57,7 +57,7 @@ static bool CustomFontGetGlyphDsc14(const lv_font_t* font, lv_font_glyph_dsc_t* 
     if (unicode_letter == 0x1EB9) unicode_letter = 0x00E9; // ẹ -> é
     if (unicode_letter == 0x1EB8) unicode_letter = 0x00C9; // Ẹ -> É
     if (unicode_letter == 0x1EB7) unicode_letter = 0x0103; // ặ -> ă (Fixes 'Cài đặt')
-    if (unicode_letter == 0x1EB6) unicode_letter = 0x0102; // Ặ -> Ă
+    if (unicode_letter == 0x1EB6 || unicode_letter == 0x0102) unicode_letter = 'A'; // Ặ/Ă -> A
     if (unicode_letter == 0x1EC1) unicode_letter = 0x00EA; // ề -> ê (Fixes 'Hình nền')
     if (unicode_letter == 0x1EC0) unicode_letter = 0x00CA; // Ề -> Ê
     if (unicode_letter == 0x1EF7) unicode_letter = 0x00FD; // ỷ -> ý (Fixes 'Tỷ giá')
@@ -3415,8 +3415,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
 
     // Title
     qs_title_ = lv_label_create(quick_settings_box_);
-    lv_label_set_text(qs_title_, "CÀI ĐẶT NHANH");
-    lv_obj_set_style_text_font(qs_title_, &font_noto_sans_basic_16_4, 0);
+    lv_label_set_text(qs_title_, "Cài đặt nhanh");
+    lv_obj_set_style_text_font(qs_title_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(qs_title_, lv_color_white(), 0);
 
     // Close button
@@ -3461,8 +3461,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_brightness_slider_, lv_color_white(), LV_PART_KNOB);
     lv_obj_set_style_radius(qs_brightness_slider_, 6, LV_PART_INDICATOR);
     lv_obj_set_style_radius(qs_brightness_slider_, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(qs_brightness_slider_, 4, LV_PART_KNOB);
-    lv_obj_set_ext_click_area(qs_brightness_slider_, 12);
+    lv_obj_set_style_pad_all(qs_brightness_slider_, 6, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_brightness_slider_, 20);
 
     qs_brightness_label_ = lv_label_create(qs_sliders_card_);
     char b_buf[16];
@@ -3508,8 +3508,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_volume_slider_, lv_color_white(), LV_PART_KNOB);
     lv_obj_set_style_radius(qs_volume_slider_, 6, LV_PART_INDICATOR);
     lv_obj_set_style_radius(qs_volume_slider_, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(qs_volume_slider_, 4, LV_PART_KNOB);
-    lv_obj_set_ext_click_area(qs_volume_slider_, 12);
+    lv_obj_set_style_pad_all(qs_volume_slider_, 6, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_volume_slider_, 20);
 
     qs_volume_label_ = lv_label_create(qs_sliders_card_);
     char v_buf[16];
@@ -3880,7 +3880,7 @@ void LcdDisplay::CreateCalendarUI() {
     // Title label
     calendar_title_label_ = lv_label_create(calendar_box_);
     lv_label_set_text(calendar_title_label_, "Tháng 11 / 2026");
-    lv_obj_set_style_text_font(calendar_title_label_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(calendar_title_label_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(calendar_title_label_, lv_color_white(), 0);
 
     // DOW headers (CN, T2..T7)
@@ -4093,7 +4093,7 @@ void LcdDisplay::CreateWeatherDetailUI() {
     // City label
     weather_detail_city_ = lv_label_create(weather_detail_box_);
     lv_label_set_text(weather_detail_city_, "Đang tải...");
-    lv_obj_set_style_text_font(weather_detail_city_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(weather_detail_city_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(weather_detail_city_, lv_color_white(), 0);
 
     // Hero card
@@ -4120,12 +4120,12 @@ void LcdDisplay::CreateWeatherDetailUI() {
 
     weather_detail_condition_ = lv_label_create(hero);
     lv_label_set_text(weather_detail_condition_, "--");
-    lv_obj_set_style_text_font(weather_detail_condition_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(weather_detail_condition_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(weather_detail_condition_, lv_color_hex(0x64B5F6), 0);
 
     weather_detail_stats_ = lv_label_create(hero);
     lv_label_set_text(weather_detail_stats_, "Độ ẩm: --%  |  Gió: -- km/h");
-    lv_obj_set_style_text_font(weather_detail_stats_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_font(weather_detail_stats_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(weather_detail_stats_, lv_color_hex(0xB0BEC5), 0);
 
     // Forecast section title

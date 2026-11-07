@@ -442,9 +442,13 @@ private:
                     int delta_x = (int)screen_x - (int)start_screen_x;
                     int delta_y = (int)screen_y - (int)start_screen_y;
 
+                    auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
+                    // Không cho phép vuốt ngang ở QuickSettings để thanh trượt âm thanh & độ sáng trượt mượt mà
+                    bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || mode == LcdDisplay::kScreenCalendar || mode == LcdDisplay::kScreenWeatherDetail);
+
                     if (!swiped && (now - down_start < 800)) {
                         // Check vertical swipe first (vuốt dưới lên / vuốt trên xuống)
-                        if (abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.1) {
+                        if (abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.2) {
                             swiped = true;
                             self->touch_lvgl_x_ = -100;
                             self->touch_lvgl_y_ = -100;
@@ -456,7 +460,7 @@ private:
                                 ESP_LOGI(TAG, "Vuot tren xuong (Swipe DOWN, dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeDown();
                             }
-                        } else if (abs(delta_x) > 25 && abs(delta_x) > abs(delta_y) * 1.1) {
+                        } else if (allow_horiz_swipe && abs(delta_x) > 25 && abs(delta_x) > abs(delta_y) * 1.2) {
                             swiped = true;
                             self->touch_lvgl_x_ = -100;
                             self->touch_lvgl_y_ = -100;
@@ -480,13 +484,18 @@ private:
                 int delta_x = (int)last_screen_x - (int)start_screen_x;
                 int delta_y = (int)last_screen_y - (int)start_screen_y;
 
-                bool is_gesture = swiped || (press < 600 && (abs(delta_y) > 25 || abs(delta_x) > 25));
+                auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
+                bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || mode == LcdDisplay::kScreenCalendar || mode == LcdDisplay::kScreenWeatherDetail);
+                bool is_vert_swipe = (abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.2);
+                bool is_horiz_swipe = (allow_horiz_swipe && abs(delta_x) > 25 && abs(delta_x) > abs(delta_y) * 1.2);
+
+                bool is_gesture = swiped || (press < 600 && (is_vert_swipe || is_horiz_swipe));
                 if (is_gesture) {
                     self->touch_lvgl_x_ = -100;
                     self->touch_lvgl_y_ = -100;
                     self->touch_pressed_ = false;
                     if (!swiped) {
-                        if (abs(delta_y) > 25 && abs(delta_y) > abs(delta_x) * 1.1) {
+                        if (is_vert_swipe) {
                             if (delta_y < -25) {
                                 ESP_LOGI(TAG, "Vuot duoi len on release (dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeUp();
@@ -494,7 +503,7 @@ private:
                                 ESP_LOGI(TAG, "Vuot tren xuong on release (dy=%d)", delta_y);
                                 if (self->display_) self->display_->OnSwipeDown();
                             }
-                        } else if (abs(delta_x) > 25 && abs(delta_x) > abs(delta_y) * 1.1) {
+                        } else if (is_horiz_swipe) {
                             if (delta_x < -25) {
                                 ESP_LOGI(TAG, "Vuot sang trai on release (dx=%d)", delta_x);
                                 if (self->display_) self->display_->OnSwipeLeft();
