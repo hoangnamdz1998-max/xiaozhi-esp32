@@ -55,6 +55,9 @@ LV_FONT_DECLARE(font_noto_sans_basic_20_4);
 #if LV_FONT_MONTSERRAT_40
 LV_FONT_DECLARE(lv_font_montserrat_40);
 #endif
+#if LV_FONT_MONTSERRAT_12
+LV_FONT_DECLARE(lv_font_montserrat_12);
+#endif
 
 #define TAG "LcdDisplay"
 
@@ -4297,7 +4300,11 @@ void LcdDisplay::CreateCalendarUI() {
 
         lv_obj_t* lunar = lv_label_create(cell);
         calendar_cells_[i].lunar_label = lunar;
+#if LV_FONT_MONTSERRAT_12
+        lv_obj_set_style_text_font(lunar, &lv_font_montserrat_12, 0);
+#else
         lv_obj_set_style_text_font(lunar, &font_noto_sans_basic_14_1, 0);
+#endif
         lv_obj_set_style_text_color(lunar, lv_color_hex(0x94A3B8), 0);
         lv_obj_set_style_pad_all(lunar, 0, 0);
         lv_obj_clear_flag(lunar, LV_OBJ_FLAG_CLICKABLE);
@@ -4342,7 +4349,7 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // 6 hàng ngày tháng (hàng y=72, ô cao 27px: solar y=-2, lunar y=11 trọn vẹn trong ô, không bị viền cắt)
+        // 6 hàng ngày tháng (hàng y=72, ô cao 27px: solar y=0, lunar y=14)
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
@@ -4352,12 +4359,12 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             if (calendar_cells_[i].solar_label) {
                 lv_obj_set_width(calendar_cells_[i].solar_label, 32);
                 lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -2);
+                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, 0);
             }
             if (calendar_cells_[i].lunar_label) {
                 lv_obj_set_width(calendar_cells_[i].lunar_label, 32);
                 lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 11);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 14);
             }
         }
 
@@ -4440,7 +4447,7 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // Hàng 4..9 (y = 68..230): 6 hàng ngày tháng cao 27px, solar y=-2, lunar y=11
+        // Hàng 4..9 (y = 68..230): 6 hàng ngày tháng cao 27px, solar y=0, lunar y=14
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
@@ -4450,12 +4457,12 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             if (calendar_cells_[i].solar_label) {
                 lv_obj_set_width(calendar_cells_[i].solar_label, 28);
                 lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -2);
+                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, 0);
             }
             if (calendar_cells_[i].lunar_label) {
                 lv_obj_set_width(calendar_cells_[i].lunar_label, 28);
                 lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 11);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 14);
             }
         }
     }
