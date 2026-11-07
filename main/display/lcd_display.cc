@@ -3459,10 +3459,10 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_brightness_slider_, lv_color_hex(0x334155), LV_PART_MAIN);
     lv_obj_set_style_bg_color(qs_brightness_slider_, lv_color_hex(0x38BDF8), LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(qs_brightness_slider_, lv_color_white(), LV_PART_KNOB);
-    lv_obj_set_style_radius(qs_brightness_slider_, 6, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(qs_brightness_slider_, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(qs_brightness_slider_, 6, LV_PART_KNOB);
-    lv_obj_set_ext_click_area(qs_brightness_slider_, 20);
+    lv_obj_set_style_radius(qs_brightness_slider_, 11, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(qs_brightness_slider_, 11, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(qs_brightness_slider_, 2, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_brightness_slider_, 3);
 
     qs_brightness_label_ = lv_label_create(qs_sliders_card_);
     char b_buf[16];
@@ -3506,10 +3506,10 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_volume_slider_, lv_color_hex(0x334155), LV_PART_MAIN);
     lv_obj_set_style_bg_color(qs_volume_slider_, lv_color_hex(0x4ADE80), LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(qs_volume_slider_, lv_color_white(), LV_PART_KNOB);
-    lv_obj_set_style_radius(qs_volume_slider_, 6, LV_PART_INDICATOR);
-    lv_obj_set_style_radius(qs_volume_slider_, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(qs_volume_slider_, 6, LV_PART_KNOB);
-    lv_obj_set_ext_click_area(qs_volume_slider_, 20);
+    lv_obj_set_style_radius(qs_volume_slider_, 11, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(qs_volume_slider_, 11, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(qs_volume_slider_, 2, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_volume_slider_, 3);
 
     qs_volume_label_ = lv_label_create(qs_sliders_card_);
     char v_buf[16];
@@ -3689,19 +3689,19 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_size(qs_sliders_card_, 220, 96);
             lv_obj_set_pos(qs_sliders_card_, 10, 36);
         }
-        if (b_icon) lv_obj_set_pos(b_icon, 10, 10);
+        if (b_icon) lv_obj_set_pos(b_icon, 10, 8);
         if (qs_brightness_slider_) {
-            lv_obj_set_size(qs_brightness_slider_, 120, 14);
-            lv_obj_set_pos(qs_brightness_slider_, 42, 14);
+            lv_obj_set_size(qs_brightness_slider_, 120, 20);
+            lv_obj_set_pos(qs_brightness_slider_, 42, 13);
         }
-        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 172, 12);
+        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 172, 15);
 
         if (v_icon) lv_obj_set_pos(v_icon, 10, 50);
         if (qs_volume_slider_) {
-            lv_obj_set_size(qs_volume_slider_, 120, 14);
-            lv_obj_set_pos(qs_volume_slider_, 42, 54);
+            lv_obj_set_size(qs_volume_slider_, 120, 20);
+            lv_obj_set_pos(qs_volume_slider_, 42, 55);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 52);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 57);
 
         if (qs_color_card_) {
             lv_obj_set_size(qs_color_card_, 220, 84);
@@ -3741,29 +3741,29 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         if (qs_title_) lv_obj_set_pos(qs_title_, 14, 4);
         if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 282, 2);
 
-        // 1. Thanh kéo âm thanh & độ sáng kéo dài hết màn hình (width = 304)
+        // 1. Thanh kéo âm thanh & độ sáng kéo dài hết màn hình (width = 304, height = 74)
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 304, 70);
-            lv_obj_set_pos(qs_sliders_card_, 8, 26);
+            lv_obj_set_size(qs_sliders_card_, 304, 74);
+            lv_obj_set_pos(qs_sliders_card_, 8, 24);
         }
-        if (b_icon) lv_obj_set_pos(b_icon, 8, 6);
+        if (b_icon) lv_obj_set_pos(b_icon, 8, 4);
         if (qs_brightness_slider_) {
-            lv_obj_set_size(qs_brightness_slider_, 206, 12);
-            lv_obj_set_pos(qs_brightness_slider_, 38, 12);
+            lv_obj_set_size(qs_brightness_slider_, 206, 22);
+            lv_obj_set_pos(qs_brightness_slider_, 38, 8);
         }
-        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 252, 9);
+        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 252, 11);
 
         if (v_icon) lv_obj_set_pos(v_icon, 8, 38);
         if (qs_volume_slider_) {
-            lv_obj_set_size(qs_volume_slider_, 206, 12);
-            lv_obj_set_pos(qs_volume_slider_, 38, 44);
+            lv_obj_set_size(qs_volume_slider_, 206, 22);
+            lv_obj_set_pos(qs_volume_slider_, 38, 42);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 252, 41);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 252, 45);
 
         // 2. Phía dưới là bảng chọn màu chữ (width = 304, 10 chấm tròn thẳng hàng)
         if (qs_color_card_) {
             lv_obj_set_size(qs_color_card_, 304, 52);
-            lv_obj_set_pos(qs_color_card_, 8, 100);
+            lv_obj_set_pos(qs_color_card_, 8, 102);
         }
         if (col_title) lv_obj_set_pos(col_title, 10, 3);
         if (qs_color_card_) {
