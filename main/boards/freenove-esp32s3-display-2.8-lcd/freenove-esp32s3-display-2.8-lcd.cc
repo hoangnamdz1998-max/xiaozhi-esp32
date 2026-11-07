@@ -451,6 +451,12 @@ private:
                         if (start_screen_y < 160 || delta_y > -45) {
                             allow_vert_swipe = false;
                         }
+                    } else if (mode == LcdDisplay::kScreenTimer) {
+                        // Trong Báo thức: chỉ cho phép vuốt thoát khi vuốt từ mép dưới lên (Home bar kiểu iPhone)
+                        int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 260 : 185;
+                        if (start_screen_y < bottom_edge || delta_y > -35) {
+                            allow_vert_swipe = false;
+                        }
                     }
 
                     if (!swiped && (now - down_start < 800)) {
@@ -496,6 +502,11 @@ private:
                 bool allow_vert_swipe = true;
                 if (mode == LcdDisplay::kScreenQuickSettings) {
                     if (start_screen_y < 160 || delta_y > -45) {
+                        allow_vert_swipe = false;
+                    }
+                } else if (mode == LcdDisplay::kScreenTimer) {
+                    int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 260 : 185;
+                    if (start_screen_y < bottom_edge || delta_y > -35) {
                         allow_vert_swipe = false;
                     }
                 }

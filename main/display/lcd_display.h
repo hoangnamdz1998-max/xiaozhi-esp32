@@ -131,6 +131,7 @@ protected:
 
     bool is_light_theme_ = false;
     void ApplyTheme();
+    void UpdateColorDotsPalette();
 
     uint32_t standby_text_color_ = 0xFFFFFF;
 

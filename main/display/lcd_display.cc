@@ -2617,8 +2617,8 @@ void LcdDisplay::OnSwipeUp() {
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
                screen_mode_ == kScreenClock || screen_mode_ == kScreenExchangeRates) {
         ShowMenu();
-    } else if (screen_mode_ == kScreenStopwatch) {
-        ShowClock(); // Thoát từ trang con về trang Đồng hồ chính (không áp dụng cho Báo thức để người dùng cuộn số)
+    } else if (screen_mode_ == kScreenStopwatch || screen_mode_ == kScreenTimer) {
+        ShowClock(); // Thoát từ trang con về trang Đồng hồ chính (Báo thức vuốt từ mép dưới lên như iPhone)
     }
 }
 
@@ -2995,18 +2995,55 @@ void LcdDisplay::SetStandbyTextColor(uint32_t color_hex) {
     }
 }
 
+void LcdDisplay::UpdateColorDotsPalette() {
+    const uint32_t dark_palette[10] = {
+        0xFFFFFF, // Trắng sáng mặc định
+        0xFDE047, // Vàng chanh
+        0x38BDF8, // Xanh da trời
+        0x4ADE80, // Xanh lá
+        0xFB923C, // Cam tươi
+        0xF472B6, // Hồng phấn
+        0xC084FC, // Tím Lavender
+        0xF87171, // Đỏ san hô
+        0x2DD4BF, // Xanh Teal
+        0xFEF08A  // Vàng nhạt kem
+    };
+    const uint32_t light_palette[10] = {
+        0x0F172A, // Đen đậm mặc định (tương phản cực cao trên nền trắng)
+        0x1E3A8A, // Xanh Navy đậm
+        0x991B1B, // Đỏ sẫm Ruby
+        0x14532D, // Xanh lá rừng đậm
+        0x581C87, // Tím than
+        0x7C2D12, // Nâu Chocolate đậm
+        0x0E7490, // Xanh cổ vịt đậm
+        0x831843, // Hồng mận đậm
+        0x334155, // Xám than chì
+        0x431407  // Cà phê đậm
+    };
+    const uint32_t* current = is_light_theme_ ? light_palette : dark_palette;
+    for (int i = 0; i < 10; ++i) {
+        if (qs_color_dots_[i]) {
+            lv_obj_set_style_bg_color(qs_color_dots_[i], lv_color_hex(current[i]), 0);
+            lv_obj_set_user_data(qs_color_dots_[i], (void*)(intptr_t)current[i]);
+        }
+    }
+    SetStandbyTextColor(is_light_theme_ ? 0x0F172A : 0xFFFFFF);
+    UpdateColorDotsSelection();
+}
+
 void LcdDisplay::UpdateColorDotsSelection() {
+    lv_color_t ring_color = is_light_theme_ ? lv_color_hex(0x0F172A) : lv_color_white();
     for (int i = 0; i < 10; ++i) {
         if (qs_color_dots_[i] == nullptr) continue;
         uint32_t col = (uint32_t)(intptr_t)lv_obj_get_user_data(qs_color_dots_[i]);
         if (col == standby_text_color_) {
-            // Selected: viền dày màu trắng + vòng tròn bao quanh nổi bật (Apple-style selection ring)
+            // Selected: viền dày tương phản + vòng tròn bao quanh nổi bật (Apple-style selection ring)
             lv_obj_set_style_outline_width(qs_color_dots_[i], 2, 0);
-            lv_obj_set_style_outline_color(qs_color_dots_[i], lv_color_white(), 0);
+            lv_obj_set_style_outline_color(qs_color_dots_[i], ring_color, 0);
             lv_obj_set_style_outline_pad(qs_color_dots_[i], 2, 0);
             lv_obj_set_style_outline_opa(qs_color_dots_[i], LV_OPA_COVER, 0);
             lv_obj_set_style_border_width(qs_color_dots_[i], 2, 0);
-            lv_obj_set_style_border_color(qs_color_dots_[i], lv_color_white(), 0);
+            lv_obj_set_style_border_color(qs_color_dots_[i], ring_color, 0);
         } else {
             // Unselected: viền mảnh xám tinh tế, không có outline
             lv_obj_set_style_outline_width(qs_color_dots_[i], 0, 0);
@@ -3722,6 +3759,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
         esp_timer_start_once(timer, 600000);
     }, LV_EVENT_CLICKED, this);
 
+    UpdateColorDotsPalette();
+
     LayoutQuickSettingsWidgets(height_ > width_);
 }
 
@@ -3926,6 +3965,19 @@ void LcdDisplay::ApplyTheme() {
         lv_obj_set_style_border_color(alarm_list_container_, card_border, 0);
     }
 
+    if (calendar_box_) {
+        uint32_t cnt = lv_obj_get_child_count(calendar_box_);
+        for (uint32_t i = 0; i < cnt; ++i) {
+            lv_obj_t* child = lv_obj_get_child(calendar_box_, i);
+            int id = (int)(intptr_t)lv_obj_get_user_data(child);
+            if (id > 100 && id < 107) {
+                lv_obj_set_style_text_color(child, is_light_theme_ ? lv_color_hex(0x475569) : lv_color_hex(0xB0BEC5), 0);
+            }
+        }
+    }
+
+    UpdateColorDotsPalette();
+
     ShowNotification(is_light_theme_ ? "Đã chuyển nền Sáng!" : "Đã chuyển nền Tối!", 1200);
 }
 
@@ -4056,7 +4108,7 @@ void LcdDisplay::CreateCalendarUI() {
     lv_label_set_text(calendar_title_label_, "Tháng 11 / 2026");
     lv_obj_set_style_text_font(calendar_title_label_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(calendar_title_label_, lv_color_white(), 0);
-    lv_label_set_long_mode(calendar_title_label_, LV_LABEL_LONG_CLIP);
+    lv_obj_set_style_pad_all(calendar_title_label_, 0, 0);
 
     // Today Card
     cal_today_card_ = lv_obj_create(calendar_box_);
@@ -4132,14 +4184,14 @@ void LcdDisplay::CreateCalendarUI() {
         calendar_cells_[i].solar_label = solar;
         lv_obj_set_style_text_font(solar, &font_noto_sans_basic_16_4, 0); // Lịch dương to rõ
         lv_obj_set_style_text_color(solar, lv_color_white(), 0);
-        lv_obj_align(solar, LV_ALIGN_TOP_MID, 0, -6); // Số dương sát mép trên
+        lv_obj_set_style_pad_all(solar, 0, 0);
         lv_obj_clear_flag(solar, LV_OBJ_FLAG_CLICKABLE);
 
         lv_obj_t* lunar = lv_label_create(cell);
         calendar_cells_[i].lunar_label = lunar;
         lv_obj_set_style_text_font(lunar, &font_noto_sans_basic_14_1, 0);
         lv_obj_set_style_text_color(lunar, lv_color_hex(0x94A3B8), 0);
-        lv_obj_align(lunar, LV_ALIGN_BOTTOM_MID, 0, 2); // Số âm sát đáy ô, cách số dương 5px rộng rãi
+        lv_obj_set_style_pad_all(lunar, 0, 0);
         lv_obj_clear_flag(lunar, LV_OBJ_FLAG_CLICKABLE);
     }
 
@@ -4152,21 +4204,21 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
 
     if (is_portrait) {
         // 240 x 320: Tất cả xích xuống, nút chuyển tháng không sát mép trên
-        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 10);
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 8);
         if (calendar_prev_btn_) {
             lv_obj_set_size(calendar_prev_btn_, 36, 26);
-            lv_obj_set_pos(calendar_prev_btn_, 56, 10);
+            lv_obj_set_pos(calendar_prev_btn_, 56, 8);
         }
         if (calendar_next_btn_) {
             lv_obj_set_size(calendar_next_btn_, 36, 26);
-            lv_obj_set_pos(calendar_next_btn_, 194, 10);
+            lv_obj_set_pos(calendar_next_btn_, 194, 8);
         }
 
-        // Chữ Tháng Năm nằm ở hàng riêng biệt, cao 26px không mất nét chữ g
+        // Chữ Tháng Năm nằm ở hàng riêng biệt, cao 28px không mất nét chữ g
         if (calendar_title_label_) {
-            lv_obj_set_size(calendar_title_label_, 220, 26);
+            lv_obj_set_size(calendar_title_label_, 220, 28);
             lv_obj_set_style_text_align(calendar_title_label_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(calendar_title_label_, 10, 38);
+            lv_obj_set_pos(calendar_title_label_, 10, 36);
         }
 
         // Hàng Thứ (CN..T7): cao 18px để không mất chân chữ
@@ -4182,40 +4234,50 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // 6 hàng ngày tháng (cao 26px để lịch âm/dương cách nhau 5px rộng rãi)
+        // 6 hàng ngày tháng (cao 24px để lịch âm/dương cách nhau 3px rõ rệt)
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 32, 26);
-            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 80 + r * 25);
+            lv_obj_set_size(calendar_cells_[i].container, 32, 24);
+            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 78 + r * 24);
+            if (calendar_cells_[i].solar_label) {
+                lv_obj_set_width(calendar_cells_[i].solar_label, 32);
+                lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, -1);
+            }
+            if (calendar_cells_[i].lunar_label) {
+                lv_obj_set_width(calendar_cells_[i].lunar_label, 32);
+                lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 12);
+            }
         }
 
-        // Today Card phía dưới ở màn hình dọc: nâng lên y = 228, cao 86px không bị che mất sự kiện
+        // Today Card phía dưới ở màn hình dọc: nâng lên y = 224, cao 92px không bị che mất sự kiện
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 228, 86);
-            lv_obj_set_pos(cal_today_card_, 6, 228);
+            lv_obj_set_size(cal_today_card_, 228, 92);
+            lv_obj_set_pos(cal_today_card_, 6, 224);
             if (cal_today_title_) {
                 lv_obj_set_style_text_align(cal_today_title_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, -48, 4);
+                lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, -42, 3);
             }
             if (cal_today_wday_) {
                 lv_obj_set_style_text_align(cal_today_wday_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_wday_, LV_ALIGN_TOP_MID, 48, 4);
+                lv_obj_align(cal_today_wday_, LV_ALIGN_TOP_MID, 42, 3);
             }
             if (cal_today_month_year_) {
                 lv_obj_set_style_text_align(cal_today_month_year_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_month_year_, LV_ALIGN_TOP_MID, -45, 24);
+                lv_obj_align(cal_today_month_year_, LV_ALIGN_TOP_MID, -42, 22);
             }
             if (cal_today_lunar_) {
                 lv_obj_set_style_text_align(cal_today_lunar_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_lunar_, LV_ALIGN_TOP_MID, 45, 24);
+                lv_obj_align(cal_today_lunar_, LV_ALIGN_TOP_MID, 42, 22);
             }
             if (cal_today_day_) lv_obj_add_flag(cal_today_day_, LV_OBJ_FLAG_HIDDEN);
             if (cal_today_event_) {
                 lv_obj_set_width(cal_today_event_, 216);
                 lv_obj_set_style_text_align(cal_today_event_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 44);
+                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 42);
             }
         }
     } else {
@@ -4250,11 +4312,11 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             lv_obj_set_pos(calendar_next_btn_, 274, 8);
         }
 
-        // Hàng 2 (y = 36): Tháng Năm ở hàng riêng biệt rộng rãi 196px, cao 26px không mất nét chữ g
+        // Hàng 2 (y = 34): Tháng Năm ở hàng riêng biệt rộng rãi 196px, cao 28px không mất nét chữ g
         if (calendar_title_label_) {
-            lv_obj_set_size(calendar_title_label_, 196, 26);
+            lv_obj_set_size(calendar_title_label_, 196, 28);
             lv_obj_set_style_text_align(calendar_title_label_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(calendar_title_label_, 114, 36);
+            lv_obj_set_pos(calendar_title_label_, 114, 34);
         }
 
         // Hàng 3 (y = 58): Hàng chữ Thứ cao 18px để không bị mất chân chữ
@@ -4270,13 +4332,23 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // Hàng 4..9 (y = 76..234): 6 hàng ngày tháng cao 27px, lịch âm cách dương 5px rõ ràng
+        // Hàng 4..9 (y = 76..238): 6 hàng ngày tháng cao 27px, lịch âm cách dương rõ ràng
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
             lv_obj_set_size(calendar_cells_[i].container, 28, 27);
             lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 28, 76 + r * 27);
+            if (calendar_cells_[i].solar_label) {
+                lv_obj_set_width(calendar_cells_[i].solar_label, 28);
+                lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(calendar_cells_[i].solar_label, 0, 0);
+            }
+            if (calendar_cells_[i].lunar_label) {
+                lv_obj_set_width(calendar_cells_[i].lunar_label, 28);
+                lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 14);
+            }
         }
     }
 }
@@ -4313,27 +4385,33 @@ void LcdDisplay::UpdateCalendarUI() {
 
     if (cal_today_title_) {
         lv_label_set_text(cal_today_title_, is_current_today ? "HÔM NAY" : "ĐÃ CHỌN");
+        lv_obj_set_style_text_color(cal_today_title_, is_light_theme_ ? lv_color_hex(0x1D4ED8) : lv_color_hex(0x64B5F6), 0);
     }
     if (cal_today_day_) {
         char sday[8];
         snprintf(sday, sizeof(sday), "%02d", show_day);
         lv_label_set_text(cal_today_day_, sday);
+        lv_obj_set_style_text_color(cal_today_day_, is_light_theme_ ? lv_color_hex(0x0F172A) : lv_color_white(), 0);
     }
     if (cal_today_month_year_) {
         char mybuf[32];
         snprintf(mybuf, sizeof(mybuf), "Tháng %d, %d", curr_cal_month_, curr_cal_year_);
         lv_label_set_text(cal_today_month_year_, mybuf);
+        lv_obj_set_style_text_color(cal_today_month_year_, is_light_theme_ ? lv_color_hex(0x2563EB) : lv_color_hex(0x60A5FA), 0);
     }
     if (cal_today_wday_) {
         lv_label_set_text(cal_today_wday_, full_wdays[show_wday]);
+        lv_obj_set_style_text_color(cal_today_wday_, is_light_theme_ ? lv_color_hex(0xB45309) : lv_color_hex(0xFFD54F), 0);
     }
     if (cal_today_lunar_) {
         char lstr[32];
         snprintf(lstr, sizeof(lstr), "Âm: %d/%d", lunar_show.day, lunar_show.month);
         lv_label_set_text(cal_today_lunar_, lstr);
+        lv_obj_set_style_text_color(cal_today_lunar_, is_light_theme_ ? lv_color_hex(0x15803D) : lv_color_hex(0x81C784), 0);
     }
     if (cal_today_event_) {
         lv_label_set_text(cal_today_event_, event_str);
+        lv_obj_set_style_text_color(cal_today_event_, is_light_theme_ ? lv_color_hex(0x9A3412) : lv_color_hex(0xFFE082), 0);
     }
 
     struct tm t = {};
@@ -4381,24 +4459,24 @@ void LcdDisplay::UpdateCalendarUI() {
                 lv_obj_set_style_text_color(c.solar_label, lv_color_white(), 0);
                 lv_obj_set_style_text_color(c.lunar_label, lv_color_hex(0xFFE082), 0);
             } else if (is_selected) {
-                lv_obj_set_style_bg_color(c.container, lv_color_hex(0x1E293B), 0);
+                lv_obj_set_style_bg_color(c.container, is_light_theme_ ? lv_color_hex(0xCBD5E1) : lv_color_hex(0x1E293B), 0);
                 lv_obj_set_style_bg_opa(c.container, LV_OPA_COVER, 0);
                 lv_obj_set_style_border_width(c.container, 2, 0);
-                lv_obj_set_style_border_color(c.container, lv_color_hex(0x00E5FF), 0);
-                lv_obj_set_style_text_color(c.solar_label, lv_color_hex(0x00E5FF), 0);
-                lv_obj_set_style_text_color(c.lunar_label, lv_color_white(), 0);
+                lv_obj_set_style_border_color(c.container, lv_color_hex(0x0284C7), 0);
+                lv_obj_set_style_text_color(c.solar_label, is_light_theme_ ? lv_color_hex(0x0284C7) : lv_color_hex(0x00E5FF), 0);
+                lv_obj_set_style_text_color(c.lunar_label, is_light_theme_ ? lv_color_hex(0x0F172A) : lv_color_white(), 0);
             } else {
                 lv_obj_set_style_bg_opa(c.container, LV_OPA_TRANSP, 0);
                 lv_obj_set_style_border_width(c.container, 0, 0);
                 if (is_sunday) {
-                    lv_obj_set_style_text_color(c.solar_label, lv_color_hex(0xFF5252), 0);
+                    lv_obj_set_style_text_color(c.solar_label, lv_color_hex(0xDC2626), 0);
                 } else {
-                    lv_obj_set_style_text_color(c.solar_label, lv_color_white(), 0);
+                    lv_obj_set_style_text_color(c.solar_label, is_light_theme_ ? lv_color_hex(0x0F172A) : lv_color_white(), 0);
                 }
                 if (lunar.day == 1) {
-                    lv_obj_set_style_text_color(c.lunar_label, lv_color_hex(0xFFD54F), 0);
+                    lv_obj_set_style_text_color(c.lunar_label, is_light_theme_ ? lv_color_hex(0xD97706) : lv_color_hex(0xFFD54F), 0);
                 } else {
-                    lv_obj_set_style_text_color(c.lunar_label, lv_color_hex(0x90A4AE), 0);
+                    lv_obj_set_style_text_color(c.lunar_label, is_light_theme_ ? lv_color_hex(0x64748B) : lv_color_hex(0x90A4AE), 0);
                 }
             }
         } else {
