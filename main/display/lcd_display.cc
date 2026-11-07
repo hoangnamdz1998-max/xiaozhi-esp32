@@ -2522,6 +2522,20 @@ void LcdDisplay::OnSwipeRight() {
 void LcdDisplay::OnSwipeUp() {
     DisplayLockGuard lock(this);
     if (!lock) return;
+
+    auto& app = Application::GetInstance();
+    auto state = app.GetDeviceState();
+
+    // Nếu đang ở màn hình chatbot (Listening, Speaking, Connecting):
+    // Vuốt lên sẽ thoát ngay chế độ chatbot và trở về màn hình chờ ban đầu!
+    if (state == kDeviceStateListening || state == kDeviceStateSpeaking || state == kDeviceStateConnecting) {
+        app.ToggleChatState();
+        if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+        if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+        screen_mode_ = kScreenStandby;
+        return;
+    }
+
     if (screen_mode_ == kScreenStandby) {
         ShowMenu(); // Swipe up from standby opens icon menu
     } else if (screen_mode_ == kScreenMenu) {
@@ -2554,6 +2568,7 @@ void LcdDisplay::ShowStandby() {
 
     auto& app = Application::GetInstance();
     if (app.GetDeviceState() == kDeviceStateIdle) {
+        if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
         if (standby_box_ != nullptr) lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     } else {
         if (content_ != nullptr) lv_obj_remove_flag(content_, LV_OBJ_FLAG_HIDDEN);

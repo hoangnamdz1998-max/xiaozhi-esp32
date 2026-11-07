@@ -146,6 +146,7 @@ Keep detailed or fast-changing information in those files, not here. Add a neste
 7. **Hệ thống Cử chỉ vuốt, Màn hình 14 Icon (2 trang) & Cài đặt nhanh (Quick Settings)**:
    - **Đồng bộ cảm ứng Ngang (320x240) và Dọc (240x320)**: Tần số lấy mẫu 20ms, thuật toán nhận diện vuốt delta trực quan độc lập góc xoay, giải mã nghịch đảo ma trận toạ độ của LVGL 9 khi xoay 90 độ, đảm bảo chạm và vuốt mượt mà 100%.
    - **Kịch bản vuốt linh hoạt**:
+     - Tại màn hình Chatbot (đang trò chuyện / lắng nghe / nói): Vuốt từ dưới lên -> Thoát ngay chế độ chatbot, ngắt âm thanh và trở về màn hình chờ ban đầu.
      - Tại màn hình chờ (Standby): Vuốt dưới lên -> Mở màn hình Menu icon. Vuốt trên xuống -> Mở Cài đặt nhanh (Quick Settings).
      - Tại màn hình Menu icon: Vuốt sang trái -> Sang Trang 2 (5 icon). Vuốt sang phải -> Quay lại Trang 1 (9 icon). Vuốt dưới lên -> Quay về màn hình chờ ban đầu. Vuốt trên xuống -> Mở Cài đặt nhanh.
      - Tại màn hình Cài đặt nhanh: Vuốt dưới lên (hoặc nút đóng X) -> Quay về màn hình chờ.
