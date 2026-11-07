@@ -165,6 +165,7 @@ protected:
 
     // Weather Detail Screen
     lv_obj_t* weather_detail_box_ = nullptr;
+    lv_obj_t* weather_detail_back_btn_ = nullptr;
     lv_obj_t* weather_detail_city_ = nullptr;
     lv_obj_t* weather_detail_temp_ = nullptr;
     lv_obj_t* weather_detail_condition_ = nullptr;
