@@ -143,15 +143,18 @@ protected:
     lv_obj_t* cal_today_card_ = nullptr;
     lv_obj_t* cal_today_title_ = nullptr;
     lv_obj_t* cal_today_day_ = nullptr;
+    lv_obj_t* cal_today_month_year_ = nullptr;
     lv_obj_t* cal_today_wday_ = nullptr;
     lv_obj_t* cal_today_lunar_ = nullptr;
     lv_obj_t* cal_today_event_ = nullptr;
     int curr_cal_year_ = 2026;
     int curr_cal_month_ = 11;
+    int selected_cal_day_ = -1;
     struct CalendarCellWidget {
         lv_obj_t* container = nullptr;
         lv_obj_t* solar_label = nullptr;
         lv_obj_t* lunar_label = nullptr;
+        int day_num = 0;
     };
     CalendarCellWidget calendar_cells_[42];
 
@@ -216,24 +219,27 @@ protected:
     bool cd_running_ = false;
     lv_timer_t* fast_tick_timer_ = nullptr;
 
-    // Alarm Clock Screen (Hẹn giờ báo thức theo giờ thực tế và chọn ngày trong tuần)
+    // Alarm Clock Screen (Báo thức con lăn xoay giờ phút + danh sách báo thức bật/tắt/xóa)
+    struct AlarmRecord {
+        int id = 0;
+        int hour = 7;
+        int min = 0;
+        uint8_t days_mask = 0x7F; // Bit 0=CN, 1=T2..6=T7
+        bool enabled = true;
+        bool triggered_today = false;
+    };
+    std::vector<AlarmRecord> alarms_;
+    int next_alarm_id_ = 1;
+
     lv_obj_t* timer_box_ = nullptr;
     lv_obj_t* timer_back_btn_ = nullptr;
-    lv_obj_t* alarm_time_label_ = nullptr;
-    lv_obj_t* alarm_status_label_ = nullptr;
-    lv_obj_t* alarm_hour_minus_btn_ = nullptr;
-    lv_obj_t* alarm_hour_plus_btn_ = nullptr;
-    lv_obj_t* alarm_min_minus_btn_ = nullptr;
-    lv_obj_t* alarm_min_plus_btn_ = nullptr;
-    lv_obj_t* alarm_toggle_btn_ = nullptr;
-    lv_obj_t* alarm_toggle_lbl_ = nullptr;
-    lv_obj_t* alarm_preset_btn_ = nullptr;
+    lv_obj_t* alarm_hour_roller_ = nullptr;
+    lv_obj_t* alarm_min_roller_ = nullptr;
+    lv_obj_t* alarm_add_btn_ = nullptr;
     lv_obj_t* alarm_day_btns_[7] = {nullptr};
-    int alarm_hour_ = 7;
-    int alarm_min_ = 0;
-    uint8_t alarm_days_mask_ = 0x7F; // Bit 0=CN, 1=T2, 2=T3, 3=T4, 4=T5, 5=T6, 6=T7
-    bool alarm_enabled_ = true;
-    bool alarm_triggered_today_ = false;
+    uint8_t alarm_new_days_mask_ = 0x7F;
+    lv_obj_t* alarm_list_container_ = nullptr;
+    void RenderAlarmList();
 
     // Exchange Rates Screen (Tỉ giá thị trường: Vàng SJC, USD, Crypto BTC/ETH, Xăng dầu)
     lv_obj_t* rates_box_ = nullptr;
