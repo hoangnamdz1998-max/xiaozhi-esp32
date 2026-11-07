@@ -78,6 +78,10 @@ public:
     virtual void ShowQuickSettings() {}
     virtual void ShowCalendar() {}
     virtual void ShowWeatherDetail() {}
+    virtual void ShowClock() {}
+    virtual void ShowStopwatch() {}
+    virtual void ShowTimer() {}
+    virtual void ShowExchangeRates() {}
     virtual void UpdateWeatherFull(const WeatherInfo& info) { (void)info; }
     virtual void UpdateWeather(float temp, int humidity, const char* condition, int icon_type) {
         (void)temp;

@@ -76,7 +76,11 @@ public:
         kScreenMenu,
         kScreenQuickSettings,
         kScreenCalendar,
-        kScreenWeatherDetail
+        kScreenWeatherDetail,
+        kScreenClock,
+        kScreenStopwatch,
+        kScreenTimer,
+        kScreenExchangeRates
     };
 
     virtual void OnSwipeLeft() override;
@@ -88,6 +92,10 @@ public:
     virtual void ShowQuickSettings() override;
     virtual void ShowCalendar() override;
     virtual void ShowWeatherDetail() override;
+    virtual void ShowClock() override;
+    virtual void ShowStopwatch() override;
+    virtual void ShowTimer() override;
+    virtual void ShowExchangeRates() override;
     void SetMenuPage(int page, bool animate = false, bool swipe_left = true);
     void SetStandbyTextColor(uint32_t color_hex);
     ScreenMode GetScreenMode() const { return screen_mode_; }
@@ -132,6 +140,12 @@ protected:
     lv_obj_t* calendar_back_btn_ = nullptr;
     lv_obj_t* calendar_prev_btn_ = nullptr;
     lv_obj_t* calendar_next_btn_ = nullptr;
+    lv_obj_t* cal_today_card_ = nullptr;
+    lv_obj_t* cal_today_title_ = nullptr;
+    lv_obj_t* cal_today_day_ = nullptr;
+    lv_obj_t* cal_today_wday_ = nullptr;
+    lv_obj_t* cal_today_lunar_ = nullptr;
+    lv_obj_t* cal_today_event_ = nullptr;
     int curr_cal_year_ = 2026;
     int curr_cal_month_ = 11;
     struct CalendarCellWidget {
@@ -147,6 +161,8 @@ protected:
     lv_obj_t* weather_detail_temp_ = nullptr;
     lv_obj_t* weather_detail_condition_ = nullptr;
     lv_obj_t* weather_detail_stats_ = nullptr;
+    lv_obj_t* weather_detail_humidity_ = nullptr;
+    lv_obj_t* weather_detail_wind_ = nullptr;
     lv_obj_t* weather_detail_icon_ = nullptr;
     struct WeatherDetailDailyWidget {
         lv_obj_t* row = nullptr;
@@ -156,14 +172,82 @@ protected:
     };
     WeatherDetailDailyWidget weather_detail_daily_[4];
 
+    // Clock Screen (Đồng hồ & lựa chọn Bấm giờ / Hẹn giờ)
+    lv_obj_t* clock_box_ = nullptr;
+    lv_obj_t* clock_back_btn_ = nullptr;
+    lv_obj_t* clock_card_ = nullptr;
+    lv_obj_t* clock_time_label_ = nullptr;
+    lv_obj_t* clock_date_label_ = nullptr;
+    lv_obj_t* clock_sub_label_ = nullptr;
+    lv_obj_t* clock_sw_btn_ = nullptr;
+    lv_obj_t* clock_timer_btn_ = nullptr;
+
+    // Stopwatch Screen (Bấm giờ)
+    lv_obj_t* stopwatch_box_ = nullptr;
+    lv_obj_t* sw_back_btn_ = nullptr;
+    lv_obj_t* sw_time_label_ = nullptr;
+    lv_obj_t* sw_status_label_ = nullptr;
+    lv_obj_t* sw_start_btn_ = nullptr;
+    lv_obj_t* sw_start_lbl_ = nullptr;
+    lv_obj_t* sw_reset_btn_ = nullptr;
+    lv_obj_t* sw_reset_lbl_ = nullptr;
+    bool sw_running_ = false;
+    int64_t sw_elapsed_ms_ = 0;
+    int64_t sw_last_tick_ms_ = 0;
+
+    // Multi-Timer Screen (Hẹn giờ đếm ngược nhiều mốc giờ)
+    lv_obj_t* timer_box_ = nullptr;
+    lv_obj_t* timer_back_btn_ = nullptr;
+    struct MultiTimerSlot {
+        lv_obj_t* card = nullptr;
+        lv_obj_t* name_lbl = nullptr;
+        lv_obj_t* time_lbl = nullptr;
+        lv_obj_t* toggle_btn = nullptr;
+        lv_obj_t* toggle_lbl = nullptr;
+        lv_obj_t* reset_btn = nullptr;
+        int total_sec = 0;
+        int remaining_sec = 0;
+        bool running = false;
+    };
+    MultiTimerSlot timer_slots_[3];
+    uint32_t last_timer_tick_ms_ = 0;
+
+    // Exchange Rates Screen (Tỉ giá thị trường: Vàng, Đô, Crypto, Xăng)
+    lv_obj_t* rates_box_ = nullptr;
+    lv_obj_t* rates_back_btn_ = nullptr;
+    lv_obj_t* rates_refresh_btn_ = nullptr;
+    lv_obj_t* rates_time_label_ = nullptr;
+    struct RateCardWidget {
+        lv_obj_t* card = nullptr;
+        lv_obj_t* icon_lbl = nullptr;
+        lv_obj_t* title_lbl = nullptr;
+        lv_obj_t* val1_lbl = nullptr;
+        lv_obj_t* val2_lbl = nullptr;
+        lv_obj_t* trend_lbl = nullptr;
+    };
+    RateCardWidget rate_cards_[4];
+
     void CreateMenuUI();
     void CreateCalendarUI();
     void UpdateCalendarUI();
     void CreateWeatherDetailUI();
     void UpdateWeatherDetailUI();
+    void CreateClockUI();
+    void UpdateClockUI();
+    void CreateStopwatchUI();
+    void UpdateStopwatchUI();
+    void CreateTimerUI();
+    void UpdateTimerUI();
+    void CreateExchangeRatesUI();
+    void UpdateExchangeRatesUI();
+
     void LayoutMenuWidgets(bool is_portrait);
     void LayoutCalendarWidgets(bool is_portrait);
     void LayoutWeatherDetailWidgets(bool is_portrait);
+    void LayoutClockWidgets(bool is_portrait);
+    void LayoutStopwatchWidgets(bool is_portrait);
+    void LayoutTimerWidgets(bool is_portrait);
+    void LayoutExchangeRatesWidgets(bool is_portrait);
 
     void InitializeLcdThemes();
     virtual bool Lock(int timeout_ms = 0) override;

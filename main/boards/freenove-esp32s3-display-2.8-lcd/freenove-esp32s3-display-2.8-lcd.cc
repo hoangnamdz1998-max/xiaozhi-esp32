@@ -443,8 +443,8 @@ private:
                     int delta_y = (int)screen_y - (int)start_screen_y;
 
                     auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
-                    // Không cho phép vuốt ngang ở QuickSettings để thanh trượt âm thanh & độ sáng trượt mượt mà
-                    bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || mode == LcdDisplay::kScreenCalendar || mode == LcdDisplay::kScreenWeatherDetail);
+                    // Chỉ cho phép vuốt ngang ở Menu (chuyển trang) và Calendar (chuyển tháng)
+                    bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
                     bool allow_vert_swipe = true;
                     if (mode == LcdDisplay::kScreenQuickSettings) {
                         // Trong QuickSettings: tuyệt đối không ngắt touch khi đang thao tác trên vùng thanh trượt / bảng màu
@@ -492,7 +492,7 @@ private:
                 int delta_y = (int)last_screen_y - (int)start_screen_y;
 
                 auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
-                bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || mode == LcdDisplay::kScreenCalendar || mode == LcdDisplay::kScreenWeatherDetail);
+                bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
                 bool allow_vert_swipe = true;
                 if (mode == LcdDisplay::kScreenQuickSettings) {
                     if (start_screen_y < 160 || delta_y > -45) {
