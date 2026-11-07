@@ -111,6 +111,7 @@ protected:
     lv_obj_t* qs_volume_slider_ = nullptr;
     lv_obj_t* qs_volume_label_ = nullptr;
     lv_obj_t* qs_color_card_ = nullptr;
+    lv_obj_t* qs_color_dots_[10] = {nullptr};
     lv_obj_t* qs_sliders_card_ = nullptr;
     lv_obj_t* qs_actions_card_ = nullptr;
     lv_obj_t* qs_ai_btn_ = nullptr;
@@ -123,6 +124,7 @@ protected:
 
     void CreateQuickSettingsUI();
     void LayoutQuickSettingsWidgets(bool is_portrait);
+    void UpdateColorDotsSelection();
 
     // Calendar Screen
     lv_obj_t* calendar_box_ = nullptr;
