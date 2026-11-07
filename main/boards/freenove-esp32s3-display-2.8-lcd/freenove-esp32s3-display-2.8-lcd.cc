@@ -396,8 +396,11 @@ private:
                     if (screen_y > 319) screen_y = 319;
 
                     // Reverse LVGL 9 rotate_point(LV_DISPLAY_ROTATION_90) so point lands on (screen_x, screen_y)
+                    // In LVGL 9 unrotated ver_res = 240, hor_res = 320:
+                    // lv_display_rotate_point: point->x = disp->ver_res - y - 1 => 240 - (239 - screen_x) - 1 = screen_x
+                    // point->y = x => screen_y
                     self->touch_lvgl_x_ = screen_y;
-                    self->touch_lvgl_y_ = 319 - screen_x;
+                    self->touch_lvgl_y_ = 239 - screen_x;
                 } else {
                     // Landscape: width 320, height 240
                     // Long physical axis (raw_y: 0..319) is screen_x

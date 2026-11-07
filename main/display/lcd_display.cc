@@ -701,13 +701,13 @@ void LcdDisplay::SetupUI() {
 #else
     lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_basic_30_4, 0);
 #endif
-    lv_obj_set_style_text_color(standby_clock_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(standby_clock_, text_col, 0);
     lv_label_set_text(standby_clock_, "00:00");
 
-    // Seconds (:SS smaller font, white)
+    // Seconds (:SS smaller font)
     standby_sec_ = lv_label_create(standby_box_);
     lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_basic_20_4, 0);
-    lv_obj_set_style_text_color(standby_sec_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(standby_sec_, text_col, 0);
     lv_label_set_text(standby_sec_, ":00");
 
     // Weekday (Thứ Tư, etc.)
@@ -736,10 +736,10 @@ void LcdDisplay::SetupUI() {
     standby_weather_icon_ = lv_image_create(standby_box_);
     lv_image_set_src(standby_weather_icon_, &weather_icon_sun_cloud_48_dsc);
 
-    // Main Temp (white)
+    // Main Temp
     standby_temp_ = lv_label_create(standby_box_);
     lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_basic_30_4, 0);
-    lv_obj_set_style_text_color(standby_temp_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(standby_temp_, text_col, 0);
     lv_label_set_text(standby_temp_, "--°C");
 
     // City
@@ -1417,13 +1417,13 @@ void LcdDisplay::SetupUI() {
 #else
     lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_basic_30_4, 0);
 #endif
-    lv_obj_set_style_text_color(standby_clock_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(standby_clock_, text_col, 0);
     lv_label_set_text(standby_clock_, "00:00");
 
-    // Seconds (:SS smaller font, white)
+    // Seconds (:SS smaller font)
     standby_sec_ = lv_label_create(standby_box_);
     lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_basic_20_4, 0);
-    lv_obj_set_style_text_color(standby_sec_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(standby_sec_, text_col, 0);
     lv_label_set_text(standby_sec_, ":00");
 
     // Weekday (Thứ Tư, etc.)
@@ -1452,10 +1452,10 @@ void LcdDisplay::SetupUI() {
     standby_weather_icon_ = lv_image_create(standby_box_);
     lv_image_set_src(standby_weather_icon_, &weather_icon_sun_cloud_48_dsc);
 
-    // Main Temp (white)
+    // Main Temp
     standby_temp_ = lv_label_create(standby_box_);
     lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_basic_30_4, 0);
-    lv_obj_set_style_text_color(standby_temp_, lv_color_white(), 0);
+    lv_obj_set_style_text_color(standby_temp_, text_col, 0);
     lv_label_set_text(standby_temp_, "--°C");
 
     // City
@@ -2561,8 +2561,16 @@ void LcdDisplay::ShowStandby() {
     DisplayLockGuard lock(this);
     if (!lock) return;
     screen_mode_ = kScreenStandby;
-    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
-    if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
+        lv_obj_set_y(menu_box_, 0);
+        lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
+        lv_obj_set_y(quick_settings_box_, 0);
+        lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
 
@@ -2580,14 +2588,31 @@ void LcdDisplay::ShowMenu() {
     if (!lock) return;
     screen_mode_ = kScreenMenu;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
-    if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
+        lv_obj_set_y(quick_settings_box_, 0);
+        lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
     if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
 
     SetMenuPage(0); // Start at first page with 9 icons
     if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
         lv_obj_remove_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_y(menu_box_, height_);
+
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, menu_box_);
+        lv_anim_set_values(&a, height_, 0);
+        lv_anim_set_duration(&a, 220);
+        lv_anim_set_exec_cb(&a, [](void* var, int32_t val) {
+            lv_obj_set_y((lv_obj_t*)var, val);
+        });
+        lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+        lv_anim_start(&a);
     }
 }
 
@@ -2596,7 +2621,11 @@ void LcdDisplay::ShowQuickSettings() {
     if (!lock) return;
     screen_mode_ = kScreenQuickSettings;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
-    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
+        lv_obj_set_y(menu_box_, 0);
+        lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
     if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
@@ -2621,7 +2650,20 @@ void LcdDisplay::ShowQuickSettings() {
     }
 
     if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
         lv_obj_remove_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_y(quick_settings_box_, -height_);
+
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, quick_settings_box_);
+        lv_anim_set_values(&a, -height_, 0);
+        lv_anim_set_duration(&a, 220);
+        lv_anim_set_exec_cb(&a, [](void* var, int32_t val) {
+            lv_obj_set_y((lv_obj_t*)var, val);
+        });
+        lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+        lv_anim_start(&a);
     }
 }
 
@@ -2630,8 +2672,16 @@ void LcdDisplay::ShowCalendar() {
     if (!lock) return;
     screen_mode_ = kScreenCalendar;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
-    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
-    if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
+        lv_obj_set_y(menu_box_, 0);
+        lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
+        lv_obj_set_y(quick_settings_box_, 0);
+        lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
     if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
 
@@ -2653,8 +2703,16 @@ void LcdDisplay::ShowWeatherDetail() {
     if (!lock) return;
     screen_mode_ = kScreenWeatherDetail;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
-    if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
-    if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
+        lv_obj_set_y(menu_box_, 0);
+        lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
+        lv_obj_set_y(quick_settings_box_, 0);
+        lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
 
@@ -2673,9 +2731,12 @@ void LcdDisplay::SetStandbyTextColor(uint32_t color_hex) {
     settings.SetInt("text_color", (int)color_hex);
 
     lv_color_t col = lv_color_hex(color_hex);
+    if (standby_clock_) lv_obj_set_style_text_color(standby_clock_, col, 0);
+    if (standby_sec_) lv_obj_set_style_text_color(standby_sec_, col, 0);
     if (standby_weekday_) lv_obj_set_style_text_color(standby_weekday_, col, 0);
     if (standby_date_) lv_obj_set_style_text_color(standby_date_, col, 0);
     if (standby_lunar_) lv_obj_set_style_text_color(standby_lunar_, col, 0);
+    if (standby_temp_) lv_obj_set_style_text_color(standby_temp_, col, 0);
     if (standby_city_) lv_obj_set_style_text_color(standby_city_, col, 0);
     if (standby_condition_) lv_obj_set_style_text_color(standby_condition_, col, 0);
     if (standby_humidity_) lv_obj_set_style_text_color(standby_humidity_, col, 0);
@@ -2933,6 +2994,8 @@ void LcdDisplay::CreateMenuUI() {
         lv_label_set_text(lbl, titles[i]);
         lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
         lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, 0);
         lv_obj_clear_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
 
@@ -3005,14 +3068,14 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
 
     if (is_portrait) {
         // 240 x 320: 3 columns x 3 rows
-        int col_x[3] = {12, 88, 164};
-        int row_y[3] = {38, 116, 194};
+        int col_x[3] = {4, 83, 162};
+        int row_y[3] = {36, 116, 196};
         for (int i = 0; i < 14; ++i) {
             if (menu_items_[i] == nullptr) continue;
             int page_idx = (i < 9) ? i : (i - 9);
             int r = page_idx / 3;
             int c = page_idx % 3;
-            lv_obj_set_size(menu_items_[i], 64, 68);
+            lv_obj_set_size(menu_items_[i], 74, 72);
             lv_obj_set_pos(menu_items_[i], col_x[c], row_y[r]);
 
             lv_obj_t* tile = lv_obj_get_child(menu_items_[i], 0);
@@ -3020,21 +3083,26 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
                 lv_obj_set_size(tile, 46, 46);
                 lv_obj_set_style_radius(tile, 12, 0);
             }
+            lv_obj_t* lbl = lv_obj_get_child(menu_items_[i], 1);
+            if (lbl) {
+                lv_obj_set_width(lbl, 74);
+                lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, 0);
+            }
         }
         if (menu_dots_[0] && menu_dots_[1]) {
-            lv_obj_set_pos(menu_dots_[0], 120 - 12, 282);
-            lv_obj_set_pos(menu_dots_[1], 120 + 4, 282);
+            lv_obj_set_pos(menu_dots_[0], 120 - 12, 286);
+            lv_obj_set_pos(menu_dots_[1], 120 + 4, 286);
         }
     } else {
         // 320 x 240: 3 columns x 3 rows
-        int col_x[3] = {38, 128, 218};
-        int row_y[3] = {24, 88, 152};
+        int col_x[3] = {16, 116, 216};
+        int row_y[3] = {24, 86, 148};
         for (int i = 0; i < 14; ++i) {
             if (menu_items_[i] == nullptr) continue;
             int page_idx = (i < 9) ? i : (i - 9);
             int r = page_idx / 3;
             int c = page_idx % 3;
-            lv_obj_set_size(menu_items_[i], 64, 58);
+            lv_obj_set_size(menu_items_[i], 88, 58);
             lv_obj_set_pos(menu_items_[i], col_x[c], row_y[r]);
 
             lv_obj_t* tile = lv_obj_get_child(menu_items_[i], 0);
@@ -3042,10 +3110,15 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
                 lv_obj_set_size(tile, 38, 38);
                 lv_obj_set_style_radius(tile, 10, 0);
             }
+            lv_obj_t* lbl = lv_obj_get_child(menu_items_[i], 1);
+            if (lbl) {
+                lv_obj_set_width(lbl, 88);
+                lv_obj_align(lbl, LV_ALIGN_BOTTOM_MID, 0, 0);
+            }
         }
         if (menu_dots_[0] && menu_dots_[1]) {
-            lv_obj_set_pos(menu_dots_[0], 160 - 12, 218);
-            lv_obj_set_pos(menu_dots_[1], 160 + 4, 218);
+            lv_obj_set_pos(menu_dots_[0], 160 - 12, 216);
+            lv_obj_set_pos(menu_dots_[1], 160 + 4, 216);
         }
     }
 
@@ -3111,6 +3184,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_brightness_slider_, lv_color_white(), LV_PART_KNOB);
     lv_obj_set_style_radius(qs_brightness_slider_, 6, LV_PART_INDICATOR);
     lv_obj_set_style_radius(qs_brightness_slider_, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(qs_brightness_slider_, 4, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_brightness_slider_, 12);
 
     qs_brightness_label_ = lv_label_create(qs_sliders_card_);
     char b_buf[16];
@@ -3123,7 +3198,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         int val = lv_slider_get_value(self->qs_brightness_slider_);
         if (Board::GetInstance().GetBacklight() != nullptr) {
-            Board::GetInstance().GetBacklight()->SetBrightness(val, true);
+            Board::GetInstance().GetBacklight()->SetBrightness(val, false); // Mượt mà tức thì, không ghi NVS
         }
         if (self->qs_brightness_label_ != nullptr) {
             char buf[16];
@@ -3131,6 +3206,14 @@ void LcdDisplay::CreateQuickSettingsUI() {
             lv_label_set_text(self->qs_brightness_label_, buf);
         }
     }, LV_EVENT_VALUE_CHANGED, this);
+
+    lv_obj_add_event_cb(qs_brightness_slider_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        int val = lv_slider_get_value(self->qs_brightness_slider_);
+        if (Board::GetInstance().GetBacklight() != nullptr) {
+            Board::GetInstance().GetBacklight()->SetBrightness(val, true); // Lưu NVS 1 lần khi buông tay
+        }
+    }, LV_EVENT_RELEASED, this);
 
     // Volume row
     lv_obj_t* v_icon = lv_label_create(qs_sliders_card_);
@@ -3148,6 +3231,8 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_set_style_bg_color(qs_volume_slider_, lv_color_white(), LV_PART_KNOB);
     lv_obj_set_style_radius(qs_volume_slider_, 6, LV_PART_INDICATOR);
     lv_obj_set_style_radius(qs_volume_slider_, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(qs_volume_slider_, 4, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_volume_slider_, 12);
 
     qs_volume_label_ = lv_label_create(qs_sliders_card_);
     char v_buf[16];
@@ -3159,15 +3244,20 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_add_event_cb(qs_volume_slider_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         int val = lv_slider_get_value(self->qs_volume_slider_);
-        if (Board::GetInstance().GetAudioCodec() != nullptr) {
-            Board::GetInstance().GetAudioCodec()->SetOutputVolume(val);
-        }
         if (self->qs_volume_label_ != nullptr) {
             char buf[16];
             snprintf(buf, sizeof(buf), "%d%%", val);
             lv_label_set_text(self->qs_volume_label_, buf);
         }
     }, LV_EVENT_VALUE_CHANGED, this);
+
+    lv_obj_add_event_cb(qs_volume_slider_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        int val = lv_slider_get_value(self->qs_volume_slider_);
+        if (Board::GetInstance().GetAudioCodec() != nullptr) {
+            Board::GetInstance().GetAudioCodec()->SetOutputVolume(val); // Lưu âm lượng NVS khi buông tay
+        }
+    }, LV_EVENT_RELEASED, this);
 
     // Text Color Card
     qs_color_card_ = lv_obj_create(quick_settings_box_);
@@ -3189,11 +3279,12 @@ void LcdDisplay::CreateQuickSettingsUI() {
         lv_obj_t* dot = lv_obj_create(qs_color_card_);
         lv_obj_set_style_bg_color(dot, lv_color_hex(colors[i]), 0);
         lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(dot, 1, 0);
+        lv_obj_set_style_border_width(dot, 2, 0);
         lv_obj_set_style_border_color(dot, lv_color_white(), 0);
         lv_obj_set_style_pad_all(dot, 0, 0);
         lv_obj_clear_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(dot, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(dot, 10);
         lv_obj_set_user_data(dot, (void*)(intptr_t)colors[i]);
 
         lv_obj_add_event_cb(dot, [](lv_event_t* e) {
@@ -3306,20 +3397,20 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
         if (b_icon) lv_obj_set_pos(b_icon, 10, 10);
         if (qs_brightness_slider_) {
-            lv_obj_set_size(qs_brightness_slider_, 120, 10);
-            lv_obj_set_pos(qs_brightness_slider_, 42, 16);
+            lv_obj_set_size(qs_brightness_slider_, 120, 14);
+            lv_obj_set_pos(qs_brightness_slider_, 42, 14);
         }
         if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 172, 12);
 
-        if (v_icon) lv_obj_set_pos(v_icon, 10, 52);
+        if (v_icon) lv_obj_set_pos(v_icon, 10, 50);
         if (qs_volume_slider_) {
-            lv_obj_set_size(qs_volume_slider_, 120, 10);
-            lv_obj_set_pos(qs_volume_slider_, 42, 58);
+            lv_obj_set_size(qs_volume_slider_, 120, 14);
+            lv_obj_set_pos(qs_volume_slider_, 42, 54);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 54);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 172, 52);
 
         if (qs_color_card_) {
-            lv_obj_set_size(qs_color_card_, 220, 64);
+            lv_obj_set_size(qs_color_card_, 220, 66);
             lv_obj_set_pos(qs_color_card_, 10, 140);
         }
         if (col_title) lv_obj_set_pos(col_title, 10, 6);
@@ -3329,9 +3420,9 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             for (uint32_t i = 0; i < cnt; ++i) {
                 lv_obj_t* c = lv_obj_get_child(qs_color_card_, i);
                 if (c != col_title) {
-                    lv_obj_set_size(c, 24, 24);
-                    lv_obj_set_style_radius(c, 12, 0);
-                    lv_obj_set_pos(c, 10 + dot_idx * 42, 30);
+                    lv_obj_set_size(c, 28, 28);
+                    lv_obj_set_style_radius(c, 14, 0);
+                    lv_obj_set_pos(c, 12 + dot_idx * 40, 28);
                     dot_idx++;
                 }
             }
@@ -3360,15 +3451,15 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
         if (b_icon) lv_obj_set_pos(b_icon, 8, 12);
         if (qs_brightness_slider_) {
-            lv_obj_set_size(qs_brightness_slider_, 75, 10);
-            lv_obj_set_pos(qs_brightness_slider_, 36, 18);
+            lv_obj_set_size(qs_brightness_slider_, 75, 12);
+            lv_obj_set_pos(qs_brightness_slider_, 36, 17);
         }
         if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 118, 14);
 
         if (v_icon) lv_obj_set_pos(v_icon, 8, 56);
         if (qs_volume_slider_) {
-            lv_obj_set_size(qs_volume_slider_, 75, 10);
-            lv_obj_set_pos(qs_volume_slider_, 36, 62);
+            lv_obj_set_size(qs_volume_slider_, 75, 12);
+            lv_obj_set_pos(qs_volume_slider_, 36, 61);
         }
         if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 118, 58);
 
@@ -3383,9 +3474,9 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             for (uint32_t i = 0; i < cnt; ++i) {
                 lv_obj_t* c = lv_obj_get_child(qs_color_card_, i);
                 if (c != col_title) {
-                    lv_obj_set_size(c, 20, 20);
-                    lv_obj_set_style_radius(c, 10, 0);
-                    lv_obj_set_pos(c, 8 + dot_idx * 29, 32);
+                    lv_obj_set_size(c, 24, 24);
+                    lv_obj_set_style_radius(c, 12, 0);
+                    lv_obj_set_pos(c, 8 + dot_idx * 28, 32);
                     dot_idx++;
                 }
             }
