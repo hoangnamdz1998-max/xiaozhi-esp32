@@ -25,47 +25,8 @@
 LV_FONT_DECLARE(font_noto_sans_basic_14_1);
 
 static uint32_t MapVietnameseChar(uint32_t unicode_letter) {
-    // 1. Nhóm 'A' hoa
-    if (unicode_letter == 0x0102 || (unicode_letter >= 0x1EB0 && unicode_letter <= 0x1EB6) || unicode_letter == 0x1EA2 || unicode_letter == 0x1EA0) return 'A';
-    if (unicode_letter >= 0x1EA4 && unicode_letter <= 0x1EAC) return 0x00C2; // Â
-    // 1b. Nhóm 'a' thường
-    if (unicode_letter == 0x1EA9 || unicode_letter == 0x1EAB) return 0x1EA5; // ẩ, ẫ -> ấ
-    if (unicode_letter >= 0x1EB1 && unicode_letter <= 0x1EB7) return 0x0103; // ằ, ẳ, ẵ, ặ -> ă
-
-    // 2. Nhóm 'E' hoa
-    if (unicode_letter >= 0x1EB8 && unicode_letter <= 0x1EBC) return 'E';
-    if (unicode_letter >= 0x1EBE && unicode_letter <= 0x1EC6) return 0x00CA; // Ê
-    // 2b. Nhóm 'e' thường
-    if (unicode_letter == 0x1EB9) return 0x1EC7; // ẹ -> ệ (có sẵn trong font)
-    if (unicode_letter == 0x1EC1) return 0x00EA; // ề -> ê
-    if (unicode_letter == 0x1EC5) return 0x1EBF; // ễ -> ế
-
-    // 3. Nhóm 'I'
-    if (unicode_letter == 0x1EC8 || unicode_letter == 0x0128 || unicode_letter == 0x1ECA) return 'I';
-    if (unicode_letter == 0x1EC9 || unicode_letter == 0x0129) return 0x00ED; // ỉ, ĩ -> í
-
-    // 4. Nhóm 'O' hoa
-    if (unicode_letter == 0x1ECC || unicode_letter == 0x1ECE) return 'O';
-    if (unicode_letter >= 0x1ED0 && unicode_letter <= 0x1ED8) return 0x00D4; // Ô
-    if (unicode_letter == 0x01A0 || (unicode_letter >= 0x1EDA && unicode_letter <= 0x1EE2)) return 'O';
-    // 4b. Nhóm 'o' thường
-    if (unicode_letter == 0x1ECF || unicode_letter == 0x1ECD) return 0x00F3; // ỏ, ọ -> ó
-    if (unicode_letter == 0x1ED5) return 0x1ED1; // ổ -> ố
-    if (unicode_letter == 0x01A1 || unicode_letter == 0x1EE1) return 0x1EDB; // ơ, ở -> ớ
-
-    // 5. Nhóm 'U' hoa
-    if (unicode_letter == 0x1EE4 || unicode_letter == 0x1EE6 || unicode_letter == 0x0168 || unicode_letter == 0x01AF || (unicode_letter >= 0x1EE8 && unicode_letter <= 0x1EF0)) return 'U';
-    // 5b. Nhóm 'u' thường
-    if (unicode_letter == 0x0169) return 0x00FA; // ũ -> ú
-    if (unicode_letter == 0x1EE9 || unicode_letter == 0x1EEB || unicode_letter == 0x1EEF || unicode_letter == 0x1EF1) return 0x01B0; // ứ, ừ, ử, ữ -> ư
-
-    // 6. Nhóm 'Y'
-    if (unicode_letter == 0x1EF2 || unicode_letter == 0x1EF4 || unicode_letter == 0x1EF6 || unicode_letter == 0x1EF8) return 'Y';
-    if (unicode_letter == 0x1EF3 || unicode_letter == 0x1EF5 || unicode_letter == 0x1EF7 || unicode_letter == 0x1EF9) return 0x00FD; // ỳ, ỵ, ỷ, ỹ -> ý
-
-    // 7. Ký hiệu tiền tệ
-    if (unicode_letter == 0x20AB) return 0x0111; // ₫ -> đ
-
+    // Toàn bộ bảng chữ cái tiếng Việt (chữ hoa và chữ thường với đầy đủ 5 dấu: sắc, huyền, hỏi, ngã, nặng)
+    // đã được tích hợp 100% trực tiếp vào bộ font hệ thống.
     return unicode_letter;
 }
 
