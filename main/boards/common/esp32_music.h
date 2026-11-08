@@ -62,7 +62,7 @@ private:
     std::condition_variable buffer_cv_;
     size_t buffer_size_;
     static constexpr size_t MAX_BUFFER_SIZE = 256 * 1024;  // 256KB缓冲区（降低以减少brownout风险）
-    static constexpr size_t MIN_BUFFER_SIZE = 32 * 1024;   // 32KB最小播放缓冲（降低以减少brownout风险）
+    static constexpr size_t MIN_BUFFER_SIZE = 8 * 1024;   // 8KB最小播放缓冲 (phát nhanh)
     
     // MP3解码器相关
     HMP3Decoder mp3_decoder_;

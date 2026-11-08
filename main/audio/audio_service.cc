@@ -1,4 +1,6 @@
 #include "audio_service.h"
+#include "boards/common/board.h"
+#include "boards/common/music.h"
 #include <esp_log.h>
 #include <cstring>
 
@@ -845,7 +847,9 @@ void AudioService::CheckAndUpdateAudioPowerState() {
         // input task instead of closing the codec from the esp_timer task.
         xEventGroupSetBits(event_group_, AS_EVENT_AUDIO_INPUT_STOP_REQUEST);
     }
-    if (output_elapsed > AUDIO_POWER_TIMEOUT_MS && codec_->output_enabled()) {
+    auto music = Board::GetInstance().GetMusic();
+    bool music_active = (music != nullptr && (music->IsDownloading() || music->GetBufferSize() > 0));
+    if (output_elapsed > AUDIO_POWER_TIMEOUT_MS && codec_->output_enabled() && !music_active) {
         // Keep TX clock when duplex RX is active; otherwise RX may stall on some boards.
         if (!(codec_->duplex() && codec_->input_enabled())) {
             codec_->EnableOutput(false);

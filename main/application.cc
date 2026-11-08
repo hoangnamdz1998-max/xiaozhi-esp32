@@ -1656,7 +1656,15 @@ static std::vector<int16_t> ResampleLinear(const int16_t* src, size_t src_len, i
 
 void Application::AddAudioData(AudioStreamPacket&& packet) {
     auto codec = Board::GetInstance().GetAudioCodec();
-    if (GetDeviceState() == kDeviceStateIdle && codec && codec->output_enabled()) {
+    if (!codec) return;
+    auto state = GetDeviceState();
+    if (state == kDeviceStateListening || state == kDeviceStateSpeaking) {
+        return;
+    }
+    if (!codec->output_enabled()) {
+        codec->EnableOutput(true);
+    }
+    if (true) {
         if (packet.payload.size() >= 2) {
             size_t num_samples = packet.payload.size() / sizeof(int16_t);
             const int16_t* pcm_raw = reinterpret_cast<const int16_t*>(packet.payload.data());

@@ -412,7 +412,10 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
     http->SetHeader("Accept", "application/json");
     http->SetHeader("Accept-Language", "vi-VN,vi;q=0.9,en;q=0.8");
     
-    add_auth_headers(http.get());
+    http->SetHeader("Cache-Control", "no-cache"); // stream ready
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        add_auth_headers(http.get());
+    }
     
     if (!http->Open("GET", full_url)) {
         ESP_LOGE(TAG, "Failed to connect");
@@ -529,6 +532,10 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     
     ClearAudioBuffer();
     
+    auto codec = Board::GetInstance().GetAudioCodec();
+    if (codec && !codec->output_enabled()) {
+        codec->EnableOutput(true);
+    }
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
     cfg.stack_size = 12288;
     cfg.prio = 5;
@@ -639,6 +646,10 @@ bool Esp32Music::StopStreaming() {
     current_lyric_index_ = -1;
     song_name_displayed_ = false;
     
+    auto codec = Board::GetInstance().GetAudioCodec();
+    if (codec && codec->output_enabled()) {
+        codec->EnableOutput(false);
+    }
     ESP_LOGI(TAG, "Cache cleanup complete - Free heap: %d bytes", esp_get_free_heap_size());
     
     if (display && display_mode_ == DISPLAY_MODE_SPECTRUM) {
@@ -657,13 +668,25 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
     auto network = Board::GetInstance().GetNetwork();
     auto http = network->CreateHttp(0);
     
-    http->SetHeader("User-Agent", "ESP32-Music-Player/1.0");
+    http->SetHeader("User-Agent", "Mozilla/5.0 (compatible; ESP32-Radio/1.0)");
+    http->SetHeader("Icy-MetaData", "0");
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        http->SetHeader("Cache-Control", "no-cache"); // stream ready
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        add_auth_headers(http.get());
+    }
+    }
     http->SetHeader("Accept", "*/*");
-    http->SetHeader("Range", "bytes=0-");
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        http->SetHeader("Range", "bytes=0-");
+    }
     http->SetHeader("Connection", "keep-alive");  // Giữ kết nối ổn định
     http->SetHeader("Cache-Control", "no-cache"); // Tránh cache cũ
     
-    add_auth_headers(http.get());
+    http->SetHeader("Cache-Control", "no-cache"); // stream ready
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        add_auth_headers(http.get());
+    }
     
     if (!http->Open("GET", music_url)) {
         ESP_LOGE(TAG, "Failed to open connection");
@@ -770,7 +793,14 @@ void Esp32Music::PlayAudioStream() {
     total_frames_decoded_ = 0;
     
     auto codec = Board::GetInstance().GetAudioCodec();
-    if (!codec || !codec->output_enabled()) {
+    if (!codec) {
+        is_playing_ = false;
+        return;
+    }
+    if (!codec->output_enabled()) {
+        codec->EnableOutput(true);
+    }
+    if (false) {
         is_playing_ = false;
         return;
     }
@@ -1103,10 +1133,20 @@ bool Esp32Music::DownloadLyrics(const std::string& lyric_url) {
             continue;
         }
         
-        http->SetHeader("User-Agent", "ESP32-Music-Player/1.0");
+        http->SetHeader("User-Agent", "Mozilla/5.0 (compatible; ESP32-Radio/1.0)");
+    http->SetHeader("Icy-MetaData", "0");
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        http->SetHeader("Cache-Control", "no-cache"); // stream ready
+    if (current_music_url_.find("tenclass") != std::string::npos) {
+        add_auth_headers(http.get());
+    }
+    }
         http->SetHeader("Accept", "text/plain");
         
+        http->SetHeader("Cache-Control", "no-cache"); // stream ready
+    if (current_music_url_.find("tenclass") != std::string::npos) {
         add_auth_headers(http.get());
+    }
         
         if (!http->Open("GET", current_url)) {
             retry_count++;
