@@ -83,6 +83,9 @@ public:
         kScreenExchangeRates
     };
 
+    ScreenMode previous_screen_mode_ = kScreenStandby;
+    void ExitQuickSettings();
+
     virtual void OnSwipeLeft() override;
     virtual void OnSwipeRight() override;
     virtual void OnSwipeUp() override;
@@ -124,6 +127,7 @@ protected:
     lv_obj_t* qs_actions_card_ = nullptr;
     lv_obj_t* qs_ai_btn_ = nullptr;
     lv_obj_t* qs_rotate_btn_ = nullptr;
+    lv_obj_t* qs_wifi_btn_ = nullptr;
     lv_obj_t* qs_theme_btn_ = nullptr;
     lv_obj_t* qs_restart_btn_ = nullptr;
     lv_obj_t* qs_close_btn_ = nullptr;

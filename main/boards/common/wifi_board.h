@@ -63,7 +63,7 @@ public:
     /**
      * Enter WiFi configuration mode (thread-safe, can be called from any task)
      */
-    void EnterWifiConfigMode();
+    void EnterWifiConfigMode() override;
     
     /**
      * Check if in WiFi config mode

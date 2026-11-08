@@ -2578,8 +2578,10 @@ void LcdDisplay::OnSwipeRight() {
         }
         UpdateCalendarUI();
     } else if (screen_mode_ == kScreenWeatherDetail || screen_mode_ == kScreenClock ||
-               screen_mode_ == kScreenExchangeRates || screen_mode_ == kScreenQuickSettings) {
+               screen_mode_ == kScreenExchangeRates) {
         ShowMenu();
+    } else if (screen_mode_ == kScreenQuickSettings) {
+        ExitQuickSettings();
     } else if (screen_mode_ == kScreenStopwatch) {
         ShowClock();
     }
@@ -2616,7 +2618,7 @@ void LcdDisplay::OnSwipeUp() {
     } else if (screen_mode_ == kScreenMenu) {
         ShowStandby(); // Swipe up from icon menu returns to standby
     } else if (screen_mode_ == kScreenQuickSettings) {
-        ShowMenu(); // Swipe up from quick settings returns to icon menu!
+        ExitQuickSettings(); // Vuốt lên từ Quick Settings quay về màn hình trước đó (Standby hoặc Menu)!
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
                screen_mode_ == kScreenClock || screen_mode_ == kScreenExchangeRates) {
         ShowMenu();
@@ -2637,7 +2639,7 @@ void LcdDisplay::OnSwipeDown() {
     if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenMenu) {
         ShowQuickSettings(); // Swipe down from standby or icon menu opens Quick Settings
     } else if (screen_mode_ == kScreenQuickSettings) {
-        ShowMenu(); // Swipe down from quick settings returns to icon menu!
+        ExitQuickSettings(); // Vuốt xuống từ Quick Settings cũng quay về màn hình trước đó!
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
                screen_mode_ == kScreenClock || screen_mode_ == kScreenExchangeRates) {
         ShowMenu();
@@ -2730,9 +2732,20 @@ void LcdDisplay::ShowMenu() {
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
 }
 
+void LcdDisplay::ExitQuickSettings() {
+    if (previous_screen_mode_ == kScreenStandby) {
+        ShowStandby();
+    } else {
+        ShowMenu();
+    }
+}
+
 void LcdDisplay::ShowQuickSettings() {
     DisplayLockGuard lock(this);
     if (!lock) return;
+    if (screen_mode_ != kScreenQuickSettings) {
+        previous_screen_mode_ = screen_mode_;
+    }
     screen_mode_ = kScreenQuickSettings;
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
@@ -3521,7 +3534,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_add_event_cb(qs_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
-        self->ShowMenu(); // Thoát cài đặt nhanh về trang menu icon!
+        self->ExitQuickSettings(); // Thoát cài đặt nhanh về trang trước đó (Standby hoặc Menu)!
     }, LV_EVENT_CLICKED, this);
 
     // Sliders Card
@@ -3762,6 +3775,25 @@ void LcdDisplay::CreateQuickSettingsUI() {
         esp_timer_start_once(timer, 600000);
     }, LV_EVENT_CLICKED, this);
 
+    // WiFi Config Button
+    qs_wifi_btn_ = lv_button_create(quick_settings_box_);
+    lv_obj_set_style_bg_color(qs_wifi_btn_, lv_color_hex(0x2563EB), 0);
+    lv_obj_set_style_bg_opa(qs_wifi_btn_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(qs_wifi_btn_, 8, 0);
+    lv_obj_set_style_border_width(qs_wifi_btn_, 0, 0);
+    lv_obj_set_style_pad_all(qs_wifi_btn_, 0, 0);
+    lv_obj_t* wifi_lbl = lv_label_create(qs_wifi_btn_);
+    lv_label_set_text(wifi_lbl, MATERIAL_SYMBOLS_WIFI "  Cấu hình WiFi");
+    lv_obj_set_style_text_font(wifi_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(wifi_lbl, lv_color_white(), 0);
+    lv_obj_align(wifi_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(qs_wifi_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
+        self->ShowNotification("Vào cấu hình WiFi...", 2000);
+        Board::GetInstance().EnterWifiConfigMode();
+    }, LV_EVENT_CLICKED, this);
+
     UpdateColorDotsPalette();
 
     LayoutQuickSettingsWidgets(height_ > width_);
@@ -3840,51 +3872,57 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
 
         // Hàng 1 (y = 216): Trợ lý AI và Nền Sáng/Tối CHUNG 1 HÀNG
         if (qs_ai_btn_) {
-            lv_obj_set_size(qs_ai_btn_, 105, 32);
+            lv_obj_set_size(qs_ai_btn_, 105, 30);
             lv_obj_set_pos(qs_ai_btn_, 10, 216);
         }
         if (qs_theme_btn_) {
-            lv_obj_set_size(qs_theme_btn_, 105, 32);
+            lv_obj_set_size(qs_theme_btn_, 105, 30);
             lv_obj_set_pos(qs_theme_btn_, 125, 216);
         }
 
-        // Hàng 2 (y = 254): Xoay màn hình và Khởi động lại
+        // Hàng 2 (y = 250): Xoay màn hình và Cấu hình WiFi
         if (qs_rotate_btn_) {
-            lv_obj_set_size(qs_rotate_btn_, 105, 32);
-            lv_obj_set_pos(qs_rotate_btn_, 10, 254);
+            lv_obj_set_size(qs_rotate_btn_, 105, 30);
+            lv_obj_set_pos(qs_rotate_btn_, 10, 250);
         }
+        if (qs_wifi_btn_) {
+            lv_obj_set_size(qs_wifi_btn_, 105, 30);
+            lv_obj_set_pos(qs_wifi_btn_, 125, 250);
+        }
+
+        // Hàng 3 (y = 284): Khởi động lại
         if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 105, 32);
-            lv_obj_set_pos(qs_restart_btn_, 125, 254);
+            lv_obj_set_size(qs_restart_btn_, 220, 30);
+            lv_obj_set_pos(qs_restart_btn_, 10, 284);
         }
     } else {
-        // 320 x 240 (Màn hình ngang theo bố cục mới: thanh trượt full màn -> chọn màu -> 4 nút chức năng 2 hàng)
-        if (qs_title_) lv_obj_set_pos(qs_title_, 14, 6);
-        if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 282, 4);
+        // 320 x 240 (Màn hình ngang)
+        if (qs_title_) lv_obj_set_pos(qs_title_, 14, 4);
+        if (qs_close_btn_) lv_obj_set_pos(qs_close_btn_, 282, 2);
 
-        // 1. Thanh kéo âm thanh & độ sáng kéo dài hết màn hình (width = 304, height = 82)
+        // 1. Thanh kéo âm thanh & độ sáng kéo dài hết màn hình (width = 304, height = 76)
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 304, 82);
-            lv_obj_set_pos(qs_sliders_card_, 8, 32);
+            lv_obj_set_size(qs_sliders_card_, 304, 76);
+            lv_obj_set_pos(qs_sliders_card_, 8, 28);
         }
-        if (b_icon) lv_obj_set_pos(b_icon, 8, 5);
+        if (b_icon) lv_obj_set_pos(b_icon, 8, 4);
         if (qs_brightness_slider_) {
-            lv_obj_set_size(qs_brightness_slider_, 196, 20);
-            lv_obj_set_pos(qs_brightness_slider_, 36, 9);
+            lv_obj_set_size(qs_brightness_slider_, 196, 18);
+            lv_obj_set_pos(qs_brightness_slider_, 36, 7);
         }
-        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 256, 11);
+        if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 256, 8);
 
-        if (v_icon) lv_obj_set_pos(v_icon, 8, 49);
+        if (v_icon) lv_obj_set_pos(v_icon, 8, 44);
         if (qs_volume_slider_) {
-            lv_obj_set_size(qs_volume_slider_, 196, 20);
-            lv_obj_set_pos(qs_volume_slider_, 36, 53);
+            lv_obj_set_size(qs_volume_slider_, 196, 18);
+            lv_obj_set_pos(qs_volume_slider_, 36, 47);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 256, 55);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 256, 48);
 
-        // 2. Phía dưới là bảng chọn màu chữ (width = 304, pos y = 118)
+        // 2. Phía dưới là bảng chọn màu chữ (width = 304, pos y = 108, cao 42)
         if (qs_color_card_) {
-            lv_obj_set_size(qs_color_card_, 304, 46);
-            lv_obj_set_pos(qs_color_card_, 8, 118);
+            lv_obj_set_size(qs_color_card_, 304, 42);
+            lv_obj_set_pos(qs_color_card_, 8, 108);
         }
         if (col_title) lv_obj_set_pos(col_title, 10, 2);
         if (qs_color_card_) {
@@ -3893,30 +3931,34 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             for (uint32_t i = 0; i < cnt; ++i) {
                 lv_obj_t* c = lv_obj_get_child(qs_color_card_, i);
                 if (c != col_title) {
-                    lv_obj_set_size(c, 20, 20);
-                    lv_obj_set_style_radius(c, 10, 0);
-                    lv_obj_set_pos(c, 16 + dot_idx * 28, 20);
+                    lv_obj_set_size(c, 18, 18);
+                    lv_obj_set_style_radius(c, 9, 0);
+                    lv_obj_set_pos(c, 16 + dot_idx * 28, 18);
                     dot_idx++;
                 }
             }
         }
 
-        // 3. Cuối cùng là 4 nút chức năng chia làm 2 hàng đối xứng (pos y = 168 và 200)
+        // 3. Cuối cùng là các nút chức năng (Hàng 1: y = 154, Hàng 2: y = 184)
         if (qs_ai_btn_) {
-            lv_obj_set_size(qs_ai_btn_, 148, 28);
-            lv_obj_set_pos(qs_ai_btn_, 8, 168);
+            lv_obj_set_size(qs_ai_btn_, 98, 26);
+            lv_obj_set_pos(qs_ai_btn_, 8, 154);
+        }
+        if (qs_wifi_btn_) {
+            lv_obj_set_size(qs_wifi_btn_, 98, 26);
+            lv_obj_set_pos(qs_wifi_btn_, 111, 154);
         }
         if (qs_rotate_btn_) {
-            lv_obj_set_size(qs_rotate_btn_, 148, 28);
-            lv_obj_set_pos(qs_rotate_btn_, 164, 168);
+            lv_obj_set_size(qs_rotate_btn_, 98, 26);
+            lv_obj_set_pos(qs_rotate_btn_, 214, 154);
         }
         if (qs_theme_btn_) {
-            lv_obj_set_size(qs_theme_btn_, 148, 28);
-            lv_obj_set_pos(qs_theme_btn_, 8, 200);
+            lv_obj_set_size(qs_theme_btn_, 149, 26);
+            lv_obj_set_pos(qs_theme_btn_, 8, 184);
         }
         if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 148, 28);
-            lv_obj_set_pos(qs_restart_btn_, 164, 200);
+            lv_obj_set_size(qs_restart_btn_, 149, 26);
+            lv_obj_set_pos(qs_restart_btn_, 163, 184);
         }
     }
 
