@@ -25,6 +25,7 @@
 #include <esp_log.h>
 #include <driver/i2c_master.h>
 #include <driver/spi_common.h>
+#include <driver/temperature_sensor.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_timer.h>
@@ -94,6 +95,8 @@ private:
     AdcBatteryMonitor* adc_battery_monitor_;
     bool is_portrait_ = false;
     bool sd_card_mounted_ = false;
+    uint64_t sd_capacity_mb_ = 0;
+    temperature_sensor_handle_t temp_sensor_ = nullptr;
     std::vector<std::string> wallpaper_files_;
     size_t current_wallpaper_idx_ = 0;
     uint8_t* current_jpeg_decoded_buf_ = nullptr;
@@ -151,13 +154,15 @@ private:
         }
 
         if (ret == ESP_OK) {
+            sd_capacity_mb_ = ((uint64_t)card->csd.capacity) * card->csd.sector_size / (1024 * 1024);
             ESP_LOGI(TAG, "SD card mounted successfully at /sdcard (Name: %s, Capacity: %llu MB)",
-                     card->cid.name, ((uint64_t)card->csd.capacity) * card->csd.sector_size / (1024 * 1024));
+                     card->cid.name, sd_capacity_mb_);
             sd_card_mounted_ = true;
             ScanWallpapers();
         } else {
             ESP_LOGW(TAG, "No SD card mounted: %s", esp_err_to_name(ret));
             sd_card_mounted_ = false;
+            sd_capacity_mb_ = 0;
         }
 
         // Start periodic wallpaper rotation timer (checks every 1 second)
@@ -712,6 +717,13 @@ public:
         InitializeButtons();
         InitializeSdCard();
         InitializeTools();
+
+        // Khởi tạo cảm biến nhiệt độ tích hợp trong chip ESP32-S3
+        temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(10, 80);
+        if (temperature_sensor_install(&temp_sensor_config, &temp_sensor_) == ESP_OK) {
+            temperature_sensor_enable(temp_sensor_);
+        }
+
         GetBacklight()->SetBrightness(100);
     }
 
@@ -745,6 +757,21 @@ public:
         discharging = adc_battery_monitor_->IsDischarging();
         level = adc_battery_monitor_->GetBatteryLevel();
         return true;
+    }
+
+    virtual bool IsSdCardMounted() override {
+        return sd_card_mounted_;
+    }
+
+    virtual uint64_t GetSdCardCapacityMB() override {
+        return sd_capacity_mb_;
+    }
+
+    virtual bool GetTemperature(float& esp32temp) override {
+        if (temp_sensor_ != nullptr) {
+            return temperature_sensor_get_celsius(temp_sensor_, &esp32temp) == ESP_OK;
+        }
+        return false;
     }
 };
 

@@ -80,7 +80,10 @@ public:
         kScreenClock,
         kScreenStopwatch,
         kScreenTimer,
-        kScreenExchangeRates
+        kScreenExchangeRates,
+        kScreenCalculator,
+        kScreenFlashlight,
+        kScreenFmRadio
     };
 
     ScreenMode previous_screen_mode_ = kScreenStandby;
@@ -99,6 +102,9 @@ public:
     virtual void ShowStopwatch() override;
     virtual void ShowTimer() override;
     virtual void ShowExchangeRates() override;
+    virtual void ShowCalculator();
+    virtual void ShowFlashlight();
+    virtual void ShowFmRadio();
     void SetMenuPage(int page, bool animate = false, bool swipe_left = true);
     void SetStandbyTextColor(uint32_t color_hex);
     ScreenMode GetScreenMode() const { return screen_mode_; }
@@ -132,6 +138,12 @@ protected:
     lv_obj_t* qs_restart_btn_ = nullptr;
     lv_obj_t* qs_close_btn_ = nullptr;
     lv_obj_t* qs_title_ = nullptr;
+    lv_obj_t* qs_info_card_ = nullptr;
+    lv_obj_t* qs_info_wifi_ = nullptr;
+    lv_obj_t* qs_info_ip_ = nullptr;
+    lv_obj_t* qs_info_temp_ = nullptr;
+    lv_obj_t* qs_info_sd_ = nullptr;
+    void UpdateQuickSettingsInfo();
 
     bool is_light_theme_ = false;
     void ApplyTheme();
@@ -265,6 +277,45 @@ protected:
         lv_obj_t* trend_lbl = nullptr;
     };
     RateCardWidget rate_cards_[4];
+
+    // Calculator Screen (Máy tính cá nhân)
+    lv_obj_t* calc_box_ = nullptr;
+    lv_obj_t* calc_back_btn_ = nullptr;
+    lv_obj_t* calc_expr_label_ = nullptr;
+    lv_obj_t* calc_result_label_ = nullptr;
+    std::string calc_curr_input_ = "0";
+    double calc_first_val_ = 0.0;
+    char calc_pending_op_ = 0;
+    bool calc_waiting_second_ = false;
+    void CreateCalculatorUI();
+    void LayoutCalculatorWidgets(bool is_portrait);
+    void OnCalculatorButton(const char* key);
+
+    // Flashlight Screen (Đèn pin)
+    lv_obj_t* flashlight_box_ = nullptr;
+    int saved_flashlight_brightness_ = 100;
+    void CreateFlashlightUI();
+
+    // FM Radio Screen (Đài phát thanh trực tuyến 6 kênh phổ thông)
+    struct FmChannel {
+        const char* name;
+        const char* freq;
+        const char* url;
+    };
+    static const FmChannel kFmChannels[6];
+    lv_obj_t* fm_box_ = nullptr;
+    lv_obj_t* fm_back_btn_ = nullptr;
+    lv_obj_t* fm_title_lbl_ = nullptr;
+    lv_obj_t* fm_status_lbl_ = nullptr;
+    lv_obj_t* fm_channel_lbl_ = nullptr;
+    lv_obj_t* fm_play_btn_ = nullptr;
+    lv_obj_t* fm_play_lbl_ = nullptr;
+    lv_obj_t* fm_channel_btns_[6] = {nullptr};
+    int fm_current_channel_ = -1;
+    bool fm_is_playing_ = false;
+    void CreateFmRadioUI();
+    void LayoutFmRadioWidgets(bool is_portrait);
+    void UpdateFmRadioUI();
 
     void CreateMenuUI();
     void CreateCalendarUI();
