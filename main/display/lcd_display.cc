@@ -65,12 +65,12 @@ LV_FONT_DECLARE(lv_font_montserrat_10);
 #endif
 
 const LcdDisplay::FmChannel LcdDisplay::kFmChannels[6] = {
-    {"VOV1", "99.9 MHz", "http://stream.vov.vn:8000/vov1_aac"},
-    {"VOV2", "96.5 MHz", "http://stream.vov.vn:8000/vov2_aac"},
-    {"VOV3", "104.5 MHz", "http://stream.vov.vn:8000/vov3_aac"},
-    {"VOV GT Hà Nội", "91.0 MHz", "http://stream.vov.vn:8000/vovgt_hn_aac"},
-    {"VOV GT TP.HCM", "91.0 MHz", "http://stream.vov.vn:8000/vovgt_hcm_aac"},
-    {"VOH TP.HCM", "99.9 MHz", "http://stream.voh.com.vn:8000/voh999"}
+    {"Hà Nội FM90", "90.0 MHz", "http://14.162.146.90:8000/HANOI90"},
+    {"Hà Nội FM96", "96.0 MHz", "http://222.252.21.96:8000/HANOI96"},
+    {"Đài PT VN", "Trực Tuyến", "http://c13.radioboss.fm:8127/stream"},
+    {"Sài Gòn FM", "Trực Tuyến", "http://142.4.215.82:8070/stream"},
+    {"RFI Tiếng Việt", "Tin Tức", "http://rfienvietnamien64k.ice.infomaniak.ch/rfienvietnamien-64.mp3"},
+    {"Tình Ca Quê Hương", "Âm Nhạc", "http://listen.57fm.com/lscafe"}
 };
 
 #define TAG "LcdDisplay"
@@ -2235,6 +2235,11 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
     LayoutCalculatorWidgets(is_portrait);
     LayoutFmRadioWidgets(is_portrait);
 
+    if (flashlight_box_ != nullptr) {
+        lv_obj_set_size(flashlight_box_, width_, height_);
+        lv_obj_set_pos(flashlight_box_, 0, 0);
+    }
+
     if (preview_image_ != nullptr) {
         lv_obj_set_size(preview_image_, width_ / 2, height_ / 2);
         lv_obj_align(preview_image_, LV_ALIGN_CENTER, 0, 0);
@@ -2649,12 +2654,15 @@ void LcdDisplay::OnSwipeUp() {
         if (Board::GetInstance().GetBacklight()) {
             Board::GetInstance().GetBacklight()->SetBrightness(saved_flashlight_brightness_, false);
         }
+        lv_obj_set_style_bg_color(lv_screen_active(), is_light_theme_ ? lv_color_hex(0xF8FAFC) : lv_color_black(), 0);
         ShowMenu();
     } else if (screen_mode_ == kScreenFmRadio) {
         auto music = Board::GetInstance().GetMusic();
         if (music && fm_is_playing_) {
-            music->StopStreaming();
             fm_is_playing_ = false;
+            std::thread([music]() {
+                music->StopStreaming();
+            }).detach();
         }
         ShowMenu();
     } else if (screen_mode_ == kScreenStopwatch || screen_mode_ == kScreenTimer) {
@@ -2674,7 +2682,7 @@ void LcdDisplay::OnSwipeDown() {
     if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenMenu) {
         ShowQuickSettings(); // Swipe down from standby or icon menu opens Quick Settings
     } else if (screen_mode_ == kScreenQuickSettings) {
-        ExitQuickSettings(); // Vuốt xuống từ Quick Settings cũng quay về màn hình trước đó!
+        // KHÔNG thoát khi vuốt xuống trong QuickSettings để người dùng thoải mái cuộn xem thông tin hệ thống từ từ!
     } else if (screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
                screen_mode_ == kScreenClock || screen_mode_ == kScreenExchangeRates ||
                screen_mode_ == kScreenCalculator) {
@@ -2683,12 +2691,15 @@ void LcdDisplay::OnSwipeDown() {
         if (Board::GetInstance().GetBacklight()) {
             Board::GetInstance().GetBacklight()->SetBrightness(saved_flashlight_brightness_, false);
         }
+        lv_obj_set_style_bg_color(lv_screen_active(), is_light_theme_ ? lv_color_hex(0xF8FAFC) : lv_color_black(), 0);
         ShowMenu();
     } else if (screen_mode_ == kScreenFmRadio) {
         auto music = Board::GetInstance().GetMusic();
         if (music && fm_is_playing_) {
-            music->StopStreaming();
             fm_is_playing_ = false;
+            std::thread([music]() {
+                music->StopStreaming();
+            }).detach();
         }
         ShowMenu();
     } else if (screen_mode_ == kScreenStopwatch) {
@@ -3124,12 +3135,17 @@ void LcdDisplay::ShowFlashlight() {
     if (calc_box_ != nullptr) lv_obj_add_flag(calc_box_, LV_OBJ_FLAG_HIDDEN);
     if (fm_box_ != nullptr) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
 
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
+
     if (Board::GetInstance().GetBacklight()) {
         saved_flashlight_brightness_ = Board::GetInstance().GetBacklight()->brightness();
         Board::GetInstance().GetBacklight()->SetBrightness(100, false);
     }
 
     if (flashlight_box_ != nullptr) {
+        lv_obj_set_size(flashlight_box_, width_, height_);
+        lv_obj_set_pos(flashlight_box_, 0, 0);
         lv_obj_remove_flag(flashlight_box_, LV_OBJ_FLAG_HIDDEN);
     }
 }
@@ -4609,7 +4625,7 @@ void LcdDisplay::CreateCalendarUI() {
         calendar_cells_[i].container = cell;
         lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(cell, 0, 0);
-        lv_obj_set_style_radius(cell, 6, 0);
+        lv_obj_set_style_radius(cell, 4, 0);
         lv_obj_set_style_pad_all(cell, 0, 0);
         lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
@@ -4652,44 +4668,44 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
     lv_obj_set_size(calendar_box_, width_, height_);
 
     if (is_portrait) {
-        // 240 x 320: Tất cả xích xuống, nút chuyển tháng không sát mép trên
-        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 6);
+        // 240 x 320: Cân đối khoảng cách, ô ngày cao 28px để khung xanh/vàng không che số âm
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 4);
         if (calendar_prev_btn_) {
-            lv_obj_set_size(calendar_prev_btn_, 36, 26);
-            lv_obj_set_pos(calendar_prev_btn_, 56, 6);
+            lv_obj_set_size(calendar_prev_btn_, 34, 24);
+            lv_obj_set_pos(calendar_prev_btn_, 46, 4);
         }
         if (calendar_next_btn_) {
-            lv_obj_set_size(calendar_next_btn_, 36, 26);
-            lv_obj_set_pos(calendar_next_btn_, 194, 6);
+            lv_obj_set_size(calendar_next_btn_, 34, 24);
+            lv_obj_set_pos(calendar_next_btn_, 200, 4);
         }
 
-        // Chữ Tháng Năm nằm ở hàng riêng biệt, cao 26px không mất nét chữ g
+        // Chữ Tháng Năm nằm ở hàng riêng biệt, cao 20px
         if (calendar_title_label_) {
-            lv_obj_set_size(calendar_title_label_, 220, 26);
+            lv_obj_set_size(calendar_title_label_, 220, 20);
             lv_obj_set_style_text_align(calendar_title_label_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(calendar_title_label_, 10, 32);
+            lv_obj_set_pos(calendar_title_label_, 10, 29);
         }
 
-        // Hàng Thứ (CN..T7): cao 18px để không mất chân chữ
+        // Hàng Thứ (CN..T7): cao 14px
         uint32_t cnt = lv_obj_get_child_count(calendar_box_);
         for (uint32_t i = 0; i < cnt; ++i) {
             lv_obj_t* child = lv_obj_get_child(calendar_box_, i);
             int id = (int)(intptr_t)lv_obj_get_user_data(child);
             if (id >= 100 && id < 107) {
                 int col = id - 100;
-                lv_obj_set_size(child, 33, 18);
+                lv_obj_set_size(child, 33, 14);
                 lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(child, 4 + col * 33, 54);
+                lv_obj_set_pos(child, 4 + col * 33, 49);
             }
         }
 
-        // 6 hàng ngày tháng (hàng y=72, ô cao 26px: solar y=0, lunar y=13)
+        // 6 hàng ngày tháng (hàng y=65, ô cao 28px: solar y=0, lunar y=14)
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 32, 26);
-            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 72 + r * 27);
+            lv_obj_set_size(calendar_cells_[i].container, 32, 28);
+            lv_obj_set_pos(calendar_cells_[i].container, 4 + c * 33, 65 + r * 29);
             if (calendar_cells_[i].solar_label) {
                 lv_obj_set_width(calendar_cells_[i].solar_label, 32);
                 lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
@@ -4698,14 +4714,14 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             if (calendar_cells_[i].lunar_label) {
                 lv_obj_set_width(calendar_cells_[i].lunar_label, 32);
                 lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 13);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 14);
             }
         }
 
-        // Today Card phía dưới ở màn hình dọc: nâng lên y = 238, cao 74px cách đáy màn hình 8px, không bị che mất sự kiện
+        // Today Card phía dưới ở màn hình dọc: đặt tại y = 242, cao 72px cách đáy màn hình 6px, không bị che mất sự kiện
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 228, 74);
-            lv_obj_set_pos(cal_today_card_, 6, 238);
+            lv_obj_set_size(cal_today_card_, 228, 72);
+            lv_obj_set_pos(cal_today_card_, 6, 242);
             if (cal_today_title_) {
                 lv_obj_set_style_text_align(cal_today_title_, LV_TEXT_ALIGN_CENTER, 0);
                 lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, -42, 2);
@@ -4726,16 +4742,16 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             if (cal_today_event_) {
                 lv_obj_set_width(cal_today_event_, 216);
                 lv_obj_set_style_text_align(cal_today_event_, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 38);
+                lv_obj_align(cal_today_event_, LV_ALIGN_TOP_MID, 0, 37);
             }
         }
     } else {
-        // 320 x 240 (Ngang): Tất cả xích xuống, nút chuyển tháng dễ bấm, hàng thứ đủ chân, lịch âm không đè dương
-        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 6);
+        // 320 x 240 (Ngang): Nút chuyển tháng dễ bấm, hàng thứ đủ chân, lịch âm không đè dương
+        if (calendar_back_btn_) lv_obj_set_pos(calendar_back_btn_, 6, 4);
 
         if (cal_today_card_) {
-            lv_obj_set_size(cal_today_card_, 102, 194);
-            lv_obj_set_pos(cal_today_card_, 6, 42);
+            lv_obj_set_size(cal_today_card_, 102, 196);
+            lv_obj_set_pos(cal_today_card_, 6, 38);
             if (cal_today_title_) lv_obj_align(cal_today_title_, LV_ALIGN_TOP_MID, 0, 4);
             if (cal_today_day_) {
                 lv_obj_remove_flag(cal_today_day_, LV_OBJ_FLAG_HIDDEN);
@@ -4751,43 +4767,43 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             }
         }
 
-        // Hàng 1 (y = 6): Nút < và > chuyển tháng
+        // Hàng 1 (y = 4): Nút < và > chuyển tháng
         if (calendar_prev_btn_) {
-            lv_obj_set_size(calendar_prev_btn_, 36, 26);
-            lv_obj_set_pos(calendar_prev_btn_, 114, 6);
+            lv_obj_set_size(calendar_prev_btn_, 34, 22);
+            lv_obj_set_pos(calendar_prev_btn_, 114, 4);
         }
         if (calendar_next_btn_) {
-            lv_obj_set_size(calendar_next_btn_, 36, 26);
-            lv_obj_set_pos(calendar_next_btn_, 274, 6);
+            lv_obj_set_size(calendar_next_btn_, 34, 22);
+            lv_obj_set_pos(calendar_next_btn_, 276, 4);
         }
 
-        // Hàng 2 (y = 30): Tháng Năm ở hàng riêng biệt rộng rãi 196px
+        // Hàng 2 (y = 26): Tháng Năm ở hàng riêng biệt rộng rãi 196px
         if (calendar_title_label_) {
-            lv_obj_set_size(calendar_title_label_, 196, 24);
+            lv_obj_set_size(calendar_title_label_, 196, 18);
             lv_obj_set_style_text_align(calendar_title_label_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(calendar_title_label_, 114, 30);
+            lv_obj_set_pos(calendar_title_label_, 114, 26);
         }
 
-        // Hàng 3 (y = 52): Hàng chữ Thứ cao 18px để không bị mất chân chữ
+        // Hàng 3 (y = 44): Hàng chữ Thứ cao 14px
         uint32_t cnt = lv_obj_get_child_count(calendar_box_);
         for (uint32_t i = 0; i < cnt; ++i) {
             lv_obj_t* child = lv_obj_get_child(calendar_box_, i);
             int id = (int)(intptr_t)lv_obj_get_user_data(child);
             if (id >= 100 && id < 107) {
                 int col = id - 100;
-                lv_obj_set_size(child, 28, 18);
+                lv_obj_set_size(child, 28, 14);
                 lv_obj_set_style_text_align(child, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(child, 114 + col * 28, 52);
+                lv_obj_set_pos(child, 114 + col * 28, 44);
             }
         }
 
-        // Hàng 4..9 (y = 68..230): 6 hàng ngày tháng cao 26px, solar y=0, lunar y=13
+        // Hàng 4..9 (y = 58..231): 6 hàng ngày tháng cao 28px, solar y=0, lunar y=14
         for (int i = 0; i < 42; ++i) {
             if (calendar_cells_[i].container == nullptr) continue;
             int r = i / 7;
             int c = i % 7;
-            lv_obj_set_size(calendar_cells_[i].container, 28, 26);
-            lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 28, 68 + r * 27);
+            lv_obj_set_size(calendar_cells_[i].container, 28, 28);
+            lv_obj_set_pos(calendar_cells_[i].container, 114 + c * 28, 58 + r * 29);
             if (calendar_cells_[i].solar_label) {
                 lv_obj_set_width(calendar_cells_[i].solar_label, 28);
                 lv_obj_set_style_text_align(calendar_cells_[i].solar_label, LV_TEXT_ALIGN_CENTER, 0);
@@ -4796,7 +4812,7 @@ void LcdDisplay::LayoutCalendarWidgets(bool is_portrait) {
             if (calendar_cells_[i].lunar_label) {
                 lv_obj_set_width(calendar_cells_[i].lunar_label, 28);
                 lv_obj_set_style_text_align(calendar_cells_[i].lunar_label, LV_TEXT_ALIGN_CENTER, 0);
-                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 13);
+                lv_obj_set_pos(calendar_cells_[i].lunar_label, 0, 14);
             }
         }
     }
@@ -6775,7 +6791,8 @@ void LcdDisplay::LayoutCalculatorWidgets(bool is_portrait) {
 void LcdDisplay::CreateFlashlightUI() {
     auto screen = lv_screen_active();
     flashlight_box_ = lv_obj_create(screen);
-    lv_obj_set_size(flashlight_box_, width_, height_);
+    lv_obj_set_size(flashlight_box_, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_pos(flashlight_box_, 0, 0);
     lv_obj_set_style_bg_color(flashlight_box_, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(flashlight_box_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(flashlight_box_, 0, 0);
@@ -6796,6 +6813,7 @@ void LcdDisplay::CreateFlashlightUI() {
         if (Board::GetInstance().GetBacklight()) {
             Board::GetInstance().GetBacklight()->SetBrightness(self->saved_flashlight_brightness_, false);
         }
+        lv_obj_set_style_bg_color(lv_screen_active(), self->is_light_theme_ ? lv_color_hex(0xF8FAFC) : lv_color_black(), 0);
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
 }
@@ -6829,8 +6847,10 @@ void LcdDisplay::CreateFmRadioUI() {
         if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
         auto music = Board::GetInstance().GetMusic();
         if (music && self->fm_is_playing_) {
-            music->StopStreaming();
             self->fm_is_playing_ = false;
+            std::thread([music]() {
+                music->StopStreaming();
+            }).detach();
         }
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
@@ -6884,11 +6904,16 @@ void LcdDisplay::CreateFmRadioUI() {
         if (!music) return;
 
         if (self->fm_is_playing_) {
-            music->StopStreaming();
             self->fm_is_playing_ = false;
+            std::thread([music]() {
+                music->StopStreaming();
+            }).detach();
         } else {
-            music->StartStreaming(self->kFmChannels[self->fm_current_channel_].url);
             self->fm_is_playing_ = true;
+            std::string url = self->kFmChannels[self->fm_current_channel_].url;
+            std::thread([music, url]() {
+                music->StartStreaming(url);
+            }).detach();
         }
         self->UpdateFmRadioUI();
     }, LV_EVENT_CLICKED, this);
@@ -6926,7 +6951,10 @@ void LcdDisplay::CreateFmRadioUI() {
                 self->fm_is_playing_ = true;
                 auto music = Board::GetInstance().GetMusic();
                 if (music) {
-                    music->StartStreaming(self->kFmChannels[idx].url);
+                    std::string url = self->kFmChannels[idx].url;
+                    std::thread([music, url]() {
+                        music->StartStreaming(url);
+                    }).detach();
                 }
                 self->UpdateFmRadioUI();
             }

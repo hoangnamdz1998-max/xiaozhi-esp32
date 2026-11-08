@@ -452,8 +452,10 @@ private:
                     bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
                     bool allow_vert_swipe = true;
                     if (mode == LcdDisplay::kScreenQuickSettings) {
-                        // Trong QuickSettings: tuyệt đối không ngắt touch khi đang thao tác trên vùng thanh trượt / bảng màu
-                        if (start_screen_y < 160 || delta_y > -45) {
+                        // Trong QuickSettings: để người dùng cuộn mượt xem thông tin từ từ,
+                        // chỉ cho phép vuốt thoát khi kéo từ thanh Home sát mép dưới cùng lên
+                        int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 290 : 210;
+                        if (start_screen_y < bottom_edge || delta_y > -40) {
                             allow_vert_swipe = false;
                         }
                     } else if (mode == LcdDisplay::kScreenTimer) {
@@ -506,7 +508,8 @@ private:
                 bool allow_horiz_swipe = (mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
                 bool allow_vert_swipe = true;
                 if (mode == LcdDisplay::kScreenQuickSettings) {
-                    if (start_screen_y < 160 || delta_y > -45) {
+                    int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 290 : 210;
+                    if (start_screen_y < bottom_edge || delta_y > -40) {
                         allow_vert_swipe = false;
                     }
                 } else if (mode == LcdDisplay::kScreenTimer) {
