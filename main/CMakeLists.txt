@@ -43,6 +43,8 @@ set(SOURCES "audio/audio_codec.cc"
             "assets.cc"
             "main.cc"
             "weather/weather_service.cc"
+            "web/wallpaper_manager.cc"
+            "web/wallpaper_server.cc"
             )
 
 set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols" "weather")
@@ -68,6 +70,7 @@ if(CONFIG_XIAOZHI_NETWORK_ETHERNET)
     list(APPEND SOURCES "boards/common/ethernet_board.cc")
 endif()
 list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/boards/common)
+list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../managed_components/espressif2022__esp_emote_gfx/src/lib/qrcode)
 
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
@@ -1195,6 +1198,9 @@ idf_component_register(SRCS ${SOURCES}
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/wallpaper_landscape.bin"
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/boot_portrait.bin"
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/boot_landscape.bin"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/boot_anim.bin"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg_landscape.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg_portrait.jpg"
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     WHOLE_ARCHIVE
                     PRIV_REQUIRES
@@ -1223,6 +1229,8 @@ idf_component_register(SRCS ${SOURCES}
                         sdmmc
                         xiaozhi-fonts
                         esp-ml307
+                        esp_http_server
+                        spiffs
                                                                         ${MAIN_PRIV_REQUIRES_EXTRA}
                     )
 

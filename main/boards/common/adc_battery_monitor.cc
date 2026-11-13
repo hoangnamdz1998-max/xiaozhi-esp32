@@ -28,17 +28,17 @@ AdcBatteryMonitor::AdcBatteryMonitor(adc_unit_t adc_unit, adc_channel_t adc_chan
     };
 
     // 在ADC配置部分进行条件设置
-    if (charging_pin_ != GPIO_NUM_NC) {
-        adc_cfg.charging_detect_cb = [](void *user_data) -> bool {
-            AdcBatteryMonitor *self = (AdcBatteryMonitor *)user_data;
+    adc_cfg.charging_detect_cb = [](void *user_data) -> bool {
+        AdcBatteryMonitor *self = (AdcBatteryMonitor *)user_data;
+        if (self->charging_detect_cb_) {
+            return self->charging_detect_cb_();
+        }
+        if (self->charging_pin_ != GPIO_NUM_NC) {
             return gpio_get_level(self->charging_pin_) == 1;
-        };
-        adc_cfg.charging_detect_user_data = this;
-    } else {
-        // 不设置回调，让adc_battery_estimation库使用软件估算
-        adc_cfg.charging_detect_cb = nullptr;
-        adc_cfg.charging_detect_user_data = nullptr;
-    }
+        }
+        return false;
+    };
+    adc_cfg.charging_detect_user_data = this;
     adc_battery_estimation_handle_ = adc_battery_estimation_create(&adc_cfg);
 
     // Initialize timer
@@ -66,6 +66,9 @@ AdcBatteryMonitor::~AdcBatteryMonitor() {
 }
 
 bool AdcBatteryMonitor::IsCharging() {
+    if (charging_detect_cb_) {
+        return charging_detect_cb_();
+    }
     // 优先使用adc_battery_estimation库的功能
     if (adc_battery_estimation_handle_ != nullptr) {
         bool is_charging = false;
@@ -88,7 +91,6 @@ bool AdcBatteryMonitor::IsDischarging() {
 }
 
 uint8_t AdcBatteryMonitor::GetBatteryLevel() {
-    // 如果句柄无效，返回默认值
     if (adc_battery_estimation_handle_ == nullptr) {
         return 100;
     }
@@ -96,9 +98,17 @@ uint8_t AdcBatteryMonitor::GetBatteryLevel() {
     float capacity = 0;
     esp_err_t err = adc_battery_estimation_get_capacity(adc_battery_estimation_handle_, &capacity);
     if (err != ESP_OK) {
-        return 100; // 出错时返回默认值
+        return 100;
     }
-    return (uint8_t)capacity;
+
+    if (capacity < 0.0f) capacity = 0.0f;
+    if (capacity > 100.0f) capacity = 100.0f;
+
+    return (uint8_t)(capacity + 0.5f);
+}
+
+void AdcBatteryMonitor::SetChargingDetectCallback(std::function<bool()> callback) {
+    charging_detect_cb_ = callback;
 }
 
 void AdcBatteryMonitor::OnChargingStatusChanged(std::function<void(bool)> callback) {

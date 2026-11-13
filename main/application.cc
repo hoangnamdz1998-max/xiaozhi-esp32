@@ -1,6 +1,8 @@
 #include "boards/common/music.h"
 #include "application.h"
 #include "weather_service.h"
+#include "web/wallpaper_manager.h"
+#include "web/wallpaper_server.h"
 #include "assets.h"
 #include "assets/lang_config.h"
 #include "audio_codec.h"
@@ -76,11 +78,15 @@ void Application::Initialize() {
     auto& board = Board::GetInstance();
     SetDeviceState(kDeviceStateStarting);
 
+    // Initialize wallpaper manager and SPIFFS storage early
+    WallpaperManager::GetInstance().Initialize();
+
     // Setup the display
     auto display = board.GetDisplay();
     display->SetupUI();
     // Print board name/version info
-    display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
+    // Do not show version text at bottom during boot
+    display->SetChatMessage("system", "");
 
     // Setup the audio service
     auto codec = board.GetAudioCodec();
@@ -431,6 +437,8 @@ void Application::HandleNetworkConnectedEvent() {
     auto display = Board::GetInstance().GetDisplay();
     display->UpdateStatusBar(true);
     WeatherService::GetInstance().RefreshNow();
+    WallpaperManager::GetInstance().Initialize();
+    WallpaperServer::GetInstance().Start();
 }
 
 void Application::HandleNetworkDisconnectedEvent() {

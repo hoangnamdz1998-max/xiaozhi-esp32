@@ -59,6 +59,11 @@ protected:
     lv_obj_t* standby_wind_ = nullptr;
     lv_obj_t* standby_city_ = nullptr;
     lv_obj_t* standby_condition_ = nullptr;
+    lv_obj_t* standby_status_bar_ = nullptr;
+    lv_obj_t* standby_right_icons_ = nullptr;
+    lv_obj_t* standby_wifi_label_ = nullptr;
+    lv_obj_t* standby_battery_pct_label_ = nullptr;
+    lv_obj_t* standby_battery_label_ = nullptr;
 
     struct ForecastCardWidget {
         lv_obj_t* card = nullptr;
@@ -73,6 +78,7 @@ protected:
 public:
     enum ScreenMode {
         kScreenStandby,
+        kScreenStandby2,
         kScreenMenu,
         kScreenQuickSettings,
         kScreenCalendar,
@@ -83,7 +89,9 @@ public:
         kScreenExchangeRates,
         kScreenCalculator,
         kScreenFlashlight,
-        kScreenFmRadio
+        kScreenFmRadio,
+        kScreenWallpaperSettings,
+        kScreenMusic
     };
 
     ScreenMode previous_screen_mode_ = kScreenStandby;
@@ -95,6 +103,7 @@ public:
     virtual void OnSwipeDown() override;
     virtual void ShowMenu() override;
     virtual void ShowStandby() override;
+    virtual void ShowStandby2();
     virtual void ShowQuickSettings() override;
     virtual void ShowCalendar() override;
     virtual void ShowWeatherDetail() override;
@@ -102,27 +111,41 @@ public:
     virtual void ShowStopwatch() override;
     virtual void ShowTimer() override;
     virtual void ShowExchangeRates() override;
+    virtual void ShowWallpaperSettings() override;
+    virtual void ReloadWallpaper() override;
+    virtual void ShowMusicScreen(const std::string& song_name = "", const std::string& artist_name = "") override;
+    virtual void UpdateMusicPlaybackState(bool is_playing, const std::string& song_name = "", const std::string& artist_name = "") override;
+    void CreateMusicScreenUI();
+    void LayoutMusicWidgets(bool is_portrait);
+    void UpdateMusicUI();
     virtual void ShowCalculator();
     virtual void ShowFlashlight();
     virtual void ShowFmRadio();
     void SetMenuPage(int page, bool animate = false, bool swipe_left = true);
     void SetStandbyTextColor(uint32_t color_hex);
     ScreenMode GetScreenMode() const { return screen_mode_; }
+    bool IsQuickSettingsAtBottom() const { return qs_at_bottom_.load(); }
 
 protected:
     ScreenMode screen_mode_ = kScreenStandby;
 
-    // App Menu (22 items across 3 pages)
+    // App Menu (12 items across 2 pages)
     lv_obj_t* menu_box_ = nullptr;
     lv_obj_t* menu_page_box_[3] = {nullptr};
     lv_obj_t* menu_title_ = nullptr;
     lv_obj_t* menu_items_[22] = {nullptr};
     lv_obj_t* menu_dots_[3] = {nullptr};
+    lv_obj_t* menu_status_bar_ = nullptr;
+    lv_obj_t* menu_wifi_label_ = nullptr;
+    lv_obj_t* menu_battery_pct_label_ = nullptr;
+    lv_obj_t* menu_battery_label_ = nullptr;
+    lv_obj_t* menu_time_label_ = nullptr;
     int menu_page_ = 0;
     uint32_t last_swipe_time_ = 0;
 
     // Quick Settings Screen
     lv_obj_t* quick_settings_box_ = nullptr;
+    lv_obj_t* qs_content_box_ = nullptr;
     lv_obj_t* qs_brightness_slider_ = nullptr;
     lv_obj_t* qs_brightness_label_ = nullptr;
     lv_obj_t* qs_volume_slider_ = nullptr;
@@ -135,6 +158,34 @@ protected:
     lv_obj_t* qs_rotate_btn_ = nullptr;
     lv_obj_t* qs_wifi_btn_ = nullptr;
     lv_obj_t* qs_theme_btn_ = nullptr;
+    lv_obj_t* qs_wallpaper_btn_ = nullptr;
+    lv_obj_t* qs_qr_modal_ = nullptr;
+    lv_obj_t* qs_qr_img_ = nullptr;
+    lv_obj_t* qs_qr_ip_lbl_ = nullptr;
+    void CreateQrModal();
+    void ShowQrModal();
+    void HideQrModal();
+
+    // Wallpaper Settings Screen (Live Preview + Dual Horizontal Scroll)
+    lv_obj_t* wallpaper_box_ = nullptr;
+    lv_obj_t* wp_preview_card_ = nullptr;
+    lv_obj_t* wp_preview_img_ = nullptr;
+    uint8_t* wp_preview_buf_ = nullptr;
+    lv_image_dsc_t wp_preview_dsc_ = {};
+    lv_obj_t* wp_preview_weather_ = nullptr;
+    lv_obj_t* wp_preview_clock_ = nullptr;
+    lv_obj_t* wp_preview_clock_lbl_ = nullptr;
+    lv_obj_t* wp_img_scroll_ = nullptr;
+    lv_obj_t* wp_layout_scroll_ = nullptr;
+    lv_obj_t* wp_sec1_lbl_ = nullptr;
+    lv_obj_t* wp_sec2_lbl_ = nullptr;
+    lv_obj_t* wp_save_btn_ = nullptr;
+    int wp_preview_idx_ = 0;
+    int wp_preview_layout_ = 0;
+    void CreateWallpaperSettingsUI();
+    void LayoutWallpaperSettingsWidgets(bool is_portrait);
+    void UpdateWallpaperSettingsUI();
+    void UpdateWallpaperPreview();
     lv_obj_t* qs_restart_btn_ = nullptr;
     lv_obj_t* qs_close_btn_ = nullptr;
     lv_obj_t* qs_title_ = nullptr;
@@ -143,6 +194,7 @@ protected:
     lv_obj_t* qs_info_ip_ = nullptr;
     lv_obj_t* qs_info_temp_ = nullptr;
     lv_obj_t* qs_info_sd_ = nullptr;
+    std::atomic<bool> qs_at_bottom_{false};
     void UpdateQuickSettingsInfo();
 
     bool is_light_theme_ = false;
@@ -296,28 +348,86 @@ protected:
     int saved_flashlight_brightness_ = 100;
     void CreateFlashlightUI();
 
-    // FM Radio Screen (Đài phát thanh trực tuyến 6 kênh phổ thông)
+    // FM Radio Screen (Đài phát thanh trực tuyến 4 kênh chọn lọc)
     struct FmChannel {
         const char* name;
         const char* freq;
         const char* url;
     };
-    static const FmChannel kFmChannels[6];
+    static const FmChannel kFmChannels[4];
     lv_obj_t* fm_box_ = nullptr;
     lv_obj_t* fm_back_btn_ = nullptr;
     lv_obj_t* fm_title_lbl_ = nullptr;
+    lv_obj_t* fm_bottom_card_ = nullptr;
     lv_obj_t* fm_status_lbl_ = nullptr;
     lv_obj_t* fm_channel_lbl_ = nullptr;
     lv_obj_t* fm_play_btn_ = nullptr;
     lv_obj_t* fm_play_lbl_ = nullptr;
-    lv_obj_t* fm_channel_btns_[6] = {nullptr};
+    lv_obj_t* fm_channel_btns_[4] = {nullptr};
     int fm_current_channel_ = -1;
     bool fm_is_playing_ = false;
+
+    // Music Player Screen
+    lv_obj_t* music_box_ = nullptr;
+    lv_obj_t* music_back_btn_ = nullptr;
+    lv_obj_t* music_title_badge_ = nullptr;
+    lv_obj_t* music_vinyl_ = nullptr;
+    lv_obj_t* music_vinyl_label_ = nullptr;
+    lv_obj_t* music_vinyl_note_ = nullptr;
+    lv_obj_t* music_song_lbl_ = nullptr;
+    lv_obj_t* music_artist_lbl_ = nullptr;
+    lv_obj_t* music_play_btn_ = nullptr;
+    lv_obj_t* music_play_lbl_ = nullptr;
+    lv_obj_t* music_stop_btn_ = nullptr;
+    lv_obj_t* music_stop_lbl_ = nullptr;
+    lv_obj_t* music_visualizer_box_ = nullptr;
+    static constexpr int kNumVisualizerBars = 16;
+    lv_obj_t* music_vis_bars_[16] = {nullptr};
+    lv_timer_t* music_vis_timer_ = nullptr;
+    std::string music_current_song_ = "Chưa phát nhạc";
+    std::string music_current_artist_ = "Zing MP3 Online";
+    bool music_is_playing_ = false;
     void CreateFmRadioUI();
     void LayoutFmRadioWidgets(bool is_portrait);
     void UpdateFmRadioUI();
+    void StartBootAnimation();
+
+    // Standby Screen 2 (Màn hình chờ 2 - Ảnh nền tùy biến, Flip Clock & Weather)
+    lv_obj_t* standby2_box_ = nullptr;
+    lv_obj_t* standby2_bg_image_ = nullptr;
+    uint8_t* standby2_bg_buf_ = nullptr;
+    int standby2_last_orient_ = -1;
+    int standby2_last_wp_idx_ = -1;
+    lv_image_dsc_t standby2_bg_dsc_ = {};
+
+    lv_obj_t* standby2_status_box_ = nullptr;
+    lv_obj_t* standby2_wifi_icon_ = nullptr;
+    lv_obj_t* standby2_battery_icon_ = nullptr;
+    lv_obj_t* standby2_battery_pct_ = nullptr;
+
+    lv_obj_t* standby2_weather_box_ = nullptr;
+    lv_obj_t* standby2_city_lbl_ = nullptr;
+    lv_obj_t* standby2_weather_icon_ = nullptr;
+    lv_obj_t* standby2_weather_temp_ = nullptr;
+
+    lv_obj_t* standby2_clock_box_ = nullptr;
+    lv_obj_t* flip_cards_[4] = {nullptr};
+    lv_obj_t* flip_labels_[4] = {nullptr};
+    lv_obj_t* flip_slits_[4] = {nullptr};
+    lv_obj_t* flip_flaps_[4] = {nullptr};
+    lv_obj_t* flip_flap_labels_[4] = {nullptr};
+    char flip_chars_[4] = {' ', ' ', ' ', ' '};
+    lv_obj_t* standby2_date_lbl_ = nullptr;
+
+    void CreateStandby2UI();
+    void LayoutStandby2Widgets(bool is_portrait);
+    void UpdateStandby2Clock(const struct tm* tm_now, bool animate);
+    void AnimateFlipCard(int idx, char new_char);
+    void SyncStandby2Weather();
 
     void CreateMenuUI();
+    void UpdateMenuStatusBar();
+    void UpdateStandbyStatusBar();
     void CreateCalendarUI();
     void UpdateCalendarUI();
     void CreateWeatherDetailUI();

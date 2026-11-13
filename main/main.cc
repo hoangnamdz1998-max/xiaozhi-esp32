@@ -1,3 +1,5 @@
+#include "soc/rtc_cntl_reg.h"
+#include "soc/soc.h"
 #include <esp_log.h>
 #include <esp_err.h>
 #include <nvs.h>
@@ -13,6 +15,8 @@
 
 extern "C" void app_main(void)
 {
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Disable brownout resets
+
     // Initialize NVS flash for WiFi configuration
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

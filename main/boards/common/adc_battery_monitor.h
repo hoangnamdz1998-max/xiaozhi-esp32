@@ -16,6 +16,7 @@ public:
     uint8_t GetBatteryLevel();
 
     void OnChargingStatusChanged(std::function<void(bool)> callback);
+    void SetChargingDetectCallback(std::function<bool()> callback);
 
 private:
     gpio_num_t charging_pin_;
@@ -23,6 +24,7 @@ private:
     esp_timer_handle_t timer_handle_ = nullptr;
     bool is_charging_ = false;
     std::function<void(bool)> on_charging_status_changed_;
+    std::function<bool()> charging_detect_cb_;
 
     void CheckBatteryStatus();
 };
