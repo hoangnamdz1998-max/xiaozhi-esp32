@@ -60,88 +60,65 @@ LV_FONT_DECLARE(font_noto_sans_basic_14_1);
 
 
 
-static uint32_t MapVietnameseChar(uint32_t unicode_letter) {
-    // 1. Nhóm 'a':
-    if (unicode_letter == 0x1EA1 || unicode_letter == 0x1EA3) return 'a'; // ạ, ả -> a
-    if (unicode_letter == 0x1EA0 || unicode_letter == 0x1EA2) return 'A'; // Ạ, Ả -> A
-    if (unicode_letter == 0x1EA5 || unicode_letter == 0x1EA7 || unicode_letter == 0x1EA9 || unicode_letter == 0x1EAB || unicode_letter == 0x1EAD) return 0x00E2; // ấ, ầ, ẩ, ẫ, ậ -> â
-    if (unicode_letter == 0x1EA4 || unicode_letter == 0x1EA6 || unicode_letter == 0x1EA8 || unicode_letter == 0x1EAA || unicode_letter == 0x1EAC) return 0x00C2; // Ấ, Ầ, Ẩ, Ẫ, Ậ -> Â
-    if (unicode_letter == 0x1EAF || unicode_letter == 0x1EB1 || unicode_letter == 0x1EB3 || unicode_letter == 0x1EB5 || unicode_letter == 0x1EB7) return 0x0103; // ắ, ằ, ẳ, ẵ, ặ -> ă
-    if (unicode_letter == 0x1EAE || unicode_letter == 0x1EB0 || unicode_letter == 0x1EB2 || unicode_letter == 0x1EB4 || unicode_letter == 0x1EB6) return 'A'; // Ắ..Ặ -> A
-
-    // 2. Nhóm 'e':
-    if (unicode_letter == 0x1EB9 || unicode_letter == 0x1EBB || unicode_letter == 0x1EBD) return 0x00E9; // ẹ, ẻ, ẽ -> é
-    if (unicode_letter == 0x1EB8 || unicode_letter == 0x1EBA || unicode_letter == 0x1EBC) return 0x00C9; // Ẹ, Ẻ, Ẽ -> É
-    if (unicode_letter == 0x1EBF || unicode_letter == 0x1EC1 || unicode_letter == 0x1EC3 || unicode_letter == 0x1EC5 || unicode_letter == 0x1EC7) return 0x00EA; // ế, ề, ể, ễ, ệ -> ê
-    if (unicode_letter == 0x1EBE || unicode_letter == 0x1EC0 || unicode_letter == 0x1EC2 || unicode_letter == 0x1EC4 || unicode_letter == 0x1EC6) return 0x00CA; // Ế, Ề, Ể, Ễ, Ệ -> Ê
-
-    // 3. Nhóm 'i':
-    if (unicode_letter == 0x1EC9 || unicode_letter == 0x1ECB || unicode_letter == 0x0129) return 0x00ED; // ỉ, ị, ĩ -> í
-    if (unicode_letter == 0x1EC8 || unicode_letter == 0x1ECA || unicode_letter == 0x0128) return 0x00CD; // Ỉ, Ị, Ĩ -> Í
-
-    // 4. Nhóm 'o':
-    if (unicode_letter == 0x1ECF || unicode_letter == 0x1ECD) return 0x00F3; // ỏ, ọ -> ó
-    if (unicode_letter == 0x1ECE || unicode_letter == 0x1ECC) return 0x00D3; // Ỏ, Ọ -> Ó
-    if (unicode_letter == 0x1ED1 || unicode_letter == 0x1ED3 || unicode_letter == 0x1ED5 || unicode_letter == 0x1ED7 || unicode_letter == 0x1ED9) return 0x00F4; // ố, ồ, ổ, ỗ, ộ -> ô
-    if (unicode_letter == 0x1ED0 || unicode_letter == 0x1ED2 || unicode_letter == 0x1ED4 || unicode_letter == 0x1ED6 || unicode_letter == 0x1ED8) return 0x00D4; // Ố, Ồ, Ổ, Ỗ, Ộ -> Ô
-    if (unicode_letter == 0x1EDB || unicode_letter == 0x1EDD || unicode_letter == 0x1EDF || unicode_letter == 0x1EE1 || unicode_letter == 0x1EE3) return 0x00F4; // ớ, ờ, ở, ỡ, ợ -> ô
-    if (unicode_letter == 0x1EDA || unicode_letter == 0x1EDC || unicode_letter == 0x1EDE || unicode_letter == 0x1EE0 || unicode_letter == 0x1EE2) return 0x00D4; // Ớ, Ờ, Ở, Ỡ, Ợ -> Ô
-
-    // 5. Nhóm 'u':
-    if (unicode_letter == 0x1EE5 || unicode_letter == 0x1EE7) return 0x00FA; // ụ, ủ -> ú
-    if (unicode_letter == 0x1EE4 || unicode_letter == 0x1EE6) return 0x00DA; // Ụ, Ủ -> Ú
-    if (unicode_letter == 0x1EE9 || unicode_letter == 0x1EEB || unicode_letter == 0x1EED || unicode_letter == 0x1EEF || unicode_letter == 0x1EF1) return 0x01B0; // ứ, ừ, sử, nữ, ự -> ư
-    if (unicode_letter == 0x1EE8 || unicode_letter == 0x1EEA || unicode_letter == 0x1EEC || unicode_letter == 0x1EEE || unicode_letter == 0x1EF0) return 'U'; // Ứ..Ự -> U
-
-    // 6. Nhóm 'y':
-    if (unicode_letter == 0x1EF3 || unicode_letter == 0x1EF5 || unicode_letter == 0x1EF7 || unicode_letter == 0x1EF9) return 0x00FD; // ỳ, ỵ, ỷ, ỹ -> ý
-    if (unicode_letter == 0x1EF2 || unicode_letter == 0x1EF4 || unicode_letter == 0x1EF6 || unicode_letter == 0x1EF8) return 0x00DD; // Ỳ..Ỹ -> Ý
-
-    return unicode_letter;
-}
-
-
+LV_FONT_DECLARE(font_vietnamese_14_4);
+LV_FONT_DECLARE(font_vietnamese_16_4);
+LV_FONT_DECLARE(font_vietnamese_20_4);
+LV_FONT_DECLARE(font_vietnamese_30_4);
 
 static lv_font_t font_noto_sans_custom_16_4;
-
 static bool CustomFontGetGlyphDsc16(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-
-    unicode_letter = MapVietnameseChar(unicode_letter);
-
-    return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
-
+    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = font;
+        return true;
+    }
+    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_16_4, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = &font_vietnamese_16_4;
+        return true;
+    }
+    return false;
 }
-
-
 
 static lv_font_t font_noto_sans_custom_14_1;
-
 static bool CustomFontGetGlyphDsc14(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-
-    unicode_letter = MapVietnameseChar(unicode_letter);
-
-    return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
-
+    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = font;
+        return true;
+    }
+    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_14_4, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = &font_vietnamese_14_4;
+        return true;
+    }
+    return false;
 }
-
-
 
 static lv_font_t font_noto_sans_custom_20_4;
-
 static bool CustomFontGetGlyphDsc20(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-
-    unicode_letter = MapVietnameseChar(unicode_letter);
-
-    return lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next);
-
+    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = font;
+        return true;
+    }
+    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_20_4, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = &font_vietnamese_20_4;
+        return true;
+    }
+    return false;
 }
 
-
+static lv_font_t font_noto_sans_custom_30_4;
+static bool CustomFontGetGlyphDsc30(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
+    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = font;
+        return true;
+    }
+    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_30_4, dsc_out, unicode_letter, unicode_letter_next)) {
+        dsc_out->resolved_font = &font_vietnamese_30_4;
+        return true;
+    }
+    return false;
+}
 
 LV_FONT_DECLARE(font_noto_sans_basic_16_4);
-
 LV_FONT_DECLARE(font_noto_sans_basic_20_4);
-
 LV_FONT_DECLARE(font_noto_sans_basic_30_4);
 
 LV_FONT_DECLARE(font_noto_sans_basic_20_4);
@@ -1428,18 +1405,26 @@ void LcdDisplay::SetupUI() {
 
 
     // Initialize custom fonts supporting Vietnamese glyphs
-
     font_noto_sans_custom_16_4 = font_noto_sans_basic_16_4;
-
     font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
+    font_noto_sans_custom_16_4.fallback = &font_vietnamese_16_4;
 
     font_noto_sans_custom_14_1 = font_noto_sans_basic_14_1;
-
     font_noto_sans_custom_14_1.get_glyph_dsc = CustomFontGetGlyphDsc14;
+    font_noto_sans_custom_14_1.fallback = &font_vietnamese_14_4;
 
     font_noto_sans_custom_20_4 = font_noto_sans_basic_20_4;
-
     font_noto_sans_custom_20_4.get_glyph_dsc = CustomFontGetGlyphDsc20;
+    font_noto_sans_custom_20_4.fallback = &font_vietnamese_20_4;
+
+    font_noto_sans_custom_30_4 = font_noto_sans_basic_30_4;
+    font_noto_sans_custom_30_4.get_glyph_dsc = CustomFontGetGlyphDsc30;
+    font_noto_sans_custom_30_4.fallback = &font_vietnamese_30_4;
+
+    const_cast<lv_font_t*>(&font_noto_sans_basic_14_1)->fallback = &font_vietnamese_14_4;
+    const_cast<lv_font_t*>(&font_noto_sans_basic_16_4)->fallback = &font_vietnamese_16_4;
+    const_cast<lv_font_t*>(&font_noto_sans_basic_20_4)->fallback = &font_vietnamese_20_4;
+    const_cast<lv_font_t*>(&font_noto_sans_basic_30_4)->fallback = &font_vietnamese_30_4;
 
 
 
@@ -2926,18 +2911,26 @@ void LcdDisplay::SetupUI() {
 
 
     // Initialize custom fonts supporting Vietnamese glyphs
-
     font_noto_sans_custom_16_4 = font_noto_sans_basic_16_4;
-
     font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
+    font_noto_sans_custom_16_4.fallback = &font_vietnamese_16_4;
 
     font_noto_sans_custom_14_1 = font_noto_sans_basic_14_1;
-
     font_noto_sans_custom_14_1.get_glyph_dsc = CustomFontGetGlyphDsc14;
+    font_noto_sans_custom_14_1.fallback = &font_vietnamese_14_4;
 
     font_noto_sans_custom_20_4 = font_noto_sans_basic_20_4;
-
     font_noto_sans_custom_20_4.get_glyph_dsc = CustomFontGetGlyphDsc20;
+    font_noto_sans_custom_20_4.fallback = &font_vietnamese_20_4;
+
+    font_noto_sans_custom_30_4 = font_noto_sans_basic_30_4;
+    font_noto_sans_custom_30_4.get_glyph_dsc = CustomFontGetGlyphDsc30;
+    font_noto_sans_custom_30_4.fallback = &font_vietnamese_30_4;
+
+    const_cast<lv_font_t*>(&font_noto_sans_basic_14_1)->fallback = &font_vietnamese_14_4;
+    const_cast<lv_font_t*>(&font_noto_sans_basic_16_4)->fallback = &font_vietnamese_16_4;
+    const_cast<lv_font_t*>(&font_noto_sans_basic_20_4)->fallback = &font_vietnamese_20_4;
+    const_cast<lv_font_t*>(&font_noto_sans_basic_30_4)->fallback = &font_vietnamese_30_4;
 
 
 
