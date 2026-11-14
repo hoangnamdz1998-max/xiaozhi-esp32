@@ -13173,12 +13173,15 @@ void LcdDisplay::CreateFlashlightUI() {
 
 void LcdDisplay::StartBootAnimation() {
     if (&boot_anim_bin_start[0] >= &boot_anim_bin_end[0]) {
+        boot_anim_running_ = false;
         return;
     }
     uint32_t total = *(const uint32_t*)boot_anim_bin_start;
-    if (total == 0 || total > 50) {
+    if (total == 0 || total > 100) {
+        boot_anim_running_ = false;
         return;
     }
+    boot_anim_running_ = true;
 
     struct BootAnimContext {
         int frame_index = 0;
@@ -13214,6 +13217,9 @@ void LcdDisplay::StartBootAnimation() {
                 heap_caps_free(ctx->decoded_buf);
                 ctx->decoded_buf = nullptr;
             }
+            if (ctx->display) {
+                ctx->display->boot_anim_running_ = false;
+            }
             lv_timer_delete(t);
             delete ctx;
             return;
@@ -13245,7 +13251,17 @@ void LcdDisplay::StartBootAnimation() {
             ctx->decoded_buf = new_buf;
         }
         ctx->frame_index++;
-    }, 70, ctx);
+    }, 90, ctx);
+}
+
+void LcdDisplay::WaitForBootAnimation() {
+    int max_wait_ms = 8000;
+    int elapsed = 0;
+    while (boot_anim_running_ && elapsed < max_wait_ms) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+        elapsed += 50;
+    }
+    boot_anim_running_ = false;
 }
 
 void LcdDisplay::CreateFmRadioUI() {

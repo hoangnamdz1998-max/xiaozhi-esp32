@@ -202,6 +202,9 @@ void Application::Initialize() {
         }
     });
 
+    // Wait for the boot animation to completely finish before starting network
+    display->WaitForBootAnimation();
+
     // Start network asynchronously
     board.StartNetwork();
 

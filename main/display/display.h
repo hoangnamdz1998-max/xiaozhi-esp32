@@ -63,6 +63,7 @@ public:
     virtual void ClearTextGlyphs() {}
     virtual void SetEmojiCollection(std::shared_ptr<EmojiCollection>) {}
     virtual void SetupUI() { setup_ui_called_ = true; }
+    virtual void WaitForBootAnimation() {}
     virtual void OnStateChanged(DeviceState state) {}
     virtual bool IsMonochrome() const { return false; }
     virtual bool SupportsGuiOperations() const { return false; }

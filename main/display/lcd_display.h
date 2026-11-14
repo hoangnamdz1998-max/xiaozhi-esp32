@@ -391,6 +391,7 @@ protected:
     void LayoutFmRadioWidgets(bool is_portrait);
     void UpdateFmRadioUI();
     void StartBootAnimation();
+    std::atomic<bool> boot_anim_running_{false};
 
     // Standby Screen 2 (Màn hình chờ 2 - Ảnh nền tùy biến, Flip Clock & Weather)
     lv_obj_t* standby2_box_ = nullptr;
@@ -466,6 +467,7 @@ public:
     virtual void ClearChatMessages() override;
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image) override;
     virtual void SetupUI() override;
+    virtual void WaitForBootAnimation() override;
     virtual void OnStateChanged(DeviceState state) override;
     // Add theme switching function
     virtual void SetTheme(Theme* theme) override;
