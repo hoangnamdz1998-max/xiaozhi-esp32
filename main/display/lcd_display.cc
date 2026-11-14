@@ -57,71 +57,37 @@
 #include "boards/common/music.h"
 
 LV_FONT_DECLARE(font_noto_sans_basic_14_1);
-
-
+LV_FONT_DECLARE(font_noto_sans_basic_16_4);
+LV_FONT_DECLARE(font_noto_sans_basic_20_4);
+LV_FONT_DECLARE(font_noto_sans_basic_30_4);
 
 LV_FONT_DECLARE(font_vietnamese_14_4);
 LV_FONT_DECLARE(font_vietnamese_16_4);
 LV_FONT_DECLARE(font_vietnamese_20_4);
 LV_FONT_DECLARE(font_vietnamese_30_4);
 
-static lv_font_t font_noto_sans_custom_16_4;
-static bool CustomFontGetGlyphDsc16(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = font;
-        return true;
-    }
-    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_16_4, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = &font_vietnamese_16_4;
-        return true;
-    }
-    return false;
-}
-
 static lv_font_t font_noto_sans_custom_14_1;
-static bool CustomFontGetGlyphDsc14(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = font;
-        return true;
-    }
-    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_14_4, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = &font_vietnamese_14_4;
-        return true;
-    }
-    return false;
-}
-
+static lv_font_t font_noto_sans_custom_16_4;
 static lv_font_t font_noto_sans_custom_20_4;
-static bool CustomFontGetGlyphDsc20(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = font;
-        return true;
-    }
-    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_20_4, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = &font_vietnamese_20_4;
-        return true;
-    }
-    return false;
-}
-
 static lv_font_t font_noto_sans_custom_30_4;
-static bool CustomFontGetGlyphDsc30(const lv_font_t* font, lv_font_glyph_dsc_t* dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next) {
-    if (lv_font_get_glyph_dsc_fmt_txt(font, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = font;
-        return true;
-    }
-    if (lv_font_get_glyph_dsc_fmt_txt(&font_vietnamese_30_4, dsc_out, unicode_letter, unicode_letter_next)) {
-        dsc_out->resolved_font = &font_vietnamese_30_4;
-        return true;
-    }
-    return false;
+static bool custom_fonts_initialized_ = false;
+
+static void InitCustomFonts() {
+    if (custom_fonts_initialized_) return;
+    custom_fonts_initialized_ = true;
+
+    font_noto_sans_custom_14_1 = font_vietnamese_14_4;
+    font_noto_sans_custom_14_1.fallback = &font_noto_sans_basic_14_1;
+
+    font_noto_sans_custom_16_4 = font_vietnamese_16_4;
+    font_noto_sans_custom_16_4.fallback = &font_noto_sans_basic_16_4;
+
+    font_noto_sans_custom_20_4 = font_vietnamese_20_4;
+    font_noto_sans_custom_20_4.fallback = &font_noto_sans_basic_20_4;
+
+    font_noto_sans_custom_30_4 = font_vietnamese_30_4;
+    font_noto_sans_custom_30_4.fallback = &font_noto_sans_basic_30_4;
 }
-
-LV_FONT_DECLARE(font_noto_sans_basic_16_4);
-LV_FONT_DECLARE(font_noto_sans_basic_20_4);
-LV_FONT_DECLARE(font_noto_sans_basic_30_4);
-
-LV_FONT_DECLARE(font_noto_sans_basic_20_4);
 
 #if LV_FONT_MONTSERRAT_40
 
@@ -315,8 +281,8 @@ static std::string FilterChinese(const char* content) {
 
 
 void LcdDisplay::InitializeLcdThemes() {
-
-    auto text_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_TEXT_FONT);
+    InitCustomFonts();
+    auto text_font = std::make_shared<LvglBuiltInFont>(&font_noto_sans_custom_20_4);
 
     auto icon_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_ICON_FONT);
 
@@ -1186,7 +1152,7 @@ void LcdDisplay::SetupUI() {
 
     lv_label_set_text(calendar_label_, "");
 
-    lv_obj_set_style_text_font(calendar_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(calendar_label_, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
 
@@ -1314,7 +1280,7 @@ void LcdDisplay::SetupUI() {
 
 #else
 
-    lv_obj_set_style_text_font(idle_clock_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(idle_clock_label_, &font_noto_sans_custom_20_4, 0);
 
 #endif
 
@@ -1372,7 +1338,7 @@ void LcdDisplay::SetupUI() {
 
     weather_label_ = lv_label_create(weather_box_);
 
-    lv_obj_set_style_text_font(weather_label_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(weather_label_, &font_noto_sans_custom_16_4, 0);
 
     lv_obj_set_style_text_color(weather_label_, lv_color_white(), 0);
 
@@ -1404,22 +1370,7 @@ void LcdDisplay::SetupUI() {
 
 
 
-    // Initialize custom fonts supporting Vietnamese glyphs
-    font_noto_sans_custom_16_4 = font_noto_sans_basic_16_4;
-    font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
-    font_noto_sans_custom_16_4.fallback = &font_vietnamese_16_4;
-
-    font_noto_sans_custom_14_1 = font_noto_sans_basic_14_1;
-    font_noto_sans_custom_14_1.get_glyph_dsc = CustomFontGetGlyphDsc14;
-    font_noto_sans_custom_14_1.fallback = &font_vietnamese_14_4;
-
-    font_noto_sans_custom_20_4 = font_noto_sans_basic_20_4;
-    font_noto_sans_custom_20_4.get_glyph_dsc = CustomFontGetGlyphDsc20;
-    font_noto_sans_custom_20_4.fallback = &font_vietnamese_20_4;
-
-    font_noto_sans_custom_30_4 = font_noto_sans_basic_30_4;
-    font_noto_sans_custom_30_4.get_glyph_dsc = CustomFontGetGlyphDsc30;
-    font_noto_sans_custom_30_4.fallback = &font_vietnamese_30_4;
+    InitCustomFonts();
 
 
 
@@ -1459,7 +1410,7 @@ void LcdDisplay::SetupUI() {
 
     standby_battery_pct_label_ = lv_label_create(standby_right_icons_);
     lv_label_set_text(standby_battery_pct_label_, "");
-    lv_obj_set_style_text_font(standby_battery_pct_label_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_font(standby_battery_pct_label_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(standby_battery_pct_label_, text_col, 0);
     lv_obj_clear_flag(standby_battery_pct_label_, LV_OBJ_FLAG_CLICKABLE);
 
@@ -1484,7 +1435,7 @@ void LcdDisplay::SetupUI() {
 
 #else
 
-    lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_custom_30_4, 0);
 
 #endif
 
@@ -1498,7 +1449,7 @@ void LcdDisplay::SetupUI() {
 
     standby_sec_ = lv_label_create(standby_box_);
 
-    lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(standby_sec_, text_col, 0);
 
@@ -1562,7 +1513,7 @@ void LcdDisplay::SetupUI() {
 
     standby_temp_ = lv_label_create(standby_box_);
 
-    lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_custom_30_4, 0);
 
     lv_obj_set_style_text_color(standby_temp_, text_col, 0);
 
@@ -1656,7 +1607,7 @@ void LcdDisplay::SetupUI() {
 
         forecast_cards_[i].temp = lv_label_create(forecast_cards_[i].card);
 
-        lv_obj_set_style_text_font(forecast_cards_[i].temp, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_font(forecast_cards_[i].temp, &font_noto_sans_custom_16_4, 0);
 
         lv_obj_set_style_text_color(forecast_cards_[i].temp, text_col, 0);
 
@@ -2685,7 +2636,7 @@ void LcdDisplay::SetupUI() {
 
     lv_label_set_text(calendar_label_, "");
 
-    lv_obj_set_style_text_font(calendar_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(calendar_label_, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
 
@@ -2815,7 +2766,7 @@ void LcdDisplay::SetupUI() {
 
 #else
 
-    lv_obj_set_style_text_font(idle_clock_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(idle_clock_label_, &font_noto_sans_custom_20_4, 0);
 
 #endif
 
@@ -2873,7 +2824,7 @@ void LcdDisplay::SetupUI() {
 
     weather_label_ = lv_label_create(weather_box_);
 
-    lv_obj_set_style_text_font(weather_label_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(weather_label_, &font_noto_sans_custom_16_4, 0);
 
     lv_obj_set_style_text_color(weather_label_, lv_color_white(), 0);
 
@@ -2905,22 +2856,7 @@ void LcdDisplay::SetupUI() {
 
 
 
-    // Initialize custom fonts supporting Vietnamese glyphs
-    font_noto_sans_custom_16_4 = font_noto_sans_basic_16_4;
-    font_noto_sans_custom_16_4.get_glyph_dsc = CustomFontGetGlyphDsc16;
-    font_noto_sans_custom_16_4.fallback = &font_vietnamese_16_4;
-
-    font_noto_sans_custom_14_1 = font_noto_sans_basic_14_1;
-    font_noto_sans_custom_14_1.get_glyph_dsc = CustomFontGetGlyphDsc14;
-    font_noto_sans_custom_14_1.fallback = &font_vietnamese_14_4;
-
-    font_noto_sans_custom_20_4 = font_noto_sans_basic_20_4;
-    font_noto_sans_custom_20_4.get_glyph_dsc = CustomFontGetGlyphDsc20;
-    font_noto_sans_custom_20_4.fallback = &font_vietnamese_20_4;
-
-    font_noto_sans_custom_30_4 = font_noto_sans_basic_30_4;
-    font_noto_sans_custom_30_4.get_glyph_dsc = CustomFontGetGlyphDsc30;
-    font_noto_sans_custom_30_4.fallback = &font_vietnamese_30_4;
+    InitCustomFonts();
 
 
 
@@ -2960,7 +2896,7 @@ void LcdDisplay::SetupUI() {
 
     standby_battery_pct_label_ = lv_label_create(standby_right_icons_);
     lv_label_set_text(standby_battery_pct_label_, "");
-    lv_obj_set_style_text_font(standby_battery_pct_label_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_font(standby_battery_pct_label_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(standby_battery_pct_label_, text_col, 0);
     lv_obj_clear_flag(standby_battery_pct_label_, LV_OBJ_FLAG_CLICKABLE);
 
@@ -2985,7 +2921,7 @@ void LcdDisplay::SetupUI() {
 
 #else
 
-    lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(standby_clock_, &font_noto_sans_custom_30_4, 0);
 
 #endif
 
@@ -2999,7 +2935,7 @@ void LcdDisplay::SetupUI() {
 
     standby_sec_ = lv_label_create(standby_box_);
 
-    lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(standby_sec_, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(standby_sec_, text_col, 0);
 
@@ -3063,7 +2999,7 @@ void LcdDisplay::SetupUI() {
 
     standby_temp_ = lv_label_create(standby_box_);
 
-    lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(standby_temp_, &font_noto_sans_custom_30_4, 0);
 
     lv_obj_set_style_text_color(standby_temp_, text_col, 0);
 
@@ -3157,7 +3093,7 @@ void LcdDisplay::SetupUI() {
 
         forecast_cards_[i].temp = lv_label_create(forecast_cards_[i].card);
 
-        lv_obj_set_style_text_font(forecast_cards_[i].temp, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_font(forecast_cards_[i].temp, &font_noto_sans_custom_16_4, 0);
 
         lv_obj_set_style_text_color(forecast_cards_[i].temp, text_col, 0);
 
@@ -7202,7 +7138,7 @@ void LcdDisplay::CreateMenuUI() {
             snprintf(day_str, sizeof(day_str), "%d", cur_day);
             lv_obj_t* day_lbl = lv_label_create(tile);
             lv_label_set_text(day_lbl, day_str);
-            lv_obj_set_style_text_font(day_lbl, &font_noto_sans_basic_30_4, 0);
+            lv_obj_set_style_text_font(day_lbl, &font_noto_sans_custom_30_4, 0);
             lv_obj_set_style_text_color(day_lbl, lv_color_hex(0x1C1C1E), 0);
             lv_obj_align(day_lbl, LV_ALIGN_CENTER, 0, 7);
         } else if (i == 1) {
@@ -7239,7 +7175,7 @@ void LcdDisplay::CreateMenuUI() {
 
             lv_obj_t* icon = lv_label_create(circle);
             lv_label_set_text(icon, "$");
-            lv_obj_set_style_text_font(icon, &font_noto_sans_basic_30_4, 0);
+            lv_obj_set_style_text_font(icon, &font_noto_sans_custom_30_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
         } else if (i == 4) {
@@ -7293,7 +7229,7 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
             lv_obj_t* icon = lv_label_create(tile);
             lv_label_set_text(icon, "FM");
-            lv_obj_set_style_text_font(icon, &font_noto_sans_basic_30_4, 0);
+            lv_obj_set_style_text_font(icon, &font_noto_sans_custom_30_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
         } else if (i == 10) {
@@ -7302,7 +7238,7 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
             lv_obj_t* icon = lv_label_create(tile);
             lv_label_set_text(icon, "[QR]");
-            lv_obj_set_style_text_font(icon, &font_noto_sans_basic_20_4, 0);
+            lv_obj_set_style_text_font(icon, &font_noto_sans_custom_20_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
         } else if (i == 11) {
@@ -7388,7 +7324,7 @@ void LcdDisplay::CreateMenuUI() {
     // GÓC TRÁI: Giờ phút (HH:MM) - to rõ ràng font 20pt
     menu_time_label_ = lv_label_create(menu_status_bar_);
     lv_label_set_text(menu_time_label_, "");
-    lv_obj_set_style_text_font(menu_time_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(menu_time_label_, &font_noto_sans_custom_20_4, 0);
     lv_obj_set_style_text_color(menu_time_label_, lv_color_white(), 0);
     lv_obj_align(menu_time_label_, LV_ALIGN_LEFT_MID, 12, 0);
     lv_obj_clear_flag(menu_time_label_, LV_OBJ_FLAG_CLICKABLE);
@@ -7414,7 +7350,7 @@ void LcdDisplay::CreateMenuUI() {
 
     menu_battery_pct_label_ = lv_label_create(right_icons);
     lv_label_set_text(menu_battery_pct_label_, "");
-    lv_obj_set_style_text_font(menu_battery_pct_label_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_font(menu_battery_pct_label_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(menu_battery_pct_label_, lv_color_white(), 0);
     lv_obj_clear_flag(menu_battery_pct_label_, LV_OBJ_FLAG_CLICKABLE);
 
@@ -8636,7 +8572,7 @@ void LcdDisplay::CreateCalendarUI() {
 
     lv_label_set_text(prev_lbl, "<");
 
-    lv_obj_set_style_text_font(prev_lbl, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(prev_lbl, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(prev_lbl, lv_color_white(), 0);
 
@@ -8690,7 +8626,7 @@ void LcdDisplay::CreateCalendarUI() {
 
     lv_label_set_text(next_lbl, ">");
 
-    lv_obj_set_style_text_font(next_lbl, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(next_lbl, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(next_lbl, lv_color_white(), 0);
 
@@ -8768,7 +8704,7 @@ void LcdDisplay::CreateCalendarUI() {
 
     cal_today_day_ = lv_label_create(cal_today_card_);
 
-    lv_obj_set_style_text_font(cal_today_day_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(cal_today_day_, &font_noto_sans_custom_30_4, 0);
 
     lv_obj_set_style_text_color(cal_today_day_, lv_color_white(), 0);
 
@@ -8818,7 +8754,7 @@ void LcdDisplay::CreateCalendarUI() {
 
         lv_label_set_text(lbl, dow_names[col]);
 
-        lv_obj_set_style_text_font(lbl, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
 
         if (col == 0) {
 
@@ -8880,7 +8816,7 @@ void LcdDisplay::CreateCalendarUI() {
 
         calendar_cells_[i].solar_label = solar;
 
-        lv_obj_set_style_text_font(solar, &font_noto_sans_basic_14_1, 0); // Lịch dương vừa vặn, không lấn lịch âm
+        lv_obj_set_style_text_font(solar, &font_noto_sans_custom_14_1, 0); // Lịch dương vừa vặn, không lấn lịch âm
 
         lv_obj_set_style_text_color(solar, lv_color_white(), 0);
 
@@ -8904,7 +8840,7 @@ void LcdDisplay::CreateCalendarUI() {
 
 #else
 
-        lv_obj_set_style_text_font(lunar, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(lunar, &font_noto_sans_custom_14_1, 0);
 
 #endif
 
@@ -9622,7 +9558,7 @@ void LcdDisplay::CreateWeatherDetailUI() {
 
 #else
 
-    lv_obj_set_style_text_font(weather_detail_temp_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(weather_detail_temp_, &font_noto_sans_custom_30_4, 0);
 
 #endif
 
@@ -9690,7 +9626,7 @@ void LcdDisplay::CreateWeatherDetailUI() {
 
         lv_label_set_text(day, "--");
 
-        lv_obj_set_style_text_font(day, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(day, &font_noto_sans_custom_14_1, 0);
 
         lv_obj_set_style_text_color(day, lv_color_white(), 0);
 
@@ -9710,7 +9646,7 @@ void LcdDisplay::CreateWeatherDetailUI() {
 
         lv_label_set_text(temp, "--°C");
 
-        lv_obj_set_style_text_font(temp, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(temp, &font_noto_sans_custom_14_1, 0);
 
         lv_obj_set_style_text_color(temp, lv_color_hex(0xFFA726), 0);
 
@@ -10094,7 +10030,7 @@ void LcdDisplay::CreateClockUI() {
 
     lv_label_set_text(clock_time_label_, "--:--:--");
 
-    lv_obj_set_style_text_font(clock_time_label_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(clock_time_label_, &font_noto_sans_custom_30_4, 0);
 
     lv_obj_set_style_text_color(clock_time_label_, lv_color_white(), 0);
 
@@ -10614,7 +10550,7 @@ void LcdDisplay::CreateStopwatchUI() {
 
     lv_label_set_text(sw_time_label_, "00:00.0");
 
-    lv_obj_set_style_text_font(sw_time_label_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(sw_time_label_, &font_noto_sans_custom_30_4, 0);
 
     lv_obj_set_style_text_color(sw_time_label_, lv_color_white(), 0);
 
@@ -10756,7 +10692,7 @@ void LcdDisplay::CreateStopwatchUI() {
 
     lv_label_set_text(cd_time_label_, "05:00.0");
 
-    lv_obj_set_style_text_font(cd_time_label_, &font_noto_sans_basic_30_4, 0);
+    lv_obj_set_style_text_font(cd_time_label_, &font_noto_sans_custom_30_4, 0);
 
     lv_obj_set_style_text_color(cd_time_label_, lv_color_white(), 0);
 
@@ -11580,7 +11516,7 @@ void LcdDisplay::RenderAlarmList() {
 
         lv_label_set_text(tgl_lbl, alm.enabled ? "BẬT" : "TẮT");
 
-        lv_obj_set_style_text_font(tgl_lbl, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(tgl_lbl, &font_noto_sans_custom_14_1, 0);
 
         lv_obj_set_style_text_color(tgl_lbl, lv_color_white(), 0);
 
@@ -11638,7 +11574,7 @@ void LcdDisplay::RenderAlarmList() {
 
         lv_label_set_text(del_lbl, "X");
 
-        lv_obj_set_style_text_font(del_lbl, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_font(del_lbl, &font_noto_sans_custom_16_4, 0);
 
         lv_obj_set_style_text_color(del_lbl, lv_color_white(), 0);
 
@@ -11794,11 +11730,11 @@ void LcdDisplay::CreateTimerUI() {
 
     lv_roller_set_visible_row_count(alarm_hour_roller_, 3);
 
-    lv_obj_set_style_text_font(alarm_hour_roller_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(alarm_hour_roller_, &font_noto_sans_custom_16_4, 0);
 
     lv_obj_set_style_text_color(alarm_hour_roller_, lv_color_hex(0x94A3B8), 0);
 
-    lv_obj_set_style_text_font(alarm_hour_roller_, &font_noto_sans_basic_20_4, LV_PART_SELECTED);
+    lv_obj_set_style_text_font(alarm_hour_roller_, &font_noto_sans_custom_20_4, LV_PART_SELECTED);
 
     lv_obj_set_style_text_color(alarm_hour_roller_, lv_color_white(), LV_PART_SELECTED);
 
@@ -11830,7 +11766,7 @@ void LcdDisplay::CreateTimerUI() {
 
     lv_label_set_text(colon_lbl, ":");
 
-    lv_obj_set_style_text_font(colon_lbl, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(colon_lbl, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(colon_lbl, lv_color_white(), 0);
 
@@ -11860,11 +11796,11 @@ void LcdDisplay::CreateTimerUI() {
 
     lv_roller_set_visible_row_count(alarm_min_roller_, 3);
 
-    lv_obj_set_style_text_font(alarm_min_roller_, &font_noto_sans_basic_16_4, 0);
+    lv_obj_set_style_text_font(alarm_min_roller_, &font_noto_sans_custom_16_4, 0);
 
     lv_obj_set_style_text_color(alarm_min_roller_, lv_color_hex(0x94A3B8), 0);
 
-    lv_obj_set_style_text_font(alarm_min_roller_, &font_noto_sans_basic_20_4, LV_PART_SELECTED);
+    lv_obj_set_style_text_font(alarm_min_roller_, &font_noto_sans_custom_20_4, LV_PART_SELECTED);
 
     lv_obj_set_style_text_color(alarm_min_roller_, lv_color_white(), LV_PART_SELECTED);
 
@@ -11916,7 +11852,7 @@ void LcdDisplay::CreateTimerUI() {
 
         lv_label_set_text(dlbl, dnames[i]);
 
-        lv_obj_set_style_text_font(dlbl, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(dlbl, &font_noto_sans_custom_14_1, 0);
 
         lv_obj_set_style_text_color(dlbl, lv_color_white(), 0);
 
@@ -11966,7 +11902,7 @@ void LcdDisplay::CreateTimerUI() {
 
     lv_label_set_text(add_lbl, "+ Thêm Báo Thức");
 
-    lv_obj_set_style_text_font(add_lbl, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_font(add_lbl, &font_noto_sans_custom_14_1, 0);
 
     lv_obj_set_style_text_color(add_lbl, lv_color_white(), 0);
 
@@ -12906,7 +12842,7 @@ void LcdDisplay::CreateCalculatorUI() {
 
     lv_label_set_text(calc_result_label_, "0");
 
-    lv_obj_set_style_text_font(calc_result_label_, &font_noto_sans_basic_20_4, 0);
+    lv_obj_set_style_text_font(calc_result_label_, &font_noto_sans_custom_20_4, 0);
 
     lv_obj_set_style_text_color(calc_result_label_, lv_color_white(), 0);
 
@@ -12974,7 +12910,7 @@ void LcdDisplay::CreateCalculatorUI() {
 
         lv_label_set_text(lbl, btn_labels[i]);
 
-        lv_obj_set_style_text_font(lbl, &font_noto_sans_basic_16_4, 0);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
 
         lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
 
@@ -14418,7 +14354,7 @@ void LcdDisplay::CreateStandby3UI() {
 
     standby3_battery_pct_ = lv_label_create(standby3_status_box_);
     lv_label_set_text(standby3_battery_pct_, "--%");
-    lv_obj_set_style_text_font(standby3_battery_pct_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_font(standby3_battery_pct_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(standby3_battery_pct_, lv_color_white(), 0);
     lv_obj_clear_flag(standby3_battery_pct_, LV_OBJ_FLAG_CLICKABLE);
 
