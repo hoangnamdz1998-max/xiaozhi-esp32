@@ -116,6 +116,19 @@ const LcdDisplay::FmChannel LcdDisplay::kFmChannels[4] = {
     {"Viet Radio", "Ca Nhạc & Tin", "http://71.4.56.20/3rdout/radio.hou.std2/icecast.audio"}
 };
 
+const LcdDisplay::SongItem LcdDisplay::kZingTopSongs[10] = {
+    {"Cắt Đôi Nỗi Sầu", "Tăng Duy Tân"},
+    {"Từng Quen", "Wren Evans"},
+    {"Nâng Chén Tiêu Sầu", "Bích Phương"},
+    {"Ngày Mai Người Ta Lấy Chồng", "Anh Tú"},
+    {"Sau Lời Từ Khước", "Phan Mạnh Quỳnh"},
+    {"Đừng Làm Trái Tim Anh Đau", "Sơn Tùng M-TP"},
+    {"Khóa Ly Biệt", "Anh Tú"},
+    {"Thu Cuối", "Mr.T, Yanbi, Hằng BingBoong"},
+    {"Gặp Lại Năm Ta 60", "Orange"},
+    {"Chúng Ta Của Tương Lai", "Sơn Tùng M-TP"}
+};
+
 
 
 #define TAG "LcdDisplay"
@@ -13727,6 +13740,79 @@ void LcdDisplay::CreateMusicScreenUI() {
             lv_obj_set_height(self->music_vis_bars_[i], h);
         }
     }, 70, this);
+
+    // 8. Bảng xếp hạng Zing MP3 (Zing Chart)
+    music_chart_title_ = lv_label_create(music_box_);
+    lv_label_set_text(music_chart_title_, "\xe2\x99\xab B\xe1\xba\xa2NG X\xe1\xba\xbeP H\xe1\xba\xa0NG ZING MP3");
+    lv_obj_set_style_text_font(music_chart_title_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(music_chart_title_, lv_color_hex(0xfacc15), 0);
+
+    music_chart_list_ = lv_obj_create(music_box_);
+    lv_obj_set_style_bg_color(music_chart_list_, lv_color_hex(0x0f172a), 0);
+    lv_obj_set_style_bg_opa(music_chart_list_, LV_OPA_80, 0);
+    lv_obj_set_style_border_color(music_chart_list_, lv_color_hex(0x334155), 0);
+    lv_obj_set_style_border_width(music_chart_list_, 1, 0);
+    lv_obj_set_style_radius(music_chart_list_, 10, 0);
+    lv_obj_set_style_pad_all(music_chart_list_, 4, 0);
+    lv_obj_set_style_pad_row(music_chart_list_, 4, 0);
+    lv_obj_set_flex_flow(music_chart_list_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_scroll_dir(music_chart_list_, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(music_chart_list_, LV_SCROLLBAR_MODE_ACTIVE);
+
+    for (int i = 0; i < 10; ++i) {
+        lv_obj_t* item_btn = lv_button_create(music_chart_list_);
+        lv_obj_set_width(item_btn, lv_pct(100));
+        lv_obj_set_height(item_btn, 36);
+        lv_obj_set_style_bg_color(item_btn, lv_color_hex(0x1e293b), 0);
+        lv_obj_set_style_bg_opa(item_btn, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(item_btn, 6, 0);
+        lv_obj_set_style_pad_all(item_btn, 4, 0);
+        lv_obj_clear_flag(item_btn, LV_OBJ_FLAG_SCROLLABLE);
+
+        // Rank badge
+        lv_obj_t* rank_lbl = lv_label_create(item_btn);
+        char rank_str[8];
+        snprintf(rank_str, sizeof(rank_str), "#%d", i + 1);
+        lv_label_set_text(rank_lbl, rank_str);
+        lv_obj_set_style_text_font(rank_lbl, &font_noto_sans_custom_14_1, 0);
+        if (i == 0) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0xef4444), 0);
+        else if (i == 1) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x3b82f6), 0);
+        else if (i == 2) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x10b981), 0);
+        else lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x94a3b8), 0);
+        lv_obj_align(rank_lbl, LV_ALIGN_LEFT_MID, 4, 0);
+
+        // Song Title
+        lv_obj_t* title_lbl = lv_label_create(item_btn);
+        lv_label_set_text(title_lbl, kZingTopSongs[i].title);
+        lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
+        lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(title_lbl, 110);
+        lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 32, -6);
+
+        // Artist
+        lv_obj_t* artist_lbl = lv_label_create(item_btn);
+        lv_label_set_text(artist_lbl, kZingTopSongs[i].artist);
+        lv_obj_set_style_text_font(artist_lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x64748b), 0);
+        lv_label_set_long_mode(artist_lbl, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(artist_lbl, 110);
+        lv_obj_align(artist_lbl, LV_ALIGN_LEFT_MID, 32, 8);
+
+        // Play icon
+        lv_obj_t* icon_lbl = lv_label_create(item_btn);
+        lv_label_set_text(icon_lbl, ">");
+        lv_obj_set_style_text_font(icon_lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(icon_lbl, lv_color_hex(0x38bdf8), 0);
+        lv_obj_align(icon_lbl, LV_ALIGN_RIGHT_MID, -4, 0);
+
+        lv_obj_set_user_data(item_btn, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(item_btn, [](lv_event_t* e) {
+            auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+            self->PlayChartSong(idx);
+        }, LV_EVENT_CLICKED, this);
+    }
 }
 
 void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
@@ -13735,70 +13821,108 @@ void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
 
     if (is_portrait) {
         if (music_back_btn_) lv_obj_set_pos(music_back_btn_, 6, 6);
-        if (music_title_badge_) lv_obj_align(music_title_badge_, LV_ALIGN_TOP_MID, 0, 10);
+        if (music_title_badge_) lv_obj_align(music_title_badge_, LV_ALIGN_TOP_MID, 0, 8);
         if (music_vinyl_) {
-            lv_obj_set_size(music_vinyl_, 96, 96);
-            lv_obj_set_style_radius(music_vinyl_, 48, 0);
-            lv_obj_set_pos(music_vinyl_, 72, 36);
+            lv_obj_set_size(music_vinyl_, 72, 72);
+            lv_obj_set_style_radius(music_vinyl_, 36, 0);
+            lv_obj_set_pos(music_vinyl_, 12, 32);
         }
         if (music_song_lbl_) {
-            lv_obj_set_width(music_song_lbl_, 220);
-            lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_align(music_song_lbl_, LV_ALIGN_TOP_MID, 0, 140);
+            lv_obj_set_width(music_song_lbl_, 136);
+            lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_LEFT, 0);
+            lv_obj_set_pos(music_song_lbl_, 92, 32);
         }
         if (music_artist_lbl_) {
-            lv_obj_set_width(music_artist_lbl_, 220);
-            lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_align(music_artist_lbl_, LV_ALIGN_TOP_MID, 0, 168);
+            lv_obj_set_width(music_artist_lbl_, 136);
+            lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_LEFT, 0);
+            lv_obj_set_pos(music_artist_lbl_, 92, 54);
         }
         if (music_play_btn_) {
-            lv_obj_set_size(music_play_btn_, 96, 36);
-            lv_obj_set_pos(music_play_btn_, 24, 204);
+            lv_obj_set_size(music_play_btn_, 64, 28);
+            lv_obj_set_pos(music_play_btn_, 92, 76);
         }
         if (music_stop_btn_) {
-            lv_obj_set_size(music_stop_btn_, 84, 36);
-            lv_obj_set_pos(music_stop_btn_, 132, 204);
+            lv_obj_set_size(music_stop_btn_, 58, 28);
+            lv_obj_set_pos(music_stop_btn_, 162, 76);
         }
         if (music_visualizer_box_) {
-            lv_obj_set_size(music_visualizer_box_, 224, 52);
-            lv_obj_set_pos(music_visualizer_box_, 8, 256);
+            lv_obj_set_size(music_visualizer_box_, 224, 24);
+            lv_obj_set_pos(music_visualizer_box_, 8, 110);
             for (int i = 0; i < kNumVisualizerBars; ++i) {
                 if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 10);
             }
         }
+        if (music_chart_title_) {
+            lv_obj_align(music_chart_title_, LV_ALIGN_TOP_LEFT, 12, 140);
+        }
+        if (music_chart_list_) {
+            lv_obj_set_size(music_chart_list_, 224, 160);
+            lv_obj_set_pos(music_chart_list_, 8, 156);
+        }
     } else {
+        // Landscape (320x240): Left half = Player, Right half = Zing Chart list
         if (music_back_btn_) lv_obj_set_pos(music_back_btn_, 6, 4);
-        if (music_title_badge_) lv_obj_align(music_title_badge_, LV_ALIGN_TOP_MID, 0, 6);
+        if (music_title_badge_) lv_obj_set_pos(music_title_badge_, 44, 10);
         if (music_vinyl_) {
-            lv_obj_set_size(music_vinyl_, 112, 112);
-            lv_obj_set_style_radius(music_vinyl_, 56, 0);
-            lv_obj_set_pos(music_vinyl_, 12, 36);
+            lv_obj_set_size(music_vinyl_, 84, 84);
+            lv_obj_set_style_radius(music_vinyl_, 42, 0);
+            lv_obj_set_pos(music_vinyl_, 26, 36);
         }
         if (music_song_lbl_) {
-            lv_obj_set_width(music_song_lbl_, 176);
-            lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_LEFT, 0);
-            lv_obj_set_pos(music_song_lbl_, 134, 36);
+            lv_obj_set_width(music_song_lbl_, 130);
+            lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_pos(music_song_lbl_, 6, 124);
         }
         if (music_artist_lbl_) {
-            lv_obj_set_width(music_artist_lbl_, 176);
-            lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_LEFT, 0);
-            lv_obj_set_pos(music_artist_lbl_, 134, 66);
+            lv_obj_set_width(music_artist_lbl_, 130);
+            lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_pos(music_artist_lbl_, 6, 146);
         }
         if (music_play_btn_) {
-            lv_obj_set_size(music_play_btn_, 86, 34);
-            lv_obj_set_pos(music_play_btn_, 134, 102);
+            lv_obj_set_size(music_play_btn_, 60, 28);
+            lv_obj_set_pos(music_play_btn_, 8, 168);
         }
         if (music_stop_btn_) {
-            lv_obj_set_size(music_stop_btn_, 72, 34);
-            lv_obj_set_pos(music_stop_btn_, 230, 102);
+            lv_obj_set_size(music_stop_btn_, 56, 28);
+            lv_obj_set_pos(music_stop_btn_, 74, 168);
         }
         if (music_visualizer_box_) {
-            lv_obj_set_size(music_visualizer_box_, 300, 64);
-            lv_obj_set_pos(music_visualizer_box_, 10, 164);
+            lv_obj_set_size(music_visualizer_box_, 124, 28);
+            lv_obj_set_pos(music_visualizer_box_, 8, 202);
             for (int i = 0; i < kNumVisualizerBars; ++i) {
-                if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 14);
+                if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 6);
             }
         }
+        if (music_chart_title_) {
+            lv_obj_set_pos(music_chart_title_, 142, 8);
+        }
+        if (music_chart_list_) {
+            lv_obj_set_size(music_chart_list_, 172, 204);
+            lv_obj_set_pos(music_chart_list_, 142, 28);
+        }
+    }
+}
+
+void LcdDisplay::PlayChartSong(int index) {
+    if (index < 0 || index >= 10) return;
+    const auto& item = kZingTopSongs[index];
+    music_current_song_ = item.title;
+    music_current_artist_ = item.artist;
+    music_is_playing_ = true;
+    UpdateMusicUI();
+
+    auto music = Board::GetInstance().GetMusic();
+    if (music) {
+        std::string song_name = item.title;
+        std::string artist_name = item.artist;
+        esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+        cfg.stack_size = 8192;
+        cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+        cfg.thread_name = "play_chart";
+        esp_pthread_set_cfg(&cfg);
+        std::thread([music, song_name, artist_name]() {
+            music->Download(song_name, artist_name);
+        }).detach();
     }
 }
 

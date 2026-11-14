@@ -372,6 +372,12 @@ protected:
     bool fm_is_playing_ = false;
 
     // Music Player Screen
+    struct SongItem {
+        const char* title;
+        const char* artist;
+    };
+    static const SongItem kZingTopSongs[10];
+
     lv_obj_t* music_box_ = nullptr;
     lv_obj_t* music_back_btn_ = nullptr;
     lv_obj_t* music_title_badge_ = nullptr;
@@ -385,12 +391,15 @@ protected:
     lv_obj_t* music_stop_btn_ = nullptr;
     lv_obj_t* music_stop_lbl_ = nullptr;
     lv_obj_t* music_visualizer_box_ = nullptr;
+    lv_obj_t* music_chart_list_ = nullptr;
+    lv_obj_t* music_chart_title_ = nullptr;
     static constexpr int kNumVisualizerBars = 16;
     lv_obj_t* music_vis_bars_[16] = {nullptr};
     lv_timer_t* music_vis_timer_ = nullptr;
     std::string music_current_song_ = "Chưa phát nhạc";
     std::string music_current_artist_ = "Zing MP3 Online";
     bool music_is_playing_ = false;
+    void PlayChartSong(int index);
     void CreateFmRadioUI();
     void LayoutFmRadioWidgets(bool is_portrait);
     void UpdateFmRadioUI();
