@@ -1201,6 +1201,14 @@ idf_component_register(SRCS ${SOURCES}
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/boot_anim.bin"
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg_landscape.jpg"
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg_portrait.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg1_landscape.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg1_portrait.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg2_landscape.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg2_portrait.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg3_landscape.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg3_portrait.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg4_landscape.jpg"
+                                "${CMAKE_CURRENT_SOURCE_DIR}/assets/standby2_bg4_portrait.jpg" 
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     WHOLE_ARCHIVE
                     PRIV_REQUIRES

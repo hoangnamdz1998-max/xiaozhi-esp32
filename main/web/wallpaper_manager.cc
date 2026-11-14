@@ -172,10 +172,24 @@ bool WallpaperManager::DeleteWallpaper(int idx) {
 bool WallpaperManager::GetWallpaperJpeg(int idx, bool is_portrait, const uint8_t** out_data, size_t* out_len, bool* is_allocated) {
     if (out_data == nullptr || out_len == nullptr || is_allocated == nullptr) return false;
 
-    if (idx == 0) {
-        // Ảnh hệ thống gốc
-        const uint8_t* start = is_portrait ? standby2_bg_portrait_jpg_start : standby2_bg_landscape_jpg_start;
-        const uint8_t* end = is_portrait ? standby2_bg_portrait_jpg_end : standby2_bg_landscape_jpg_end;
+    if (idx <= 4) {
+        // 4 ảnh hệ thống chất lượng cao tích hợp sẵn
+        const uint8_t* start = nullptr;
+        const uint8_t* end = nullptr;
+        if (idx == 2) {
+            start = is_portrait ? standby2_bg2_portrait_jpg_start : standby2_bg2_landscape_jpg_start;
+            end = is_portrait ? standby2_bg2_portrait_jpg_end : standby2_bg2_landscape_jpg_end;
+        } else if (idx == 3) {
+            start = is_portrait ? standby2_bg3_portrait_jpg_start : standby2_bg3_landscape_jpg_start;
+            end = is_portrait ? standby2_bg3_portrait_jpg_end : standby2_bg3_landscape_jpg_end;
+        } else if (idx == 4) {
+            start = is_portrait ? standby2_bg4_portrait_jpg_start : standby2_bg4_landscape_jpg_start;
+            end = is_portrait ? standby2_bg4_portrait_jpg_end : standby2_bg4_landscape_jpg_end;
+        } else {
+            // idx == 1 hoặc 0 (mặc định)
+            start = is_portrait ? standby2_bg1_portrait_jpg_start : standby2_bg1_landscape_jpg_start;
+            end = is_portrait ? standby2_bg1_portrait_jpg_end : standby2_bg1_landscape_jpg_end;
+        }
         *out_data = start;
         *out_len = (size_t)(end - start);
         *is_allocated = false;
@@ -186,7 +200,7 @@ bool WallpaperManager::GetWallpaperJpeg(int idx, bool is_portrait, const uint8_t
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) {
         ESP_LOGW(TAG, "File %s not found, falling back to system wallpaper", path.c_str());
-        return GetWallpaperJpeg(0, is_portrait, out_data, out_len, is_allocated);
+        return GetWallpaperJpeg(1, is_portrait, out_data, out_len, is_allocated);
     }
 
     fseek(f, 0, SEEK_END);
@@ -195,7 +209,7 @@ bool WallpaperManager::GetWallpaperJpeg(int idx, bool is_portrait, const uint8_t
 
     if (sz == 0 || sz > 1024 * 512) { // Giới hạn 512KB
         fclose(f);
-        return GetWallpaperJpeg(0, is_portrait, out_data, out_len, is_allocated);
+        return GetWallpaperJpeg(1, is_portrait, out_data, out_len, is_allocated);
     }
 
     uint8_t* buf = (uint8_t*)heap_caps_malloc(sz, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -204,7 +218,7 @@ bool WallpaperManager::GetWallpaperJpeg(int idx, bool is_portrait, const uint8_t
     }
     if (!buf) {
         fclose(f);
-        return GetWallpaperJpeg(0, is_portrait, out_data, out_len, is_allocated);
+        return GetWallpaperJpeg(1, is_portrait, out_data, out_len, is_allocated);
     }
 
     size_t read_bytes = fread(buf, 1, sz, f);
@@ -212,7 +226,7 @@ bool WallpaperManager::GetWallpaperJpeg(int idx, bool is_portrait, const uint8_t
 
     if (read_bytes != sz) {
         free(buf);
-        return GetWallpaperJpeg(0, is_portrait, out_data, out_len, is_allocated);
+        return GetWallpaperJpeg(1, is_portrait, out_data, out_len, is_allocated);
     }
 
     *out_data = buf;

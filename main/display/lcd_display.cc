@@ -61,13 +61,43 @@ LV_FONT_DECLARE(font_noto_sans_basic_14_1);
 
 
 static uint32_t MapVietnameseChar(uint32_t unicode_letter) {
+    // 1. Nhóm 'a':
+    if (unicode_letter == 0x1EA1 || unicode_letter == 0x1EA3) return 'a'; // ạ, ả -> a
+    if (unicode_letter == 0x1EA0 || unicode_letter == 0x1EA2) return 'A'; // Ạ, Ả -> A
+    if (unicode_letter == 0x1EA5 || unicode_letter == 0x1EA7 || unicode_letter == 0x1EA9 || unicode_letter == 0x1EAB || unicode_letter == 0x1EAD) return 0x00E2; // ấ, ầ, ẩ, ẫ, ậ -> â
+    if (unicode_letter == 0x1EA4 || unicode_letter == 0x1EA6 || unicode_letter == 0x1EA8 || unicode_letter == 0x1EAA || unicode_letter == 0x1EAC) return 0x00C2; // Ấ, Ầ, Ẩ, Ẫ, Ậ -> Â
+    if (unicode_letter == 0x1EAF || unicode_letter == 0x1EB1 || unicode_letter == 0x1EB3 || unicode_letter == 0x1EB5 || unicode_letter == 0x1EB7) return 0x0103; // ắ, ằ, ẳ, ẵ, ặ -> ă
+    if (unicode_letter == 0x1EAE || unicode_letter == 0x1EB0 || unicode_letter == 0x1EB2 || unicode_letter == 0x1EB4 || unicode_letter == 0x1EB6) return 'A'; // Ắ..Ặ -> A
 
-    // Toàn bộ bảng chữ cái tiếng Việt (chữ hoa và chữ thường với đầy đủ 5 dấu: sắc, huyền, hỏi, ngã, nặng)
+    // 2. Nhóm 'e':
+    if (unicode_letter == 0x1EB9 || unicode_letter == 0x1EBB || unicode_letter == 0x1EBD) return 0x00E9; // ẹ, ẻ, ẽ -> é
+    if (unicode_letter == 0x1EB8 || unicode_letter == 0x1EBA || unicode_letter == 0x1EBC) return 0x00C9; // Ẹ, Ẻ, Ẽ -> É
+    if (unicode_letter == 0x1EBF || unicode_letter == 0x1EC1 || unicode_letter == 0x1EC3 || unicode_letter == 0x1EC5 || unicode_letter == 0x1EC7) return 0x00EA; // ế, ề, ể, ễ, ệ -> ê
+    if (unicode_letter == 0x1EBE || unicode_letter == 0x1EC0 || unicode_letter == 0x1EC2 || unicode_letter == 0x1EC4 || unicode_letter == 0x1EC6) return 0x00CA; // Ế, Ề, Ể, Ễ, Ệ -> Ê
 
-    // đã được tích hợp 100% trực tiếp vào bộ font hệ thống.
+    // 3. Nhóm 'i':
+    if (unicode_letter == 0x1EC9 || unicode_letter == 0x1ECB || unicode_letter == 0x0129) return 0x00ED; // ỉ, ị, ĩ -> í
+    if (unicode_letter == 0x1EC8 || unicode_letter == 0x1ECA || unicode_letter == 0x0128) return 0x00CD; // Ỉ, Ị, Ĩ -> Í
+
+    // 4. Nhóm 'o':
+    if (unicode_letter == 0x1ECF || unicode_letter == 0x1ECD) return 0x00F3; // ỏ, ọ -> ó
+    if (unicode_letter == 0x1ECE || unicode_letter == 0x1ECC) return 0x00D3; // Ỏ, Ọ -> Ó
+    if (unicode_letter == 0x1ED1 || unicode_letter == 0x1ED3 || unicode_letter == 0x1ED5 || unicode_letter == 0x1ED7 || unicode_letter == 0x1ED9) return 0x00F4; // ố, ồ, ổ, ỗ, ộ -> ô
+    if (unicode_letter == 0x1ED0 || unicode_letter == 0x1ED2 || unicode_letter == 0x1ED4 || unicode_letter == 0x1ED6 || unicode_letter == 0x1ED8) return 0x00D4; // Ố, Ồ, Ổ, Ỗ, Ộ -> Ô
+    if (unicode_letter == 0x1EDB || unicode_letter == 0x1EDD || unicode_letter == 0x1EDF || unicode_letter == 0x1EE1 || unicode_letter == 0x1EE3) return 0x00F4; // ớ, ờ, ở, ỡ, ợ -> ô
+    if (unicode_letter == 0x1EDA || unicode_letter == 0x1EDC || unicode_letter == 0x1EDE || unicode_letter == 0x1EE0 || unicode_letter == 0x1EE2) return 0x00D4; // Ớ, Ờ, Ở, Ỡ, Ợ -> Ô
+
+    // 5. Nhóm 'u':
+    if (unicode_letter == 0x1EE5 || unicode_letter == 0x1EE7) return 0x00FA; // ụ, ủ -> ú
+    if (unicode_letter == 0x1EE4 || unicode_letter == 0x1EE6) return 0x00DA; // Ụ, Ủ -> Ú
+    if (unicode_letter == 0x1EE9 || unicode_letter == 0x1EEB || unicode_letter == 0x1EED || unicode_letter == 0x1EEF || unicode_letter == 0x1EF1) return 0x01B0; // ứ, ừ, sử, nữ, ự -> ư
+    if (unicode_letter == 0x1EE8 || unicode_letter == 0x1EEA || unicode_letter == 0x1EEC || unicode_letter == 0x1EEE || unicode_letter == 0x1EF0) return 'U'; // Ứ..Ự -> U
+
+    // 6. Nhóm 'y':
+    if (unicode_letter == 0x1EF3 || unicode_letter == 0x1EF5 || unicode_letter == 0x1EF7 || unicode_letter == 0x1EF9) return 0x00FD; // ỳ, ỵ, ỷ, ỹ -> ý
+    if (unicode_letter == 0x1EF2 || unicode_letter == 0x1EF4 || unicode_letter == 0x1EF6 || unicode_letter == 0x1EF8) return 0x00DD; // Ỳ..Ỹ -> Ý
 
     return unicode_letter;
-
 }
 
 
@@ -4338,6 +4368,9 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
             if (standby2_box_ != nullptr) {
                 lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
             }
+            if (standby3_box_ != nullptr) {
+                lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+            }
 
     } else {
 
@@ -4370,6 +4403,9 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
             }
             if (standby2_box_ != nullptr) {
                 lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (standby3_box_ != nullptr) {
+                lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
             }
 
             if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
@@ -5507,7 +5543,11 @@ void LcdDisplay::OnSwipeUp() {
             wp_preview_buf_ = nullptr;
         }
         ReloadWallpaper();
-        ShowStandby2();
+        if (wp_opened_from_menu_) {
+            ShowMenu();
+        } else {
+            ShowStandby2();
+        }
         return;
     }
 
@@ -5807,6 +5847,7 @@ void LcdDisplay::ShowQuickSettings() {
     screen_mode_ = kScreenQuickSettings;
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
@@ -7295,7 +7336,7 @@ void LcdDisplay::CreateMenuUI() {
         // Title label below tile
         lv_obj_t* lbl = lv_label_create(btn);
         lv_label_set_text(lbl, titles[i]);
-        lv_obj_set_style_text_font(lbl, &font_noto_sans_basic_14_1, 0);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
         lv_obj_set_style_text_color(lbl, is_light_theme_ ? lv_color_hex(0x0F172A) : lv_color_white(), 0);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
         lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
@@ -14816,7 +14857,11 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
             self->wp_preview_buf_ = nullptr;
         }
         self->ReloadWallpaper();
-        self->ShowStandby2();
+        if (self->wp_opened_from_menu_) {
+            self->ShowMenu();
+        } else {
+            self->ShowStandby2();
+        }
     };
 
     lv_obj_add_event_cb(wp_save_btn_, save_exit_action, LV_EVENT_CLICKED, this);
@@ -14835,7 +14880,11 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
                     self->wp_preview_buf_ = nullptr;
                 }
                 self->ReloadWallpaper();
-                self->ShowStandby2();
+                if (self->wp_opened_from_menu_) {
+                    self->ShowMenu();
+                } else {
+                    self->ShowStandby2();
+                }
             }
         }
     }, LV_EVENT_GESTURE, this);
@@ -14924,6 +14973,8 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
 }
 
 void LcdDisplay::ShowWallpaperSettings() {
+    wp_opened_from_menu_ = (screen_mode_ == kScreenMenu || previous_screen_mode_ == kScreenMenu);
+    previous_screen_mode_ = screen_mode_;
     screen_mode_ = kScreenWallpaperSettings;
     if (menu_box_) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby_box_) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);

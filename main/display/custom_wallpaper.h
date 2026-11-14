@@ -16,4 +16,24 @@ extern const uint8_t standby2_bg_landscape_jpg_end[] asm("_binary_standby2_bg_la
 extern const uint8_t standby2_bg_portrait_jpg_start[] asm("_binary_standby2_bg_portrait_jpg_start");
 extern const uint8_t standby2_bg_portrait_jpg_end[] asm("_binary_standby2_bg_portrait_jpg_end");
 
+extern const uint8_t standby2_bg1_landscape_jpg_start[] asm("_binary_standby2_bg1_landscape_jpg_start");
+extern const uint8_t standby2_bg1_landscape_jpg_end[] asm("_binary_standby2_bg1_landscape_jpg_end");
+extern const uint8_t standby2_bg1_portrait_jpg_start[] asm("_binary_standby2_bg1_portrait_jpg_start");
+extern const uint8_t standby2_bg1_portrait_jpg_end[] asm("_binary_standby2_bg1_portrait_jpg_end");
+
+extern const uint8_t standby2_bg2_landscape_jpg_start[] asm("_binary_standby2_bg2_landscape_jpg_start");
+extern const uint8_t standby2_bg2_landscape_jpg_end[] asm("_binary_standby2_bg2_landscape_jpg_end");
+extern const uint8_t standby2_bg2_portrait_jpg_start[] asm("_binary_standby2_bg2_portrait_jpg_start");
+extern const uint8_t standby2_bg2_portrait_jpg_end[] asm("_binary_standby2_bg2_portrait_jpg_end");
+
+extern const uint8_t standby2_bg3_landscape_jpg_start[] asm("_binary_standby2_bg3_landscape_jpg_start");
+extern const uint8_t standby2_bg3_landscape_jpg_end[] asm("_binary_standby2_bg3_landscape_jpg_end");
+extern const uint8_t standby2_bg3_portrait_jpg_start[] asm("_binary_standby2_bg3_portrait_jpg_start");
+extern const uint8_t standby2_bg3_portrait_jpg_end[] asm("_binary_standby2_bg3_portrait_jpg_end");
+
+extern const uint8_t standby2_bg4_landscape_jpg_start[] asm("_binary_standby2_bg4_landscape_jpg_start");
+extern const uint8_t standby2_bg4_landscape_jpg_end[] asm("_binary_standby2_bg4_landscape_jpg_end");
+extern const uint8_t standby2_bg4_portrait_jpg_start[] asm("_binary_standby2_bg4_portrait_jpg_start");
+extern const uint8_t standby2_bg4_portrait_jpg_end[] asm("_binary_standby2_bg4_portrait_jpg_end");
+
 #endif // CUSTOM_WALLPAPER_H

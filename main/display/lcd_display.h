@@ -185,6 +185,7 @@ protected:
     lv_obj_t* wp_save_btn_ = nullptr;
     int wp_preview_idx_ = 0;
     int wp_preview_layout_ = 0;
+    bool wp_opened_from_menu_ = false;
     void CreateWallpaperSettingsUI();
     void LayoutWallpaperSettingsWidgets(bool is_portrait);
     void UpdateWallpaperSettingsUI();
