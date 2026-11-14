@@ -71,11 +71,15 @@ jobs:
   build:
     name: Build ${{ matrix.ci_name || matrix.full_name }}
     needs: prepare
-    if: ${{ needs.prepare.outputs.variants != '[]' }}
+    # if bypassed
     strategy:
-      fail-fast: false  # 单个变体失败不影响其它变体
+      fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.prepare.outputs.variants) }}
+        include:
+          - board: freenove-esp32s3-display-2.8-lcd
+            name: default
+            full_name: freenove-esp32s3-display-2.8-lcd
+            ci_name: freenove-esp32s3-display-2.8-lcd
     runs-on: ubuntu-latest
     container:
       image: espressif/idf:release-v6.1
