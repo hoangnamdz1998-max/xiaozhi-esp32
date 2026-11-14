@@ -373,10 +373,13 @@ protected:
 
     // Music Player Screen
     struct SongItem {
-        const char* title;
-        const char* artist;
+        std::string title;
+        std::string artist;
     };
-    static const SongItem kZingTopSongs[10];
+    static const SongItem kZingTopSongsDefault[10];
+    std::vector<SongItem> music_chart_songs_;
+    lv_obj_t* music_chart_item_titles_[10] = {nullptr};
+    lv_obj_t* music_chart_item_artists_[10] = {nullptr};
 
     lv_obj_t* music_box_ = nullptr;
     lv_obj_t* music_back_btn_ = nullptr;
@@ -400,6 +403,8 @@ protected:
     std::string music_current_artist_ = "Zing MP3 Online";
     bool music_is_playing_ = false;
     void PlayChartSong(int index);
+    void FetchRealtimeChart();
+    void UpdateChartSongsUI();
     void CreateFmRadioUI();
     void LayoutFmRadioWidgets(bool is_portrait);
     void UpdateFmRadioUI();

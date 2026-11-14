@@ -116,17 +116,17 @@ const LcdDisplay::FmChannel LcdDisplay::kFmChannels[4] = {
     {"Viet Radio", "Ca Nhạc & Tin", "http://71.4.56.20/3rdout/radio.hou.std2/icecast.audio"}
 };
 
-const LcdDisplay::SongItem LcdDisplay::kZingTopSongs[10] = {
-    {"Cắt Đôi Nỗi Sầu", "Tăng Duy Tân"},
-    {"Từng Quen", "Wren Evans"},
-    {"Nâng Chén Tiêu Sầu", "Bích Phương"},
-    {"Ngày Mai Người Ta Lấy Chồng", "Anh Tú"},
-    {"Sau Lời Từ Khước", "Phan Mạnh Quỳnh"},
-    {"Đừng Làm Trái Tim Anh Đau", "Sơn Tùng M-TP"},
-    {"Khóa Ly Biệt", "Anh Tú"},
-    {"Thu Cuối", "Mr.T, Yanbi, Hằng BingBoong"},
-    {"Gặp Lại Năm Ta 60", "Orange"},
-    {"Chúng Ta Của Tương Lai", "Sơn Tùng M-TP"}
+const LcdDisplay::SongItem LcdDisplay::kZingTopSongsDefault[10] = {
+    {"Không Môn Đăng Hộ Đối", "Nguyễn Vĩ"},
+    {"Giá Như Anh Là Em", "Lệ Quyên"},
+    {"Kẻ Say Tình 2", "Quốc Thiên"},
+    {"Ngồi Nghe Em Khóc", "Đạt G"},
+    {"Ngày Còn Đôi Mươi", "Chú Út Lông Bông, Tiểu Mỹ"},
+    {"Đáng Ra Anh Không Nên", "Nhiều nghệ sĩ"},
+    {"Ngân Hàng Nỗi Nhớ", "Đạt G"},
+    {"Thắng Đời Thua Em", "Thái Học"},
+    {"Nói Buông Là Buông", "Đình Dũng"},
+    {"Tự Do Như Cơn Gió", "Xanh"}
 };
 
 
@@ -13783,7 +13783,9 @@ void LcdDisplay::CreateMusicScreenUI() {
 
         // Song Title
         lv_obj_t* title_lbl = lv_label_create(item_btn);
-        lv_label_set_text(title_lbl, kZingTopSongs[i].title);
+        music_chart_item_titles_[i] = title_lbl;
+        const char* init_title = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].title.c_str() : kZingTopSongsDefault[i].title.c_str();
+        lv_label_set_text(title_lbl, init_title);
         lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_14_1, 0);
         lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
         lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
@@ -13792,7 +13794,9 @@ void LcdDisplay::CreateMusicScreenUI() {
 
         // Artist
         lv_obj_t* artist_lbl = lv_label_create(item_btn);
-        lv_label_set_text(artist_lbl, kZingTopSongs[i].artist);
+        music_chart_item_artists_[i] = artist_lbl;
+        const char* init_artist = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].artist.c_str() : kZingTopSongsDefault[i].artist.c_str();
+        lv_label_set_text(artist_lbl, init_artist);
         lv_obj_set_style_text_font(artist_lbl, &font_noto_sans_custom_14_1, 0);
         lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x64748b), 0);
         lv_label_set_long_mode(artist_lbl, LV_LABEL_LONG_DOT);
@@ -13903,25 +13907,90 @@ void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
     }
 }
 
+void LcdDisplay::UpdateChartSongsUI() {
+    DisplayLockGuard lock(this);
+    if (!lock || !music_box_ || lv_obj_has_flag(music_box_, LV_OBJ_FLAG_HIDDEN)) return;
+    for (int i = 0; i < 10; ++i) {
+        if (i < (int)music_chart_songs_.size()) {
+            if (music_chart_item_titles_[i]) lv_label_set_text(music_chart_item_titles_[i], music_chart_songs_[i].title.c_str());
+            if (music_chart_item_artists_[i]) lv_label_set_text(music_chart_item_artists_[i], music_chart_songs_[i].artist.c_str());
+        }
+    }
+}
+
+void LcdDisplay::FetchRealtimeChart() {
+    esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+    cfg.stack_size = 8192;
+    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    cfg.thread_name = "fetch_chart";
+    esp_pthread_set_cfg(&cfg);
+    std::thread([this]() {
+        auto network = Board::GetInstance().GetNetwork();
+        if (!network) return;
+        auto http = network->CreateHttp(0);
+        if (!http) return;
+        http->SetHeader("User-Agent", "ESP32-Xiaozhi/1.0");
+        http->SetHeader("Accept", "application/json");
+        std::string url = "https://server-mcp-xiaozhi-dz.onrender.com/api/chart?limit=10";
+        if (!http->Open("GET", url)) {
+            return;
+        }
+        auto status = http->GetStatusCode();
+        if (!status || *status != 200) {
+            http->Close();
+            return;
+        }
+        std::string body = http->ReadAll();
+        http->Close();
+
+        if (body.empty()) return;
+        cJSON* root = cJSON_Parse(body.c_str());
+        if (!root) return;
+        cJSON* songs_arr = cJSON_GetObjectItem(root, "songs");
+        if (songs_arr && cJSON_IsArray(songs_arr)) {
+            std::vector<SongItem> new_songs;
+            int count = cJSON_GetArraySize(songs_arr);
+            for (int i = 0; i < count && i < 10; ++i) {
+                cJSON* item = cJSON_GetArrayItem(songs_arr, i);
+                if (item) {
+                    cJSON* title_item = cJSON_GetObjectItem(item, "title");
+                    cJSON* artist_item = cJSON_GetObjectItem(item, "artist");
+                    if (title_item && title_item->valuestring) {
+                        SongItem s;
+                        s.title = title_item->valuestring;
+                        s.artist = (artist_item && artist_item->valuestring) ? artist_item->valuestring : "";
+                        new_songs.push_back(s);
+                    }
+                }
+            }
+            if (!new_songs.empty()) {
+                this->music_chart_songs_ = new_songs;
+                this->UpdateChartSongsUI();
+            }
+        }
+        cJSON_Delete(root);
+    }).detach();
+}
+
 void LcdDisplay::PlayChartSong(int index) {
     if (index < 0 || index >= 10) return;
-    const auto& item = kZingTopSongs[index];
-    music_current_song_ = item.title;
-    music_current_artist_ = item.artist;
+    std::string s_title = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].title : kZingTopSongsDefault[index].title;
+    std::string s_artist = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].artist : kZingTopSongsDefault[index].artist;
+
+    music_current_song_ = s_title;
+    music_current_artist_ = s_artist;
     music_is_playing_ = true;
     UpdateMusicUI();
 
     auto music = Board::GetInstance().GetMusic();
     if (music) {
-        std::string song_name = item.title;
-        std::string artist_name = item.artist;
         esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
         cfg.stack_size = 8192;
         cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
         cfg.thread_name = "play_chart";
         esp_pthread_set_cfg(&cfg);
-        std::thread([music, song_name, artist_name]() {
-            music->Download(song_name, artist_name);
+        std::thread([music, s_title, s_artist]() {
+            music->Download(s_title, s_artist);
         }).detach();
     }
 }
@@ -13969,6 +14038,7 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
     CreateMusicScreenUI();
     LayoutMusicWidgets(height_ > width_);
     UpdateMusicUI();
+    FetchRealtimeChart();
 
     if (music_box_) {
         lv_obj_remove_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
