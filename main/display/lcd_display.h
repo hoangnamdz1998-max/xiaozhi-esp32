@@ -79,6 +79,7 @@ public:
     enum ScreenMode {
         kScreenStandby,
         kScreenStandby2,
+        kScreenStandby3,
         kScreenMenu,
         kScreenQuickSettings,
         kScreenCalendar,
@@ -104,6 +105,7 @@ public:
     virtual void ShowMenu() override;
     virtual void ShowStandby() override;
     virtual void ShowStandby2();
+    virtual void ShowStandby3();
     virtual void ShowQuickSettings() override;
     virtual void ShowCalendar() override;
     virtual void ShowWeatherDetail() override;
@@ -428,6 +430,19 @@ protected:
     void UpdateStandby2Clock(const struct tm* tm_now, bool animate);
     void AnimateFlipCard(int idx, char new_char);
     void SyncStandby2Weather();
+
+    lv_obj_t* standby3_box_ = nullptr;
+    lv_obj_t* standby3_bg_image_ = nullptr;
+    lv_obj_t* standby3_status_box_ = nullptr;
+    lv_obj_t* standby3_wifi_icon_ = nullptr;
+    lv_obj_t* standby3_battery_icon_ = nullptr;
+    lv_obj_t* standby3_battery_pct_ = nullptr;
+    lv_obj_t* standby3_time_lbl_ = nullptr;
+    lv_obj_t* standby3_date_lbl_ = nullptr;
+
+    void CreateStandby3UI();
+    void LayoutStandby3Widgets(bool is_portrait);
+    void UpdateStandby3Clock(const struct tm* tm_now);
 
     void CreateMenuUI();
     void UpdateMenuStatusBar();

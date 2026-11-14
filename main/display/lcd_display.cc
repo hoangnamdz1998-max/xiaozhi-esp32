@@ -1660,8 +1660,7 @@ void LcdDisplay::SetupUI() {
     UpdateStandbyStatusBar();
 
     CreateStandby2UI();
-
-    CreateStandby2UI();
+    CreateStandby3UI();
 
     CreateMenuUI();
 
@@ -3159,6 +3158,7 @@ void LcdDisplay::SetupUI() {
     UpdateStandbyStatusBar();
 
     CreateStandby2UI();
+    CreateStandby3UI();
 
     CreateMenuUI();
 
@@ -4553,6 +4553,7 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
 
     LayoutStandbyWidgets(is_portrait);
     LayoutStandby2Widgets(is_portrait);
+    LayoutStandby3Widgets(is_portrait);
     LayoutWallpaperSettingsWidgets(is_portrait);
     UpdateStandbyStatusBar();
 
@@ -4846,6 +4847,14 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
         struct tm* tm2 = localtime(&now2);
         if (tm2 != nullptr) {
             UpdateStandby2Clock(tm2, true);
+        }
+    }
+    if (screen_mode_ == kScreenStandby3 || (standby3_box_ != nullptr && !lv_obj_has_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN))) {
+        UpdateStandbyStatusBar();
+        time_t now3 = time(nullptr);
+        struct tm* tm3 = localtime(&now3);
+        if (tm3 != nullptr) {
+            UpdateStandby3Clock(tm3);
         }
     }
 
@@ -5251,6 +5260,11 @@ void LcdDisplay::OnSwipeLeft() {
     }
 
     if (screen_mode_ == kScreenStandby2) {
+        ShowStandby3();
+        return;
+    }
+
+    if (screen_mode_ == kScreenStandby3) {
         return;
     }
 
@@ -5300,6 +5314,11 @@ void LcdDisplay::OnSwipeRight() {
 
         indev = lv_indev_get_next(indev);
 
+    }
+
+    if (screen_mode_ == kScreenStandby3) {
+        ShowStandby2();
+        return;
     }
 
     if (screen_mode_ == kScreenStandby2) {
@@ -5423,7 +5442,7 @@ void LcdDisplay::OnSwipeUp() {
 
 
 
-    if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2) {
+    if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || screen_mode_ == kScreenStandby3) {
 
         ShowMenu(); // Swipe up from standby opens icon menu
 
@@ -5528,6 +5547,7 @@ void LcdDisplay::ShowStandby() {
     previous_screen_mode_ = kScreenStandby;
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (menu_box_ != nullptr) {
 
@@ -5635,6 +5655,7 @@ void LcdDisplay::ShowMenu() {
     }
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
@@ -5725,6 +5746,9 @@ void LcdDisplay::ExitQuickSettings() {
             break;
         case kScreenStandby2:
             ShowStandby2();
+            break;
+        case kScreenStandby3:
+            ShowStandby3();
             break;
         case kScreenCalendar:
             ShowCalendar();
@@ -6919,7 +6943,8 @@ void LcdDisplay::SetMenuPage(int page, bool animate, bool swipe_left) {
 
 void LcdDisplay::UpdateStandbyStatusBar() {
     if ((standby_box_ == nullptr || lv_obj_has_flag(standby_box_, LV_OBJ_FLAG_HIDDEN)) &&
-        (standby2_box_ == nullptr || lv_obj_has_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN))) {
+        (standby2_box_ == nullptr || lv_obj_has_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN)) &&
+        (standby3_box_ == nullptr || lv_obj_has_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN))) {
         return;
     }
     auto& board = Board::GetInstance();
@@ -6930,6 +6955,9 @@ void LcdDisplay::UpdateStandbyStatusBar() {
         }
         if (standby2_wifi_icon_ != nullptr) {
             lv_label_set_text(standby2_wifi_icon_, wifi_icon);
+        }
+        if (standby3_wifi_icon_ != nullptr) {
+            lv_label_set_text(standby3_wifi_icon_, wifi_icon);
         }
     }
     if (standby_battery_label_ != nullptr || standby_battery_pct_label_ != nullptr ||
@@ -6946,6 +6974,9 @@ void LcdDisplay::UpdateStandbyStatusBar() {
             }
             if (standby2_battery_pct_ != nullptr) {
                 lv_label_set_text(standby2_battery_pct_, pct_str);
+            }
+            if (standby3_battery_pct_ != nullptr) {
+                lv_label_set_text(standby3_battery_pct_, pct_str);
             }
             const char* b_icon = MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL;
             if (charging) {
@@ -6976,11 +7007,16 @@ void LcdDisplay::UpdateStandbyStatusBar() {
             if (standby2_battery_icon_ != nullptr) {
                 lv_label_set_text(standby2_battery_icon_, b_icon);
             }
+            if (standby3_battery_icon_ != nullptr) {
+                lv_label_set_text(standby3_battery_icon_, b_icon);
+            }
         } else {
             if (standby_battery_label_ != nullptr) lv_label_set_text(standby_battery_label_, "");
             if (standby_battery_pct_label_ != nullptr) lv_label_set_text(standby_battery_pct_label_, "");
             if (standby2_battery_icon_ != nullptr) lv_label_set_text(standby2_battery_icon_, "");
             if (standby2_battery_pct_ != nullptr) lv_label_set_text(standby2_battery_pct_, "");
+            if (standby3_battery_icon_ != nullptr) lv_label_set_text(standby3_battery_icon_, "");
+            if (standby3_battery_pct_ != nullptr) lv_label_set_text(standby3_battery_pct_, "");
         }
     }
     if (standby_right_icons_ != nullptr) {
@@ -13923,62 +13959,142 @@ void LcdDisplay::CreateStandby2UI() {
         lv_image_set_src(standby2_bg_image_, &standby2_bg_dsc_);
     }
 
-    // 2. Top-Right Status Bar: [ WiFi ]  [ % Pin ] [ Ký hiệu Pin ] - Bố cục như màn 1
+    // 2. Weather Area phía dưới
+    standby2_weather_box_ = lv_obj_create(standby2_box_);
+    lv_obj_set_style_bg_opa(standby2_weather_box_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(standby2_weather_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby2_weather_box_, 0, 0);
+    lv_obj_set_size(standby2_weather_box_, 140, 48);
+    lv_obj_clear_flag(standby2_weather_box_, LV_OBJ_FLAG_SCROLLABLE);
+
+    standby2_city_lbl_ = lv_label_create(standby2_weather_box_);
+    lv_label_set_text(standby2_city_lbl_, "Hồ Chí Minh");
+    lv_obj_set_style_text_font(standby2_city_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby2_city_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby2_city_lbl_, 0, 0);
+    lv_obj_set_size(standby2_city_lbl_, 140, LV_SIZE_CONTENT);
+
+    standby2_weather_icon_ = lv_image_create(standby2_weather_box_);
+    lv_image_set_src(standby2_weather_icon_, &weather_icon_cloud_24_dsc);
+    lv_obj_set_pos(standby2_weather_icon_, 0, 20);
+
+    standby2_weather_temp_ = lv_label_create(standby2_weather_box_);
+    lv_label_set_text(standby2_weather_temp_, "--°C");
+    lv_obj_set_style_text_font(standby2_weather_temp_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby2_weather_temp_, lv_color_hex(0x38BDF8), 0);
+    lv_obj_set_pos(standby2_weather_temp_, 30, 22);
+
+    // 3. Top-Right Status Bar: [ WiFi ]  [ % Pin ] [ Ký hiệu Pin ]
     standby2_status_box_ = lv_obj_create(standby2_box_);
-    lv_obj_set_size(standby2_status_box_, LV_SIZE_CONTENT, 30);
-    lv_obj_set_style_bg_opa(standby2_status_box_, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(standby2_status_box_, 0, 0);
+    lv_obj_set_style_bg_color(standby2_status_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(standby2_status_box_, 140, 0);
+    lv_obj_set_style_radius(standby2_status_box_, 13, 0);
+    lv_obj_set_style_border_width(standby2_status_box_, 1, 0);
+    lv_obj_set_style_border_color(standby2_status_box_, lv_color_hex(0x334155), 0);
     lv_obj_set_style_pad_all(standby2_status_box_, 0, 0);
-    lv_obj_set_flex_flow(standby2_status_box_, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(standby2_status_box_, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(standby2_status_box_, 6, 0);
+    lv_obj_set_size(standby2_status_box_, 112, 26);
     lv_obj_clear_flag(standby2_status_box_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(standby2_status_box_, LV_OBJ_FLAG_CLICKABLE);
 
     standby2_wifi_icon_ = lv_label_create(standby2_status_box_);
     lv_label_set_text(standby2_wifi_icon_, MATERIAL_SYMBOLS_WIFI);
     lv_obj_set_style_text_font(standby2_wifi_icon_, &font_material_symbols_30_4, 0);
     lv_obj_set_style_text_color(standby2_wifi_icon_, lv_color_white(), 0);
-    lv_obj_clear_flag(standby2_wifi_icon_, LV_OBJ_FLAG_CLICKABLE);
-
-    standby2_battery_pct_ = lv_label_create(standby2_status_box_);
-    lv_label_set_text(standby2_battery_pct_, "--%");
-    lv_obj_set_style_text_font(standby2_battery_pct_, &font_noto_sans_basic_14_1, 0);
-    lv_obj_set_style_text_color(standby2_battery_pct_, lv_color_white(), 0);
-    lv_obj_clear_flag(standby2_battery_pct_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_align(standby2_wifi_icon_, LV_ALIGN_LEFT_MID, 6, 0);
 
     standby2_battery_icon_ = lv_label_create(standby2_status_box_);
     lv_label_set_text(standby2_battery_icon_, MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL);
     lv_obj_set_style_text_font(standby2_battery_icon_, &font_material_symbols_30_4, 0);
     lv_obj_set_style_text_color(standby2_battery_icon_, lv_color_white(), 0);
-    lv_obj_clear_flag(standby2_battery_icon_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_align(standby2_battery_icon_, LV_ALIGN_RIGHT_MID, -6, 0);
 
-    // 3. Top-Left Clock and Date: Giờ to ở góc trên bên trái kèm Thứ, Ngày Tháng Năm
-    standby2_time_lbl_ = lv_label_create(standby2_box_);
-    lv_label_set_text(standby2_time_lbl_, "--:--");
-    lv_obj_set_style_text_font(standby2_time_lbl_, &lv_font_montserrat_40, 0);
-    lv_obj_set_style_text_color(standby2_time_lbl_, lv_color_white(), 0);
-    lv_obj_clear_flag(standby2_time_lbl_, LV_OBJ_FLAG_CLICKABLE);
+    standby2_battery_pct_ = lv_label_create(standby2_status_box_);
+    lv_label_set_text(standby2_battery_pct_, "--%");
+    lv_obj_set_style_text_font(standby2_battery_pct_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby2_battery_pct_, lv_color_white(), 0);
+    lv_obj_align(standby2_battery_pct_, LV_ALIGN_RIGHT_MID, -37, 0);
 
-    standby2_date_lbl_ = lv_label_create(standby2_box_);
+    // 4. Đồng hồ lật phía dưới
+    standby2_clock_box_ = lv_obj_create(standby2_box_);
+    lv_obj_set_style_bg_opa(standby2_clock_box_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(standby2_clock_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby2_clock_box_, 0, 0);
+    lv_obj_set_size(standby2_clock_box_, 160, 78);
+    lv_obj_clear_flag(standby2_clock_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(standby2_clock_box_, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_add_event_cb(standby2_clock_box_, [](lv_event_t* e) {
+        auto* disp = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (disp) {
+            for (int i = 0; i < 4; ++i) {
+                disp->AnimateFlipCard(i, disp->flip_chars_[i]);
+            }
+        }
+    }, LV_EVENT_CLICKED, this);
+
+    int card_xs[4] = {0, 38, 84, 122};
+    for (int i = 0; i < 4; ++i) {
+        lv_obj_t* card = lv_obj_create(standby2_clock_box_);
+        flip_cards_[i] = card;
+        lv_obj_set_size(card, 36, 52);
+        lv_obj_set_pos(card, card_xs[i], 0);
+        lv_obj_set_style_bg_color(card, lv_color_hex(0x1C1D1F), 0);
+        lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(card, 8, 0);
+        lv_obj_set_style_border_width(card, 0, 0);
+        lv_obj_set_style_pad_all(card, 0, 0);
+        lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_style_clip_corner(card, true, 0);
+
+        lv_obj_t* lbl = lv_label_create(card);
+        flip_labels_[i] = lbl;
+        lv_label_set_text(lbl, "0");
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_40, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+
+        lv_obj_t* slit = lv_obj_create(card);
+        flip_slits_[i] = slit;
+        lv_obj_set_size(slit, 36, 2);
+        lv_obj_set_pos(slit, 0, 25);
+        lv_obj_set_style_bg_color(slit, lv_color_hex(0x0E0E10), 0);
+        lv_obj_set_style_bg_opa(slit, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(slit, 0, 0);
+        lv_obj_set_style_pad_all(slit, 0, 0);
+        lv_obj_clear_flag(slit, LV_OBJ_FLAG_SCROLLABLE);
+
+        lv_obj_t* flap = lv_obj_create(card);
+        flip_flaps_[i] = flap;
+        lv_obj_set_size(flap, 36, 0);
+        lv_obj_set_pos(flap, 0, 0);
+        lv_obj_set_style_bg_color(flap, lv_color_hex(0x1C1D1F), 0);
+        lv_obj_set_style_bg_opa(flap, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(flap, 0, 0);
+        lv_obj_set_style_border_width(flap, 0, 0);
+        lv_obj_set_style_pad_all(flap, 0, 0);
+        lv_obj_clear_flag(flap, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_style_clip_corner(flap, true, 0);
+        lv_obj_add_flag(flap, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_t* flap_lbl = lv_label_create(flap);
+        flip_flap_labels_[i] = flap_lbl;
+        lv_label_set_text(flap_lbl, "0");
+        lv_obj_set_style_text_font(flap_lbl, &lv_font_montserrat_40, 0);
+        lv_obj_set_style_text_color(flap_lbl, lv_color_white(), 0);
+        lv_obj_align(flap_lbl, LV_ALIGN_CENTER, 0, 0);
+
+        lv_obj_move_foreground(slit);
+    }
+
+    standby2_date_lbl_ = lv_label_create(standby2_clock_box_);
     lv_label_set_text(standby2_date_lbl_, "Thứ Ba, 10/11/2026");
     lv_obj_set_style_text_font(standby2_date_lbl_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(standby2_date_lbl_, lv_color_white(), 0);
-    lv_obj_clear_flag(standby2_date_lbl_, LV_OBJ_FLAG_CLICKABLE);
-
-    // Weather và flip clock dưới đã bỏ
-    standby2_weather_box_ = nullptr;
-    standby2_city_lbl_ = nullptr;
-    standby2_weather_icon_ = nullptr;
-    standby2_weather_temp_ = nullptr;
-    standby2_clock_box_ = nullptr;
-    for (int i = 0; i < 4; ++i) {
-        flip_cards_[i] = nullptr;
-        flip_labels_[i] = nullptr;
-        flip_slits_[i] = nullptr;
-        flip_flaps_[i] = nullptr;
-        flip_flap_labels_[i] = nullptr;
-    }
+    lv_obj_set_style_bg_opa(standby2_date_lbl_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(standby2_date_lbl_, 0, 0);
+    lv_obj_set_style_pad_all(standby2_date_lbl_, 0, 0);
+    lv_obj_set_pos(standby2_date_lbl_, 0, 56);
+    lv_obj_set_size(standby2_date_lbl_, 160, 20);
+    lv_obj_set_style_text_align(standby2_date_lbl_, LV_TEXT_ALIGN_CENTER, 0);
 
     LayoutStandby2Widgets(height_ > width_);
     UpdateStandbyStatusBar();
@@ -13991,7 +14107,6 @@ void LcdDisplay::LayoutStandby2Widgets(bool is_portrait) {
     lv_obj_set_size(standby2_box_, w, h);
     if (standby2_bg_image_) lv_obj_set_size(standby2_bg_image_, w, h);
 
-    // Tự động load đúng hình nền dọc/ngang full màn hình
     int cur_orient = is_portrait ? 1 : 0;
     int cur_wp_idx = WallpaperManager::GetInstance().GetActiveWallpaperIndex();
     if (standby2_last_orient_ != cur_orient || standby2_last_wp_idx_ != cur_wp_idx) {
@@ -14025,17 +14140,32 @@ void LcdDisplay::LayoutStandby2Widgets(bool is_portrait) {
         }
     }
 
-    if (standby2_status_box_) {
-        lv_obj_align(standby2_status_box_, LV_ALIGN_TOP_RIGHT, is_portrait ? -8 : -10, 6);
-        lv_obj_move_foreground(standby2_status_box_);
-    }
-    if (standby2_time_lbl_) {
-        lv_obj_set_pos(standby2_time_lbl_, 12, 6);
-        lv_obj_move_foreground(standby2_time_lbl_);
-    }
-    if (standby2_date_lbl_) {
-        lv_obj_set_pos(standby2_date_lbl_, 14, 50);
-        lv_obj_move_foreground(standby2_date_lbl_);
+    if (is_portrait) {
+        if (standby2_status_box_) lv_obj_set_pos(standby2_status_box_, 240 - 112 - 8, 8);
+        if (standby2_weather_box_) {
+            lv_obj_set_pos(standby2_weather_box_, 14, 12);
+            lv_obj_set_size(standby2_weather_box_, 105, 52);
+        }
+        if (standby2_city_lbl_) {
+            lv_obj_set_size(standby2_city_lbl_, 105, LV_SIZE_CONTENT);
+        }
+        if (standby2_clock_box_) {
+            lv_obj_set_pos(standby2_clock_box_, 40, 236);
+            lv_obj_set_size(standby2_clock_box_, 160, 78);
+        }
+    } else {
+        if (standby2_status_box_) lv_obj_set_pos(standby2_status_box_, 320 - 112 - 8, 4);
+        if (standby2_weather_box_) {
+            lv_obj_set_pos(standby2_weather_box_, 12, 184);
+            lv_obj_set_size(standby2_weather_box_, 140, 48);
+        }
+        if (standby2_city_lbl_) {
+            lv_obj_set_size(standby2_city_lbl_, 140, LV_SIZE_CONTENT);
+        }
+        if (standby2_clock_box_) {
+            lv_obj_set_pos(standby2_clock_box_, 320 - 160 - 8, 156);
+            lv_obj_set_size(standby2_clock_box_, 160, 78);
+        }
     }
 }
 
@@ -14048,20 +14178,16 @@ void LcdDisplay::AnimateFlipCard(int idx, char new_char) {
     lv_obj_t* main_lbl = flip_labels_[idx];
     lv_anim_delete(flap, nullptr);
 
-    // Lấy ký tự cũ hiện tại
     const char* old_txt = lv_label_get_text(main_lbl);
     char old_char = (old_txt && old_txt[0]) ? old_txt[0] : '0';
 
-    // Cập nhật flap hiển thị ký tự cũ ở nửa trên
     char old_str[2] = {old_char, '\0'};
     lv_label_set_text(flap_lbl, old_str);
     lv_obj_set_style_text_color(flap_lbl, lv_obj_get_style_text_color(main_lbl, LV_PART_MAIN), 0);
 
-    // Cập nhật main_lbl thành ký tự mới (nằm dưới flap, sẽ lộ ra khi flap gập xuống)
     char new_str[2] = {new_char, '\0'};
     lv_label_set_text(main_lbl, new_str);
 
-    // Chuẩn bị flap ở nửa trên (y = 0, h = 26)
     lv_obj_remove_flag(flap, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(flap);
     if (flip_slits_[idx]) lv_obj_move_foreground(flip_slits_[idx]);
@@ -14076,7 +14202,6 @@ void LcdDisplay::AnimateFlipCard(int idx, char new_char) {
     };
     auto* data = new FlipAnimData{this, idx, new_char};
 
-    // Giai đoạn 1: Nửa trên của thẻ cũ gập xuống giữa (26 -> 0px)
     lv_anim_t a1;
     lv_anim_init(&a1);
     lv_anim_set_var(&a1, flap);
@@ -14092,11 +14217,9 @@ void LcdDisplay::AnimateFlipCard(int idx, char new_char) {
             lv_obj_t* f = d->display->flip_flaps_[d->idx];
             lv_obj_t* f_lbl = d->display->flip_flap_labels_[d->idx];
             if (f && f_lbl) {
-                // Đổi flap sang ký tự mới cho nửa dưới
                 char s[2] = {d->new_char, '\0'};
                 lv_label_set_text(f_lbl, s);
 
-                // Giai đoạn 2: Nửa dưới của thẻ mới bung mở từ giữa xuống đáy (0 -> 26px)
                 lv_obj_set_pos(f, 0, 26);
                 lv_obj_set_size(f, 36, 0);
                 lv_obj_align(f_lbl, LV_ALIGN_CENTER, 0, -26);
@@ -14129,10 +14252,25 @@ void LcdDisplay::AnimateFlipCard(int idx, char new_char) {
 void LcdDisplay::UpdateStandby2Clock(const struct tm* tm_now, bool animate) {
     if (standby2_box_ == nullptr) return;
 
-    if (standby2_time_lbl_ != nullptr) {
-        char tbuf[16];
-        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", tm_now->tm_hour, tm_now->tm_min);
-        lv_label_set_text(standby2_time_lbl_, tbuf);
+    char new_digits[4];
+    new_digits[0] = '0' + (tm_now->tm_hour / 10);
+    new_digits[1] = '0' + (tm_now->tm_hour % 10);
+    new_digits[2] = '0' + (tm_now->tm_min / 10);
+    new_digits[3] = '0' + (tm_now->tm_min % 10);
+
+    bool is_visible = !lv_obj_has_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+
+    for (int i = 0; i < 4; ++i) {
+        if (new_digits[i] != flip_chars_[i]) {
+            char old_char = flip_chars_[i];
+            flip_chars_[i] = new_digits[i];
+            if (animate && is_visible && old_char != ' ') {
+                AnimateFlipCard(i, new_digits[i]);
+            } else {
+                char s[2] = {new_digits[i], '\0'};
+                if (flip_labels_[i]) lv_label_set_text(flip_labels_[i], s);
+            }
+        }
     }
 
     if (standby2_date_lbl_ != nullptr) {
@@ -14150,7 +14288,6 @@ void LcdDisplay::SyncStandby2Weather() {
 
     const auto& info = WeatherService::GetInstance().GetWeatherInfo();
 
-    // 1. City / Location (e.g. from WeatherService or Standby 1)
     if (standby2_city_lbl_ != nullptr) {
         if (!info.city.empty() && info.city != "Đang định vị...") {
             lv_label_set_text(standby2_city_lbl_, info.city.c_str());
@@ -14162,7 +14299,6 @@ void LcdDisplay::SyncStandby2Weather() {
         }
     }
 
-    // 2. Temperature
     if (standby2_weather_temp_ != nullptr) {
         if (info.temp > -60.0f && info.temp < 80.0f && info.temp != 0.0f) {
             char tbuf[16];
@@ -14176,7 +14312,6 @@ void LcdDisplay::SyncStandby2Weather() {
         }
     }
 
-    // 3. Weather Icon (24x24 px)
     if (standby2_weather_icon_ != nullptr) {
         const lv_image_dsc_t* dsc24 = &weather_icon_cloud_24_dsc;
         switch (info.icon_type) {
@@ -14190,6 +14325,144 @@ void LcdDisplay::SyncStandby2Weather() {
             default: dsc24 = &weather_icon_cloud_24_dsc; break;
         }
         lv_image_set_src(standby2_weather_icon_, dsc24);
+    }
+}
+
+// =========================================================================
+// MÀN HÌNH CHỜ 3 (Standby 3): Đồng hồ số to + Ngày tháng ở góc trên bên trái, sóng & pin ở góc trên bên phải
+// =========================================================================
+
+void LcdDisplay::CreateStandby3UI() {
+    if (standby3_box_ != nullptr) return;
+
+    auto screen = lv_screen_active();
+    standby3_box_ = lv_obj_create(screen);
+    lv_obj_set_size(standby3_box_, width_, height_);
+    lv_obj_set_pos(standby3_box_, 0, 0);
+    lv_obj_set_style_bg_color(standby3_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(standby3_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(standby3_box_, 0, 0);
+    lv_obj_set_style_border_width(standby3_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby3_box_, 0, 0);
+    lv_obj_clear_flag(standby3_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_add_event_cb(standby3_box_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self) {
+            if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 300) return;
+            self->CycleStandby2Wallpaper();
+        }
+    }, LV_EVENT_CLICKED, this);
+
+    // 1. Wallpaper background (dùng chung buffer standby2_bg_dsc_)
+    standby3_bg_image_ = lv_image_create(standby3_box_);
+    lv_obj_set_size(standby3_bg_image_, width_, height_);
+    lv_obj_set_pos(standby3_bg_image_, 0, 0);
+    lv_obj_set_style_border_width(standby3_bg_image_, 0, 0);
+    lv_obj_add_flag(standby3_bg_image_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(standby3_bg_image_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self) {
+            if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 300) return;
+            self->CycleStandby2Wallpaper();
+        }
+    }, LV_EVENT_CLICKED, this);
+
+    if (standby2_bg_buf_ != nullptr) {
+        lv_image_set_src(standby3_bg_image_, &standby2_bg_dsc_);
+    }
+
+    // 2. Top-Right Status Bar: [ WiFi ]  [ % Pin ] [ Ký hiệu Pin ]
+    standby3_status_box_ = lv_obj_create(standby3_box_);
+    lv_obj_set_size(standby3_status_box_, LV_SIZE_CONTENT, 30);
+    lv_obj_set_style_bg_opa(standby3_status_box_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(standby3_status_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby3_status_box_, 0, 0);
+    lv_obj_set_flex_flow(standby3_status_box_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(standby3_status_box_, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(standby3_status_box_, 6, 0);
+    lv_obj_clear_flag(standby3_status_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(standby3_status_box_, LV_OBJ_FLAG_CLICKABLE);
+
+    standby3_wifi_icon_ = lv_label_create(standby3_status_box_);
+    lv_label_set_text(standby3_wifi_icon_, MATERIAL_SYMBOLS_WIFI);
+    lv_obj_set_style_text_font(standby3_wifi_icon_, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(standby3_wifi_icon_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby3_wifi_icon_, LV_OBJ_FLAG_CLICKABLE);
+
+    standby3_battery_pct_ = lv_label_create(standby3_status_box_);
+    lv_label_set_text(standby3_battery_pct_, "--%");
+    lv_obj_set_style_text_font(standby3_battery_pct_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_color(standby3_battery_pct_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby3_battery_pct_, LV_OBJ_FLAG_CLICKABLE);
+
+    standby3_battery_icon_ = lv_label_create(standby3_status_box_);
+    lv_label_set_text(standby3_battery_icon_, MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL);
+    lv_obj_set_style_text_font(standby3_battery_icon_, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(standby3_battery_icon_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby3_battery_icon_, LV_OBJ_FLAG_CLICKABLE);
+
+    // 3. Top-Left Clock & Date
+    standby3_time_lbl_ = lv_label_create(standby3_box_);
+    lv_label_set_text(standby3_time_lbl_, "--:--");
+    lv_obj_set_style_text_font(standby3_time_lbl_, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(standby3_time_lbl_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby3_time_lbl_, LV_OBJ_FLAG_CLICKABLE);
+
+    standby3_date_lbl_ = lv_label_create(standby3_box_);
+    lv_label_set_text(standby3_date_lbl_, "Thứ Ba, 10/11/2026");
+    lv_obj_set_style_text_font(standby3_date_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby3_date_lbl_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby3_date_lbl_, LV_OBJ_FLAG_CLICKABLE);
+
+    LayoutStandby3Widgets(height_ > width_);
+    UpdateStandbyStatusBar();
+}
+
+void LcdDisplay::LayoutStandby3Widgets(bool is_portrait) {
+    if (standby3_box_ == nullptr) return;
+    int w = is_portrait ? 240 : 320;
+    int h = is_portrait ? 320 : 240;
+    lv_obj_set_size(standby3_box_, w, h);
+    if (standby3_bg_image_) {
+        lv_obj_set_size(standby3_bg_image_, w, h);
+        if (standby2_bg_buf_ != nullptr) {
+            lv_image_set_src(standby3_bg_image_, &standby2_bg_dsc_);
+        }
+    }
+
+    if (standby3_status_box_) {
+        lv_obj_align(standby3_status_box_, LV_ALIGN_TOP_RIGHT, is_portrait ? -8 : -10, 6);
+        lv_obj_move_foreground(standby3_status_box_);
+    }
+    if (standby3_time_lbl_) {
+        lv_obj_set_pos(standby3_time_lbl_, 12, 6);
+        lv_obj_move_foreground(standby3_time_lbl_);
+    }
+    if (standby3_date_lbl_) {
+        lv_obj_set_pos(standby3_date_lbl_, 14, 50);
+        lv_obj_move_foreground(standby3_date_lbl_);
+    }
+}
+
+void LcdDisplay::UpdateStandby3Clock(const struct tm* tm_now) {
+    if (standby3_box_ == nullptr) return;
+
+    if (standby3_time_lbl_ != nullptr) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", tm_now->tm_hour, tm_now->tm_min);
+        lv_label_set_text(standby3_time_lbl_, tbuf);
+    }
+
+    if (standby3_date_lbl_ != nullptr) {
+        const char* full_wdays[] = {"Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"};
+        char dbuf[64];
+        snprintf(dbuf, sizeof(dbuf), "%s, %02d/%02d/%04d", 
+                 full_wdays[tm_now->tm_wday % 7], 
+                 tm_now->tm_mday, tm_now->tm_mon + 1, tm_now->tm_year + 1900);
+        lv_label_set_text(standby3_date_lbl_, dbuf);
     }
 }
 
@@ -14211,6 +14484,9 @@ void LcdDisplay::CycleStandby2Wallpaper() {
     WallpaperManager::GetInstance().SetActiveWallpaperIndex(next_idx);
     bool is_p = (height_ > width_);
     LayoutStandby2Widgets(is_p);
+    if (standby3_box_ != nullptr) {
+        LayoutStandby3Widgets(is_p);
+    }
 }
 
 void LcdDisplay::ShowStandby2() {
@@ -14221,6 +14497,7 @@ void LcdDisplay::ShowStandby2() {
     previous_screen_mode_ = kScreenStandby2;
 
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_set_y(menu_box_, 0);
@@ -14243,6 +14520,9 @@ void LcdDisplay::ShowStandby2() {
     if (fm_box_ != nullptr) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
     if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
 
+    if (standby2_box_ == nullptr) {
+        CreateStandby2UI();
+    }
     if (standby2_box_ != nullptr) {
         lv_obj_remove_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_move_foreground(standby2_box_);
@@ -14257,8 +14537,54 @@ void LcdDisplay::ShowStandby2() {
     }
 }
 
+void LcdDisplay::ShowStandby3() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
 
-// Buffer & Descriptor cho ma QR (110x110 RGB565)
+    screen_mode_ = kScreenStandby3;
+    previous_screen_mode_ = kScreenStandby3;
+
+    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
+        lv_obj_set_y(menu_box_, 0);
+        lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
+        lv_obj_set_y(quick_settings_box_, 0);
+        lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+    if (clock_box_ != nullptr) lv_obj_add_flag(clock_box_, LV_OBJ_FLAG_HIDDEN);
+    if (stopwatch_box_ != nullptr) lv_obj_add_flag(stopwatch_box_, LV_OBJ_FLAG_HIDDEN);
+    if (timer_box_ != nullptr) lv_obj_add_flag(timer_box_, LV_OBJ_FLAG_HIDDEN);
+    if (rates_box_ != nullptr) lv_obj_add_flag(rates_box_, LV_OBJ_FLAG_HIDDEN);
+    if (calc_box_ != nullptr) lv_obj_add_flag(calc_box_, LV_OBJ_FLAG_HIDDEN);
+    if (flashlight_box_ != nullptr) lv_obj_add_flag(flashlight_box_, LV_OBJ_FLAG_HIDDEN);
+    if (fm_box_ != nullptr) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
+    if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
+
+    if (standby3_box_ == nullptr) {
+        CreateStandby3UI();
+    }
+    if (standby3_box_ != nullptr) {
+        bool is_p = (height_ > width_);
+        LayoutStandby3Widgets(is_p);
+        lv_obj_remove_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(standby3_box_);
+        UpdateStandbyStatusBar();
+        time_t now = time(nullptr);
+        struct tm* tm_now = localtime(&now);
+        if (tm_now) {
+            UpdateStandby3Clock(tm_now);
+        }
+    }
+}
+
 static uint16_t s_qr_pixels[110 * 110];
 static const lv_image_dsc_t s_qr_dsc = {
     .header = {
@@ -14602,6 +14928,7 @@ void LcdDisplay::ShowWallpaperSettings() {
     if (menu_box_) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby_box_) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby2_box_) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby3_box_) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (quick_settings_box_) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
     wp_preview_idx_ = WallpaperManager::GetInstance().GetActiveWallpaperIndex();
@@ -14615,7 +14942,11 @@ void LcdDisplay::ShowWallpaperSettings() {
 
 void LcdDisplay::ReloadWallpaper() {
     standby2_last_wp_idx_ = -1;
-    LayoutStandby2Widgets(height_ > width_);
+    bool is_p = (height_ > width_);
+    LayoutStandby2Widgets(is_p);
+    if (standby3_box_ != nullptr) {
+        LayoutStandby3Widgets(is_p);
+    }
 }
 
 void LcdDisplay::LayoutWallpaperSettingsWidgets(bool is_portrait) {
