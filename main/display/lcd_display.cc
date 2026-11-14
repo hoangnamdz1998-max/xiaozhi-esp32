@@ -1421,11 +1421,6 @@ void LcdDisplay::SetupUI() {
     font_noto_sans_custom_30_4.get_glyph_dsc = CustomFontGetGlyphDsc30;
     font_noto_sans_custom_30_4.fallback = &font_vietnamese_30_4;
 
-    const_cast<lv_font_t*>(&font_noto_sans_basic_14_1)->fallback = &font_vietnamese_14_4;
-    const_cast<lv_font_t*>(&font_noto_sans_basic_16_4)->fallback = &font_vietnamese_16_4;
-    const_cast<lv_font_t*>(&font_noto_sans_basic_20_4)->fallback = &font_vietnamese_20_4;
-    const_cast<lv_font_t*>(&font_noto_sans_basic_30_4)->fallback = &font_vietnamese_30_4;
-
 
 
     Settings settings("display", false);
@@ -2926,11 +2921,6 @@ void LcdDisplay::SetupUI() {
     font_noto_sans_custom_30_4 = font_noto_sans_basic_30_4;
     font_noto_sans_custom_30_4.get_glyph_dsc = CustomFontGetGlyphDsc30;
     font_noto_sans_custom_30_4.fallback = &font_vietnamese_30_4;
-
-    const_cast<lv_font_t*>(&font_noto_sans_basic_14_1)->fallback = &font_vietnamese_14_4;
-    const_cast<lv_font_t*>(&font_noto_sans_basic_16_4)->fallback = &font_vietnamese_16_4;
-    const_cast<lv_font_t*>(&font_noto_sans_basic_20_4)->fallback = &font_vietnamese_20_4;
-    const_cast<lv_font_t*>(&font_noto_sans_basic_30_4)->fallback = &font_vietnamese_30_4;
 
 
 
