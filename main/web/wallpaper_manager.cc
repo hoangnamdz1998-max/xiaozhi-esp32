@@ -108,23 +108,28 @@ std::string WallpaperManager::GetFilePath(int idx, bool is_portrait) {
 
 std::vector<WallpaperItem> WallpaperManager::GetWallpaperList() {
     std::vector<WallpaperItem> list;
+    // 4 ảnh hệ thống
+    list.push_back({1, "Ảnh 1", true});
+    list.push_back({2, "Ảnh 2", true});
+    list.push_back({3, "Ảnh 3", true});
+    list.push_back({4, "Ảnh 4", true});
+
+    int user_counter = 1;
     for (int idx : custom_indices_) {
-        std::string name = "Ảnh " + std::to_string(idx);
-        if (idx == 1) name = "Porsche GT3 RS";
-        else if (idx == 2) name = "Phong Cảnh Núi";
-        else if (idx == 3) name = "Gojo Satoru Anime";
-        else if (idx == 4) name = "Porsche 911 Đua";
-        list.push_back({idx, name, false});
-    }
-    if (list.empty()) {
-        list.push_back({0, "Ảnh Mặc Định", true});
+        if (idx >= 5) {
+            std::string name = "Ảnh " + std::to_string(user_counter++);
+            list.push_back({idx, name, false});
+        }
     }
     return list;
 }
 
 int WallpaperManager::GetNextAvailableIndex() {
-    if (custom_indices_.empty()) return 1;
-    return custom_indices_.back() + 1;
+    int max_idx = 4;
+    for (int idx : custom_indices_) {
+        if (idx > max_idx) max_idx = idx;
+    }
+    return max_idx + 1;
 }
 
 bool WallpaperManager::SaveWallpaperData(int idx, bool is_portrait, const uint8_t* data, size_t len) {

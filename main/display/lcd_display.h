@@ -177,6 +177,7 @@ protected:
     lv_obj_t* wp_preview_clock_lbl_ = nullptr;
     lv_obj_t* wp_img_scroll_ = nullptr;
     lv_obj_t* wp_layout_scroll_ = nullptr;
+    lv_obj_t* wp_user_scroll_ = nullptr;
     lv_obj_t* wp_sec1_lbl_ = nullptr;
     lv_obj_t* wp_sec2_lbl_ = nullptr;
     lv_obj_t* wp_save_btn_ = nullptr;
@@ -413,6 +414,7 @@ protected:
     lv_obj_t* standby2_weather_temp_ = nullptr;
 
     lv_obj_t* standby2_clock_box_ = nullptr;
+    lv_obj_t* standby2_time_lbl_ = nullptr;
     lv_obj_t* flip_cards_[4] = {nullptr};
     lv_obj_t* flip_labels_[4] = {nullptr};
     lv_obj_t* flip_slits_[4] = {nullptr};

@@ -5251,7 +5251,6 @@ void LcdDisplay::OnSwipeLeft() {
     }
 
     if (screen_mode_ == kScreenStandby2) {
-        CycleStandby2Wallpaper();
         return;
     }
 
@@ -13880,8 +13879,16 @@ void LcdDisplay::CreateStandby2UI() {
     lv_obj_set_style_pad_all(standby2_box_, 0, 0);
     lv_obj_clear_flag(standby2_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(standby2_box_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self) {
+            if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 300) return;
+            self->CycleStandby2Wallpaper();
+        }
+    }, LV_EVENT_CLICKED, this);
 
-    // 1. Wallpaper from HINH CHO 1
+    // 1. Wallpaper background
     standby2_bg_image_ = lv_image_create(standby2_box_);
     lv_obj_set_size(standby2_bg_image_, width_, height_);
     lv_obj_set_pos(standby2_bg_image_, 0, 0);
@@ -13916,155 +13923,62 @@ void LcdDisplay::CreateStandby2UI() {
         lv_image_set_src(standby2_bg_image_, &standby2_bg_dsc_);
     }
 
-    // 2. Bottom-Left Weather Area (Bỏ viền đen mờ, chỉ để chữ và icon, đặt ở góc dưới bên trái)
-    standby2_weather_box_ = lv_obj_create(standby2_box_);
-    lv_obj_set_style_bg_opa(standby2_weather_box_, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(standby2_weather_box_, 0, 0);
-    lv_obj_set_style_pad_all(standby2_weather_box_, 0, 0);
-    lv_obj_set_size(standby2_weather_box_, 140, 48);
-    lv_obj_clear_flag(standby2_weather_box_, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Dòng 1: Tên địa điểm ("Hồ Chí Minh")
-    standby2_city_lbl_ = lv_label_create(standby2_weather_box_);
-    lv_label_set_text(standby2_city_lbl_, "Hồ Chí Minh");
-    lv_obj_set_style_text_font(standby2_city_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby2_city_lbl_, lv_color_white(), 0);
-    lv_obj_set_pos(standby2_city_lbl_, 0, 0);
-    lv_obj_set_size(standby2_city_lbl_, 140, LV_SIZE_CONTENT);
-
-    // Dòng 2: Icon đám mây/thời tiết (24x24) + Số nhiệt độ
-    standby2_weather_icon_ = lv_image_create(standby2_weather_box_);
-    lv_image_set_src(standby2_weather_icon_, &weather_icon_cloud_24_dsc);
-    lv_obj_set_pos(standby2_weather_icon_, 0, 20);
-
-    standby2_weather_temp_ = lv_label_create(standby2_weather_box_);
-    lv_label_set_text(standby2_weather_temp_, "--°C");
-    lv_obj_set_style_text_font(standby2_weather_temp_, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(standby2_weather_temp_, lv_color_hex(0x38BDF8), 0);
-    lv_obj_set_pos(standby2_weather_temp_, 30, 22);
-
-    // 3. Top-Right Status Bar: [ WiFi ]  [ % Pin ] [ Ký hiệu Pin ] - % Pin xích qua phải gần pin, không bị WiFi đè
+    // 2. Top-Right Status Bar: [ WiFi ]  [ % Pin ] [ Ký hiệu Pin ] - Bố cục như màn 1
     standby2_status_box_ = lv_obj_create(standby2_box_);
-    lv_obj_set_style_bg_color(standby2_status_box_, lv_color_black(), 0);
-    lv_obj_set_style_bg_opa(standby2_status_box_, 140, 0);
-    lv_obj_set_style_radius(standby2_status_box_, 13, 0);
-    lv_obj_set_style_border_width(standby2_status_box_, 1, 0);
-    lv_obj_set_style_border_color(standby2_status_box_, lv_color_hex(0x334155), 0);
+    lv_obj_set_size(standby2_status_box_, LV_SIZE_CONTENT, 30);
+    lv_obj_set_style_bg_opa(standby2_status_box_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(standby2_status_box_, 0, 0);
     lv_obj_set_style_pad_all(standby2_status_box_, 0, 0);
-    lv_obj_set_size(standby2_status_box_, 112, 26);
+    lv_obj_set_flex_flow(standby2_status_box_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(standby2_status_box_, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(standby2_status_box_, 6, 0);
     lv_obj_clear_flag(standby2_status_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(standby2_status_box_, LV_OBJ_FLAG_CLICKABLE);
 
-    // 1. Sóng Wi-Fi bên trái
     standby2_wifi_icon_ = lv_label_create(standby2_status_box_);
     lv_label_set_text(standby2_wifi_icon_, MATERIAL_SYMBOLS_WIFI);
     lv_obj_set_style_text_font(standby2_wifi_icon_, &font_material_symbols_30_4, 0);
     lv_obj_set_style_text_color(standby2_wifi_icon_, lv_color_white(), 0);
-    lv_obj_align(standby2_wifi_icon_, LV_ALIGN_LEFT_MID, 6, 0);
+    lv_obj_clear_flag(standby2_wifi_icon_, LV_OBJ_FLAG_CLICKABLE);
 
-    // 2. Ký hiệu Pin neo sát mép phải
+    standby2_battery_pct_ = lv_label_create(standby2_status_box_);
+    lv_label_set_text(standby2_battery_pct_, "--%");
+    lv_obj_set_style_text_font(standby2_battery_pct_, &font_noto_sans_basic_14_1, 0);
+    lv_obj_set_style_text_color(standby2_battery_pct_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby2_battery_pct_, LV_OBJ_FLAG_CLICKABLE);
+
     standby2_battery_icon_ = lv_label_create(standby2_status_box_);
     lv_label_set_text(standby2_battery_icon_, MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL);
     lv_obj_set_style_text_font(standby2_battery_icon_, &font_material_symbols_30_4, 0);
     lv_obj_set_style_text_color(standby2_battery_icon_, lv_color_white(), 0);
-    lv_obj_align(standby2_battery_icon_, LV_ALIGN_RIGHT_MID, -6, 0);
+    lv_obj_clear_flag(standby2_battery_icon_, LV_OBJ_FLAG_CLICKABLE);
 
-    // 3. Số % pin xích qua phải gần cục pin (cách pin 4px, cách WiFi tới 16px)
-    standby2_battery_pct_ = lv_label_create(standby2_status_box_);
-    lv_label_set_text(standby2_battery_pct_, "--%");
-    lv_obj_set_style_text_font(standby2_battery_pct_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby2_battery_pct_, lv_color_white(), 0);
-    lv_obj_align(standby2_battery_pct_, LV_ALIGN_RIGHT_MID, -37, 0);
+    // 3. Top-Left Clock and Date: Giờ to ở góc trên bên trái kèm Thứ, Ngày Tháng Năm
+    standby2_time_lbl_ = lv_label_create(standby2_box_);
+    lv_label_set_text(standby2_time_lbl_, "--:--");
+    lv_obj_set_style_text_font(standby2_time_lbl_, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(standby2_time_lbl_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby2_time_lbl_, LV_OBJ_FLAG_CLICKABLE);
 
-    // 4. Bottom-Right Flip Clock & Date
-    standby2_clock_box_ = lv_obj_create(standby2_box_);
-    lv_obj_set_style_bg_opa(standby2_clock_box_, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(standby2_clock_box_, 0, 0);
-    lv_obj_set_style_pad_all(standby2_clock_box_, 0, 0);
-    lv_obj_set_size(standby2_clock_box_, 160, 78);
-    lv_obj_clear_flag(standby2_clock_box_, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(standby2_clock_box_, LV_OBJ_FLAG_CLICKABLE);
-
-    // Chạm vào đồng hồ để xem hiệu ứng lật tức thì
-    lv_obj_add_event_cb(standby2_clock_box_, [](lv_event_t* e) {
-        auto* disp = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        if (disp) {
-            for (int i = 0; i < 4; ++i) {
-                disp->AnimateFlipCard(i, disp->flip_chars_[i]);
-            }
-        }
-    }, LV_EVENT_CLICKED, this);
-
-    // Create 4 flip cards: H1, H2, M1, M2 (no colon)
-    // Spacing: [0..36] (2px gap) [38..74] (10px gap) [84..120] (2px gap) [122..158]
-    int card_xs[4] = {0, 38, 84, 122};
-    for (int i = 0; i < 4; ++i) {
-        lv_obj_t* card = lv_obj_create(standby2_clock_box_);
-        flip_cards_[i] = card;
-        lv_obj_set_size(card, 36, 52);
-        lv_obj_set_pos(card, card_xs[i], 0);
-        lv_obj_set_style_bg_color(card, lv_color_hex(0x1C1D1F), 0);
-        lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(card, 8, 0);
-        lv_obj_set_style_border_width(card, 0, 0);
-        lv_obj_set_style_pad_all(card, 0, 0);
-        lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_style_clip_corner(card, true, 0);
-
-        // Digit Label (Montserrat 40)
-        lv_obj_t* lbl = lv_label_create(card);
-        flip_labels_[i] = lbl;
-        lv_label_set_text(lbl, "0");
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_40, 0);
-        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
-        lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
-
-        // Seam / Horizontal slit line across the middle
-        lv_obj_t* slit = lv_obj_create(card);
-        flip_slits_[i] = slit;
-        lv_obj_set_size(slit, 36, 2);
-        lv_obj_set_pos(slit, 0, 25);
-        lv_obj_set_style_bg_color(slit, lv_color_hex(0x0E0E10), 0);
-        lv_obj_set_style_bg_opa(slit, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(slit, 0, 0);
-        lv_obj_set_style_pad_all(slit, 0, 0);
-        lv_obj_clear_flag(slit, LV_OBJ_FLAG_SCROLLABLE);
-
-        // Flap overlay for flip animation (contains its own digit label)
-        lv_obj_t* flap = lv_obj_create(card);
-        flip_flaps_[i] = flap;
-        lv_obj_set_size(flap, 36, 0);
-        lv_obj_set_pos(flap, 0, 0);
-        lv_obj_set_style_bg_color(flap, lv_color_hex(0x1C1D1F), 0);
-        lv_obj_set_style_bg_opa(flap, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(flap, 0, 0);
-        lv_obj_set_style_border_width(flap, 0, 0);
-        lv_obj_set_style_pad_all(flap, 0, 0);
-        lv_obj_clear_flag(flap, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_style_clip_corner(flap, true, 0);
-        lv_obj_add_flag(flap, LV_OBJ_FLAG_HIDDEN);
-
-        lv_obj_t* flap_lbl = lv_label_create(flap);
-        flip_flap_labels_[i] = flap_lbl;
-        lv_label_set_text(flap_lbl, "0");
-        lv_obj_set_style_text_font(flap_lbl, &lv_font_montserrat_40, 0);
-        lv_obj_set_style_text_color(flap_lbl, lv_color_white(), 0);
-        lv_obj_align(flap_lbl, LV_ALIGN_CENTER, 0, 0);
-
-        // Slit đặt trên cùng để tạo đường rãnh xuyên qua số
-        lv_obj_move_foreground(slit);
-    }
-
-    // Date Label right below the Flip Clock
-    standby2_date_lbl_ = lv_label_create(standby2_clock_box_);
+    standby2_date_lbl_ = lv_label_create(standby2_box_);
     lv_label_set_text(standby2_date_lbl_, "Thứ Ba, 10/11/2026");
     lv_obj_set_style_text_font(standby2_date_lbl_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(standby2_date_lbl_, lv_color_white(), 0);
-    lv_obj_set_style_bg_opa(standby2_date_lbl_, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(standby2_date_lbl_, 0, 0);
-    lv_obj_set_style_pad_all(standby2_date_lbl_, 0, 0);
-    lv_obj_set_pos(standby2_date_lbl_, 0, 56);
-    lv_obj_set_size(standby2_date_lbl_, 160, 20);
-    lv_obj_set_style_text_align(standby2_date_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_clear_flag(standby2_date_lbl_, LV_OBJ_FLAG_CLICKABLE);
+
+    // Weather và flip clock dưới đã bỏ
+    standby2_weather_box_ = nullptr;
+    standby2_city_lbl_ = nullptr;
+    standby2_weather_icon_ = nullptr;
+    standby2_weather_temp_ = nullptr;
+    standby2_clock_box_ = nullptr;
+    for (int i = 0; i < 4; ++i) {
+        flip_cards_[i] = nullptr;
+        flip_labels_[i] = nullptr;
+        flip_slits_[i] = nullptr;
+        flip_flaps_[i] = nullptr;
+        flip_flap_labels_[i] = nullptr;
+    }
 
     LayoutStandby2Widgets(height_ > width_);
     UpdateStandbyStatusBar();
@@ -14111,64 +14025,17 @@ void LcdDisplay::LayoutStandby2Widgets(bool is_portrait) {
         }
     }
 
-    int layout_idx = WallpaperManager::GetInstance().GetActiveLayoutIndex();
-    if (is_portrait) {
-        if (standby2_status_box_) lv_obj_set_pos(standby2_status_box_, 240 - 112 - 8, 8);
-
-        if (layout_idx == 0) {
-            // Bố cục 1: Flip Clock sát đáy (y = 236), Thời tiết ở đỉnh (y = 12)
-            if (standby2_weather_box_) {
-                lv_obj_set_pos(standby2_weather_box_, 14, 12);
-                lv_obj_set_size(standby2_weather_box_, 105, 52);
-            }
-            if (standby2_city_lbl_) {
-                lv_obj_set_size(standby2_city_lbl_, 105, LV_SIZE_CONTENT);
-            }
-            if (standby2_clock_box_) {
-                lv_obj_set_pos(standby2_clock_box_, 40, 236);
-                lv_obj_set_size(standby2_clock_box_, 160, 78);
-            }
-        } else if (layout_idx == 1) {
-            // Bố cục 2: Đồng hồ ở giữa, Thời tiết ở đáy
-            if (standby2_weather_box_) {
-                lv_obj_set_pos(standby2_weather_box_, 14, 252);
-                lv_obj_set_size(standby2_weather_box_, 105, 52);
-            }
-            if (standby2_city_lbl_) {
-                lv_obj_set_size(standby2_city_lbl_, 105, LV_SIZE_CONTENT);
-            }
-            if (standby2_clock_box_) {
-                lv_obj_set_pos(standby2_clock_box_, 40, 125);
-                lv_obj_set_size(standby2_clock_box_, 160, 78);
-            }
-        } else {
-            // Bố cục 3: Flip Clock ở giữa, Thời tiết ở đỉnh
-            if (standby2_weather_box_) {
-                lv_obj_set_pos(standby2_weather_box_, 14, 12);
-                lv_obj_set_size(standby2_weather_box_, 105, 52);
-            }
-            if (standby2_city_lbl_) {
-                lv_obj_set_size(standby2_city_lbl_, 105, LV_SIZE_CONTENT);
-            }
-            if (standby2_clock_box_) {
-                lv_obj_set_pos(standby2_clock_box_, 40, 130);
-                lv_obj_set_size(standby2_clock_box_, 160, 78);
-            }
-        }
-    } else {
-        // Màn hình ngang (320x240)
-        if (standby2_status_box_) lv_obj_set_pos(standby2_status_box_, 320 - 112 - 8, 4);
-        if (standby2_weather_box_) {
-            lv_obj_set_pos(standby2_weather_box_, 12, 184);
-            lv_obj_set_size(standby2_weather_box_, 140, 48);
-        }
-        if (standby2_city_lbl_) {
-            lv_obj_set_size(standby2_city_lbl_, 140, LV_SIZE_CONTENT);
-        }
-        if (standby2_clock_box_) {
-            lv_obj_set_pos(standby2_clock_box_, 320 - 160 - 8, 156);
-            lv_obj_set_size(standby2_clock_box_, 160, 78);
-        }
+    if (standby2_status_box_) {
+        lv_obj_align(standby2_status_box_, LV_ALIGN_TOP_RIGHT, is_portrait ? -8 : -10, 6);
+        lv_obj_move_foreground(standby2_status_box_);
+    }
+    if (standby2_time_lbl_) {
+        lv_obj_set_pos(standby2_time_lbl_, 12, 6);
+        lv_obj_move_foreground(standby2_time_lbl_);
+    }
+    if (standby2_date_lbl_) {
+        lv_obj_set_pos(standby2_date_lbl_, 14, 50);
+        lv_obj_move_foreground(standby2_date_lbl_);
     }
 }
 
@@ -14262,25 +14129,10 @@ void LcdDisplay::AnimateFlipCard(int idx, char new_char) {
 void LcdDisplay::UpdateStandby2Clock(const struct tm* tm_now, bool animate) {
     if (standby2_box_ == nullptr) return;
 
-    char new_digits[4];
-    new_digits[0] = '0' + (tm_now->tm_hour / 10);
-    new_digits[1] = '0' + (tm_now->tm_hour % 10);
-    new_digits[2] = '0' + (tm_now->tm_min / 10);
-    new_digits[3] = '0' + (tm_now->tm_min % 10);
-
-    bool is_visible = !lv_obj_has_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
-
-    for (int i = 0; i < 4; ++i) {
-        if (new_digits[i] != flip_chars_[i]) {
-            char old_char = flip_chars_[i];
-            flip_chars_[i] = new_digits[i];
-            if (animate && is_visible && old_char != ' ') {
-                AnimateFlipCard(i, new_digits[i]);
-            } else {
-                char s[2] = {new_digits[i], '\0'};
-                if (flip_labels_[i]) lv_label_set_text(flip_labels_[i], s);
-            }
-        }
+    if (standby2_time_lbl_ != nullptr) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", tm_now->tm_hour, tm_now->tm_min);
+        lv_label_set_text(standby2_time_lbl_, tbuf);
     }
 
     if (standby2_date_lbl_ != nullptr) {
@@ -14569,7 +14421,7 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_clear_flag(wallpaper_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
-    // Header: Nút đóng [✕] to tròn + Tiêu đề đậm
+    // Header: Nút đóng [✕] + Tiêu đề
     lv_obj_t* back_btn = lv_button_create(wallpaper_box_);
     lv_obj_set_size(back_btn, 32, 32);
     lv_obj_set_pos(back_btn, 4, 4);
@@ -14582,14 +14434,14 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_align(back_lbl, LV_ALIGN_CENTER, 0, 0);
 
     lv_obj_t* title_lbl = lv_label_create(wallpaper_box_);
-    lv_label_set_text(title_lbl, "Cài đặt Hình Nền");
+    lv_label_set_text(title_lbl, "Cài đặt hình nền");
     lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
     lv_obj_align(title_lbl, LV_ALIGN_TOP_MID, 0, 8);
 
-    // 1. Nhóm Chọn ảnh (gọn gàng, chữ to 16_4)
+    // 1. Nhóm Ảnh hệ thống (Ảnh 1, Ảnh 2, Ảnh 3, Ảnh 4)
     wp_sec1_lbl_ = lv_label_create(wallpaper_box_);
-    lv_label_set_text(wp_sec1_lbl_, "Chọn ảnh:");
+    lv_label_set_text(wp_sec1_lbl_, "Ảnh hệ thống:");
     lv_obj_set_style_text_font(wp_sec1_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(wp_sec1_lbl_, lv_color_hex(0x38bdf8), 0);
 
@@ -14603,28 +14455,28 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_set_flex_align(wp_img_scroll_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_scroll_dir(wp_img_scroll_, LV_DIR_HOR);
 
-    // 2. Nhóm Bố cục giờ (gọn gàng, chữ to 16_4)
+    // 2. Nhóm Ảnh của tôi (Ảnh tải lên, nếu chưa thì hiển thị Trống)
     wp_sec2_lbl_ = lv_label_create(wallpaper_box_);
-    lv_label_set_text(wp_sec2_lbl_, "Bố cục giờ:");
+    lv_label_set_text(wp_sec2_lbl_, "Ảnh của tôi:");
     lv_obj_set_style_text_font(wp_sec2_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(wp_sec2_lbl_, lv_color_hex(0x38bdf8), 0);
 
-    wp_layout_scroll_ = lv_obj_create(wallpaper_box_);
-    lv_obj_set_style_bg_color(wp_layout_scroll_, lv_color_hex(0x131d2e), 0);
-    lv_obj_set_style_border_color(wp_layout_scroll_, lv_color_hex(0x334155), 0);
-    lv_obj_set_style_border_width(wp_layout_scroll_, 1, 0);
-    lv_obj_set_style_radius(wp_layout_scroll_, 10, 0);
-    lv_obj_set_style_pad_all(wp_layout_scroll_, 4, 0);
-    lv_obj_set_flex_flow(wp_layout_scroll_, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(wp_layout_scroll_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_scroll_dir(wp_layout_scroll_, LV_DIR_HOR);
+    wp_user_scroll_ = lv_obj_create(wallpaper_box_);
+    lv_obj_set_style_bg_color(wp_user_scroll_, lv_color_hex(0x131d2e), 0);
+    lv_obj_set_style_border_color(wp_user_scroll_, lv_color_hex(0x334155), 0);
+    lv_obj_set_style_border_width(wp_user_scroll_, 1, 0);
+    lv_obj_set_style_radius(wp_user_scroll_, 10, 0);
+    lv_obj_set_style_pad_all(wp_user_scroll_, 4, 0);
+    lv_obj_set_flex_flow(wp_user_scroll_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(wp_user_scroll_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_scroll_dir(wp_user_scroll_, LV_DIR_HOR);
 
-    // 3. Nút Lưu & Áp Dụng (to rõ ràng, chữ đậm)
+    // 3. Nút Lưu & Áp dụng
     wp_save_btn_ = lv_button_create(wallpaper_box_);
     lv_obj_set_style_bg_color(wp_save_btn_, lv_color_hex(0x0d9488), 0);
     lv_obj_set_style_radius(wp_save_btn_, 10, 0);
     lv_obj_t* save_lbl = lv_label_create(wp_save_btn_);
-    lv_label_set_text(save_lbl, "Lưu & Áp Dụng");
+    lv_label_set_text(save_lbl, "Lưu & áp dụng");
     lv_obj_set_style_text_font(save_lbl, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(save_lbl, lv_color_white(), 0);
     lv_obj_align(save_lbl, LV_ALIGN_CENTER, 0, 0);
@@ -14632,7 +14484,6 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     auto save_exit_action = [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         WallpaperManager::GetInstance().SetActiveWallpaperIndex(self->wp_preview_idx_);
-        WallpaperManager::GetInstance().SetActiveLayoutIndex(self->wp_preview_layout_);
         if (self->wallpaper_box_) lv_obj_add_flag(self->wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
         if (self->wp_preview_buf_ != nullptr) {
             heap_caps_free(self->wp_preview_buf_);
@@ -14645,14 +14496,13 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_add_event_cb(wp_save_btn_, save_exit_action, LV_EVENT_CLICKED, this);
     lv_obj_add_event_cb(back_btn, save_exit_action, LV_EVENT_CLICKED, this);
 
-    // Thêm hiệu ứng vuốt lên hoặc sang phải để thoát và tự lưu
+    // Hiệu ứng vuốt lên hoặc sang phải để thoát và tự lưu
     lv_obj_add_event_cb(wallpaper_box_, [](lv_event_t* e) {
         if (lv_event_get_code(e) == LV_EVENT_GESTURE) {
             lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
             if (dir == LV_DIR_TOP || dir == LV_DIR_RIGHT) {
                 auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
                 WallpaperManager::GetInstance().SetActiveWallpaperIndex(self->wp_preview_idx_);
-                WallpaperManager::GetInstance().SetActiveLayoutIndex(self->wp_preview_layout_);
                 if (self->wallpaper_box_) lv_obj_add_flag(self->wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
                 if (self->wp_preview_buf_ != nullptr) {
                     heap_caps_free(self->wp_preview_buf_);
@@ -14666,30 +14516,28 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
 }
 
 void LcdDisplay::UpdateWallpaperPreview() {
-    // Không cần giải mã xem trước thu nhỏ nữa để tránh chậm và giật
 }
 
 void LcdDisplay::UpdateWallpaperSettingsUI() {
     if (wallpaper_box_ == nullptr) return;
 
-    // 1. Cập nhật danh sách ảnh nền (chữ to 16_4, nút to 42px)
+    // 1. Nhóm Ảnh hệ thống (Ảnh 1, Ảnh 2, Ảnh 3, Ảnh 4)
     if (wp_img_scroll_ != nullptr) {
         lv_obj_clean(wp_img_scroll_);
-        auto list = WallpaperManager::GetInstance().GetWallpaperList();
-
-        for (const auto& item : list) {
+        for (int i = 1; i <= 4; ++i) {
             lv_obj_t* btn = lv_button_create(wp_img_scroll_);
-            lv_obj_set_size(btn, 96, 42);
+            lv_obj_set_size(btn, 88, 40);
             lv_obj_set_style_radius(btn, 8, 0);
-            bool is_sel = (item.index == wp_preview_idx_);
+            bool is_sel = (i == wp_preview_idx_);
             lv_obj_set_style_bg_color(btn, is_sel ? lv_color_hex(0x0d9488) : lv_color_hex(0x1e293b), 0);
             lv_obj_set_style_border_color(btn, is_sel ? lv_color_hex(0x2dd4bf) : lv_color_hex(0x334155), 0);
             lv_obj_set_style_border_width(btn, is_sel ? 2 : 1, 0);
-            lv_obj_set_user_data(btn, (void*)(intptr_t)item.index);
+            lv_obj_set_user_data(btn, (void*)(intptr_t)i);
 
             lv_obj_t* lbl = lv_label_create(btn);
-            std::string name = (item.index == 0) ? "Mặc định" : item.name;
-            lv_label_set_text(lbl, name.c_str());
+            char btn_txt[16];
+            snprintf(btn_txt, sizeof(btn_txt), "Ảnh %d", i);
+            lv_label_set_text(lbl, btn_txt);
             lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
             lv_obj_set_style_text_color(lbl, is_sel ? lv_color_white() : lv_color_hex(0x94a3b8), 0);
             lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
@@ -14703,42 +14551,48 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
         }
     }
 
-    // 2. Cập nhật danh sách bố cục ngày giờ (chữ to 16_4, nút to 42px)
-    if (wp_layout_scroll_ != nullptr) {
-        lv_obj_clean(wp_layout_scroll_);
+    // 2. Nhóm Ảnh của tôi (tải lên >= 5, đánh số Ảnh 1, Ảnh 2... nếu không có thì Trống)
+    if (wp_user_scroll_ != nullptr) {
+        lv_obj_clean(wp_user_scroll_);
+        auto list = WallpaperManager::GetInstance().GetWallpaperList();
+        std::vector<WallpaperItem> user_wallpapers;
+        for (const auto& item : list) {
+            if (item.index >= 5) {
+                user_wallpapers.push_back(item);
+            }
+        }
 
-        struct LayoutOption {
-            int id;
-            const char* title;
-        };
-        const LayoutOption opts[3] = {
-            {0, "1. Mặc định"},
-            {1, "2. Giờ ở giữa"},
-            {2, "3. Lật ở giữa"}
-        };
+        if (user_wallpapers.empty()) {
+            lv_obj_t* empty_lbl = lv_label_create(wp_user_scroll_);
+            lv_label_set_text(empty_lbl, "Trống (Chưa có ảnh tải lên)");
+            lv_obj_set_style_text_font(empty_lbl, &font_noto_sans_custom_14_1, 0);
+            lv_obj_set_style_text_color(empty_lbl, lv_color_hex(0x94a3b8), 0);
+            lv_obj_set_size(empty_lbl, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_align(empty_lbl, LV_ALIGN_CENTER, 0, 0);
+        } else {
+            for (const auto& item : user_wallpapers) {
+                lv_obj_t* btn = lv_button_create(wp_user_scroll_);
+                lv_obj_set_size(btn, 88, 40);
+                lv_obj_set_style_radius(btn, 8, 0);
+                bool is_sel = (item.index == wp_preview_idx_);
+                lv_obj_set_style_bg_color(btn, is_sel ? lv_color_hex(0x0d9488) : lv_color_hex(0x1e293b), 0);
+                lv_obj_set_style_border_color(btn, is_sel ? lv_color_hex(0x2dd4bf) : lv_color_hex(0x334155), 0);
+                lv_obj_set_style_border_width(btn, is_sel ? 2 : 1, 0);
+                lv_obj_set_user_data(btn, (void*)(intptr_t)item.index);
 
-        for (int i = 0; i < 3; ++i) {
-            lv_obj_t* btn = lv_button_create(wp_layout_scroll_);
-            lv_obj_set_size(btn, 126, 42);
-            lv_obj_set_style_radius(btn, 8, 0);
-            bool is_sel = (opts[i].id == wp_preview_layout_);
-            lv_obj_set_style_bg_color(btn, is_sel ? lv_color_hex(0x0d9488) : lv_color_hex(0x1e293b), 0);
-            lv_obj_set_style_border_color(btn, is_sel ? lv_color_hex(0x2dd4bf) : lv_color_hex(0x334155), 0);
-            lv_obj_set_style_border_width(btn, is_sel ? 2 : 1, 0);
-            lv_obj_set_user_data(btn, (void*)(intptr_t)opts[i].id);
+                lv_obj_t* lbl = lv_label_create(btn);
+                lv_label_set_text(lbl, item.name.c_str());
+                lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
+                lv_obj_set_style_text_color(lbl, is_sel ? lv_color_white() : lv_color_hex(0x94a3b8), 0);
+                lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
 
-            lv_obj_t* lbl = lv_label_create(btn);
-            lv_label_set_text(lbl, opts[i].title);
-            lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
-            lv_obj_set_style_text_color(lbl, is_sel ? lv_color_white() : lv_color_hex(0x94a3b8), 0);
-            lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
-
-            lv_obj_add_event_cb(btn, [](lv_event_t* e) {
-                auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-                int l = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-                self->wp_preview_layout_ = l;
-                self->UpdateWallpaperSettingsUI();
-            }, LV_EVENT_CLICKED, this);
+                lv_obj_add_event_cb(btn, [](lv_event_t* e) {
+                    auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+                    int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+                    self->wp_preview_idx_ = idx;
+                    self->UpdateWallpaperSettingsUI();
+                }, LV_EVENT_CLICKED, this);
+            }
         }
     }
 }
@@ -14751,7 +14605,7 @@ void LcdDisplay::ShowWallpaperSettings() {
     if (quick_settings_box_) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
     wp_preview_idx_ = WallpaperManager::GetInstance().GetActiveWallpaperIndex();
-    wp_preview_layout_ = WallpaperManager::GetInstance().GetActiveLayoutIndex();
+    if (wp_preview_idx_ <= 0) wp_preview_idx_ = 1;
 
     CreateWallpaperSettingsUI();
     LayoutWallpaperSettingsWidgets(height_ > width_);
@@ -14769,36 +14623,36 @@ void LcdDisplay::LayoutWallpaperSettingsWidgets(bool is_portrait) {
     lv_obj_set_size(wallpaper_box_, width_, height_);
 
     if (is_portrait) {
-        // Dọc 240x320: Bố trí thoáng đãng, các nút to dễ chạm
-        if (wp_sec1_lbl_) lv_obj_set_pos(wp_sec1_lbl_, 10, 52);
+        // Dọc 240x320: Bố trí thoáng đãng
+        if (wp_sec1_lbl_) lv_obj_set_pos(wp_sec1_lbl_, 10, 48);
         if (wp_img_scroll_) {
-            lv_obj_set_size(wp_img_scroll_, 224, 56);
-            lv_obj_set_pos(wp_img_scroll_, 8, 76);
+            lv_obj_set_size(wp_img_scroll_, 224, 52);
+            lv_obj_set_pos(wp_img_scroll_, 8, 72);
         }
-        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 10, 144);
-        if (wp_layout_scroll_) {
-            lv_obj_set_size(wp_layout_scroll_, 224, 56);
-            lv_obj_set_pos(wp_layout_scroll_, 8, 168);
+        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 10, 134);
+        if (wp_user_scroll_) {
+            lv_obj_set_size(wp_user_scroll_, 224, 52);
+            lv_obj_set_pos(wp_user_scroll_, 8, 158);
         }
         if (wp_save_btn_) {
             lv_obj_set_size(wp_save_btn_, 224, 46);
-            lv_obj_set_pos(wp_save_btn_, 8, 248);
+            lv_obj_set_pos(wp_save_btn_, 8, 240);
         }
     } else {
         // Ngang 320x240
-        if (wp_sec1_lbl_) lv_obj_set_pos(wp_sec1_lbl_, 12, 40);
+        if (wp_sec1_lbl_) lv_obj_set_pos(wp_sec1_lbl_, 12, 36);
         if (wp_img_scroll_) {
-            lv_obj_set_size(wp_img_scroll_, 296, 52);
-            lv_obj_set_pos(wp_img_scroll_, 12, 62);
+            lv_obj_set_size(wp_img_scroll_, 296, 46);
+            lv_obj_set_pos(wp_img_scroll_, 12, 56);
         }
-        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 12, 122);
-        if (wp_layout_scroll_) {
-            lv_obj_set_size(wp_layout_scroll_, 296, 52);
-            lv_obj_set_pos(wp_layout_scroll_, 12, 144);
+        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 12, 108);
+        if (wp_user_scroll_) {
+            lv_obj_set_size(wp_user_scroll_, 296, 46);
+            lv_obj_set_pos(wp_user_scroll_, 12, 128);
         }
         if (wp_save_btn_) {
-            lv_obj_set_size(wp_save_btn_, 240, 38);
-            lv_obj_set_pos(wp_save_btn_, 40, 198);
+            lv_obj_set_size(wp_save_btn_, 240, 40);
+            lv_obj_set_pos(wp_save_btn_, 40, 186);
         }
     }
 }
