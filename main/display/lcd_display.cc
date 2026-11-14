@@ -5250,6 +5250,11 @@ void LcdDisplay::OnSwipeLeft() {
         return;
     }
 
+    if (screen_mode_ == kScreenStandby2) {
+        CycleStandby2Wallpaper();
+        return;
+    }
+
     if (screen_mode_ == kScreenMenu) {
 
         if (menu_page_ < 1) {
@@ -7681,19 +7686,18 @@ void LcdDisplay::CreateQuickSettingsUI() {
         Board::GetInstance().ToggleRotation("toggle");
     }, LV_EVENT_CLICKED, this);
 
-    // 3. Ảnh bìa (trong qs_content_box_)
+    // 3. Thêm ảnh (trong qs_content_box_) - Bấm vào hiện mã QR upload ảnh
     qs_wallpaper_btn_ = lv_button_create(qs_content_box_);
     style_action_btn(qs_wallpaper_btn_);
     lv_obj_t* wp_btn_lbl = lv_label_create(qs_wallpaper_btn_);
-    lv_label_set_text(wp_btn_lbl, "Ảnh Bìa");
+    lv_label_set_text(wp_btn_lbl, "Thêm ảnh");
     lv_obj_set_style_text_font(wp_btn_lbl, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(wp_btn_lbl, lv_color_white(), 0);
     lv_obj_align(wp_btn_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(qs_wallpaper_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 500) return;
-        self->ExitQuickSettings();
-        self->ShowWallpaperSettings();
+        self->ShowQrModal();
     }, LV_EVENT_CLICKED, this);
 
     // 4. Cấu hình WiFi (trong qs_content_box_)
@@ -13882,6 +13886,14 @@ void LcdDisplay::CreateStandby2UI() {
     lv_obj_set_size(standby2_bg_image_, width_, height_);
     lv_obj_set_pos(standby2_bg_image_, 0, 0);
     lv_obj_set_style_border_width(standby2_bg_image_, 0, 0);
+    lv_obj_add_flag(standby2_bg_image_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(standby2_bg_image_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        if (self) {
+            if (esp_timer_get_time() / 1000 - self->last_swipe_time_ < 300) return;
+            self->CycleStandby2Wallpaper();
+        }
+    }, LV_EVENT_CLICKED, this);
 
     if (standby2_bg_buf_ == nullptr) {
         bool is_p = (height_ > width_);
@@ -14329,6 +14341,26 @@ void LcdDisplay::SyncStandby2Weather() {
     }
 }
 
+void LcdDisplay::CycleStandby2Wallpaper() {
+    auto list = WallpaperManager::GetInstance().GetWallpaperList();
+    if (list.empty()) return;
+
+    int cur_idx = WallpaperManager::GetInstance().GetActiveWallpaperIndex();
+    int next_idx = 1;
+    for (size_t i = 0; i < list.size(); ++i) {
+        if (list[i].index == cur_idx) {
+            next_idx = list[(i + 1) % list.size()].index;
+            break;
+        }
+    }
+    if (next_idx == 0 && list.size() > 1) {
+        next_idx = 1;
+    }
+    WallpaperManager::GetInstance().SetActiveWallpaperIndex(next_idx);
+    bool is_p = (height_ > width_);
+    LayoutStandby2Widgets(is_p);
+}
+
 void LcdDisplay::ShowStandby2() {
     DisplayLockGuard lock(this);
     if (!lock) return;
@@ -14417,7 +14449,7 @@ void LcdDisplay::CreateQrModal() {
 
     // Title tiếng Việt có dấu đậm
     lv_obj_t* title = lv_label_create(card);
-    lv_label_set_text(title, "Cài đặt Ảnh Bìa");
+    lv_label_set_text(title, "Thêm ảnh nền");
     lv_obj_set_style_text_font(title, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(title, lv_color_white(), 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 2, 4);

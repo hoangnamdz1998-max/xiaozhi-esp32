@@ -83,7 +83,7 @@ void WallpaperManager::RefreshIndexCache() {
 
 int WallpaperManager::GetActiveWallpaperIndex() {
     Settings s("wallpaper", true);
-    return s.GetInt("wp_idx", 0);
+    return s.GetInt("wp_idx", 1);
 }
 
 void WallpaperManager::SetActiveWallpaperIndex(int idx) {
@@ -108,10 +108,16 @@ std::string WallpaperManager::GetFilePath(int idx, bool is_portrait) {
 
 std::vector<WallpaperItem> WallpaperManager::GetWallpaperList() {
     std::vector<WallpaperItem> list;
-    list.push_back({0, "Ảnh Hệ Thống (Mặc định)", true});
-
     for (int idx : custom_indices_) {
-        list.push_back({idx, "Ảnh " + std::to_string(idx), false});
+        std::string name = "Ảnh " + std::to_string(idx);
+        if (idx == 1) name = "Porsche GT3 RS";
+        else if (idx == 2) name = "Phong Cảnh Núi";
+        else if (idx == 3) name = "Gojo Satoru Anime";
+        else if (idx == 4) name = "Porsche 911 Đua";
+        list.push_back({idx, name, false});
+    }
+    if (list.empty()) {
+        list.push_back({0, "Ảnh Mặc Định", true});
     }
     return list;
 }

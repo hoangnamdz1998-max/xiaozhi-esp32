@@ -391,6 +391,7 @@ protected:
     void LayoutFmRadioWidgets(bool is_portrait);
     void UpdateFmRadioUI();
     void StartBootAnimation();
+    void CycleStandby2Wallpaper();
     std::atomic<bool> boot_anim_running_{false};
 
     // Standby Screen 2 (Màn hình chờ 2 - Ảnh nền tùy biến, Flip Clock & Weather)

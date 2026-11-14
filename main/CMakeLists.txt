@@ -1307,8 +1307,6 @@ if(ESP_SR_COMPONENT_PATH)
     set(ESP_SR_MODEL_PATH "${ESP_SR_COMPONENT_PATH}/model")
 endif()
 
-# Find xiaozhi-fonts component dynamically
-find_component_by_pattern("xiaozhi-fonts" NOTO_FONTS_COMPONENT NOTO_FONTS_COMPONENT_PATH)
 if(NOTO_FONTS_COMPONENT_PATH)
     set(NOTO_FONTS_PATH "${NOTO_FONTS_COMPONENT_PATH}")
 endif()
@@ -1437,7 +1435,9 @@ function(build_default_assets_bin)
     endif()
 
     list(APPEND BUILD_ARGS "--esp_sr_model_path" "${ESP_SR_MODEL_PATH}")
-    list(APPEND BUILD_ARGS "--noto_fonts_path" "${NOTO_FONTS_PATH}")
+    if(NOTO_FONTS_PATH)
+        list(APPEND BUILD_ARGS "--noto_fonts_path" "${NOTO_FONTS_PATH}")
+    endif()
 
     # Enforce assets.bin fits the flash partition (e.g. ESP-HI 4MB map uses 1MB assets).
     partition_table_get_partition_info(assets_partition_size "--partition-name assets" "size")
