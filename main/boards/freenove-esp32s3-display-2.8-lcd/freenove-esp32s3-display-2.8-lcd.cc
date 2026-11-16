@@ -927,10 +927,15 @@ private:
 
                     bool is_music_chart = (mode == LcdDisplay::kScreenMusic && self->display_ && self->display_->GetMusicSubView() == LcdDisplay::kMusicViewChart);
                     if (mode == LcdDisplay::kScreenQuickSettings || is_music_chart) {
-                        // Trong QuickSettings và BXH Nhạc: TẮT toàn bộ gesture vuốt toàn màn hình
-                        // Để 100% sự kiện chạm và kéo ngón tay được giao trọn vẹn cho LVGL cuộn siêu mượt!
                         allow_vert_swipe = false;
                         allow_horiz_swipe = false;
+                    } else if (mode == LcdDisplay::kScreenWallpaperSettings) {
+                        // Trong Cài đặt hình nền: vuốt ngang dành 100% cho LVGL cuộn ảnh mượt,
+                        // nhưng vuốt lên (từ dưới lên delta_y < -35) vẫn nhận để thoát ra!
+                        allow_horiz_swipe = false;
+                        if (delta_y > -35) {
+                            allow_vert_swipe = false;
+                        }
                     } else if (mode == LcdDisplay::kScreenTimer) {
                         // Trong Bao thuc: vuot tu mep duoi len de thoat ve Dong ho, hoac vuot tu dinh xuong de mo Cai dat nhanh
                         int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 260 : 185;
@@ -1027,7 +1032,11 @@ private:
                 if (mode == LcdDisplay::kScreenQuickSettings || is_music_chart_rel) {
                     allow_vert_swipe = false;
                     allow_horiz_swipe = false;
-
+                } else if (mode == LcdDisplay::kScreenWallpaperSettings) {
+                    allow_horiz_swipe = false;
+                    if (delta_y > -35) {
+                        allow_vert_swipe = false;
+                    }
                 } else if (mode == LcdDisplay::kScreenTimer) {
 
                     int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 260 : 185;

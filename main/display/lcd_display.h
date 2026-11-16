@@ -167,11 +167,15 @@ protected:
     lv_obj_t* qs_theme_btn_ = nullptr;
     lv_obj_t* qs_wallpaper_btn_ = nullptr;
     lv_obj_t* qs_qr_modal_ = nullptr;
+    lv_obj_t* qs_qr_card_ = nullptr;
+    lv_obj_t* qs_qr_title_ = nullptr;
+    lv_obj_t* qs_qr_close_btn_ = nullptr;
     lv_obj_t* qs_qr_img_ = nullptr;
     lv_obj_t* qs_qr_ip_lbl_ = nullptr;
     void CreateQrModal();
     void ShowQrModal();
     void HideQrModal();
+    void LayoutQrModalWidgets(bool is_portrait);
 
     // Wallpaper Settings Screen (Live Preview + Dual Horizontal Scroll)
     lv_obj_t* wallpaper_box_ = nullptr;
@@ -191,6 +195,14 @@ protected:
     int wp_preview_idx_ = 0;
     int wp_preview_layout_ = 0;
     bool wp_opened_from_menu_ = false;
+
+    struct WpThumbItem {
+        uint8_t* buf = nullptr;
+        lv_image_dsc_t dsc = {};
+    };
+    std::vector<WpThumbItem> wp_thumb_items_;
+    void ClearWpThumbnails();
+
     void CreateWallpaperSettingsUI();
     void LayoutWallpaperSettingsWidgets(bool is_portrait);
     void UpdateWallpaperSettingsUI();

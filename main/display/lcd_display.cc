@@ -33,6 +33,7 @@
 #include <noto_emoji.h>
 
 #include <src/misc/cache/lv_cache.h>
+#include <src/misc/cache/instance/lv_image_cache.h>
 
 #include <algorithm>
 
@@ -8123,6 +8124,7 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         if (qs_info_temp_) lv_obj_set_pos(qs_info_temp_, 10, 68);
         if (qs_info_sd_) lv_obj_set_pos(qs_info_sd_, 10, 98);
     }
+    LayoutQrModalWidgets(is_portrait);
 }
 
 
@@ -15074,96 +15076,146 @@ void LcdDisplay::ShowStandby3() {
     }
 }
 
-static uint16_t s_qr_pixels[110 * 110];
-static const lv_image_dsc_t s_qr_dsc = {
+#define QR_CANVAS_SIZE 136
+
+static uint16_t s_qr_pixels[QR_CANVAS_SIZE * QR_CANVAS_SIZE];
+static lv_image_dsc_t s_qr_dsc = {
     .header = {
         .magic = LV_IMAGE_HEADER_MAGIC,
         .cf = LV_COLOR_FORMAT_RGB565,
-        .flags = 0,
-        .w = 110,
-        .h = 110,
-        .stride = 110 * 2,
+        .flags = LV_IMAGE_FLAGS_MODIFIABLE,
+        .w = QR_CANVAS_SIZE,
+        .h = QR_CANVAS_SIZE,
+        .stride = QR_CANVAS_SIZE * 2,
         .reserved_2 = 0,
     },
-    .data_size = 110 * 110 * 2,
+    .data_size = QR_CANVAS_SIZE * QR_CANVAS_SIZE * 2,
     .data = (const uint8_t*)s_qr_pixels,
     .reserved = nullptr,
 };
+
+void LcdDisplay::LayoutQrModalWidgets(bool is_portrait) {
+    if (qs_qr_modal_ == nullptr) return;
+
+    lv_obj_set_size(qs_qr_modal_, width_, height_);
+    lv_obj_set_pos(qs_qr_modal_, 0, 0);
+
+    if (qs_qr_card_ == nullptr) return;
+
+    if (is_portrait) {
+        // Màn hình dọc 240 x 320: Phủ toàn màn hình, bố cục thoáng đãng
+        lv_obj_set_size(qs_qr_card_, width_, height_);
+        lv_obj_set_pos(qs_qr_card_, 0, 0);
+        lv_obj_set_style_radius(qs_qr_card_, 0, 0);
+        lv_obj_set_style_border_width(qs_qr_card_, 0, 0);
+
+        if (qs_qr_title_) lv_obj_align(qs_qr_title_, LV_ALIGN_TOP_MID, 0, 16);
+        if (qs_qr_close_btn_) {
+            lv_obj_set_size(qs_qr_close_btn_, 34, 34);
+            lv_obj_align(qs_qr_close_btn_, LV_ALIGN_TOP_RIGHT, 0, 10);
+        }
+        if (qs_qr_img_) lv_obj_align(qs_qr_img_, LV_ALIGN_TOP_MID, 0, 56);
+        if (qs_qr_ip_lbl_) {
+            lv_obj_align(qs_qr_ip_lbl_, LV_ALIGN_TOP_MID, 0, 206);
+            lv_obj_set_style_text_font(qs_qr_ip_lbl_, &font_noto_sans_custom_16_4, 0);
+        }
+    } else {
+        // Màn hình ngang 320 x 240: Card gọn gàng 304 x 230, căn giữa, không bị đè lấn
+        lv_obj_set_size(qs_qr_card_, 304, 230);
+        lv_obj_center(qs_qr_card_);
+        lv_obj_set_style_radius(qs_qr_card_, 10, 0);
+        lv_obj_set_style_border_color(qs_qr_card_, lv_color_hex(0x0d9488), 0);
+        lv_obj_set_style_border_width(qs_qr_card_, 1, 0);
+
+        if (qs_qr_title_) lv_obj_align(qs_qr_title_, LV_ALIGN_TOP_MID, 0, 4);
+        if (qs_qr_close_btn_) {
+            lv_obj_set_size(qs_qr_close_btn_, 28, 28);
+            lv_obj_align(qs_qr_close_btn_, LV_ALIGN_TOP_RIGHT, 0, 2);
+        }
+        if (qs_qr_img_) lv_obj_align(qs_qr_img_, LV_ALIGN_TOP_MID, 0, 26);
+        if (qs_qr_ip_lbl_) {
+            lv_obj_align(qs_qr_ip_lbl_, LV_ALIGN_BOTTOM_MID, 0, -4);
+            lv_obj_set_style_text_font(qs_qr_ip_lbl_, &font_noto_sans_custom_14_1, 0);
+        }
+    }
+}
 
 void LcdDisplay::CreateQrModal() {
     if (qs_qr_modal_ != nullptr) return;
 
     qs_qr_modal_ = lv_obj_create(lv_layer_top());
+    lv_obj_clear_flag(qs_qr_modal_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_size(qs_qr_modal_, width_, height_);
     lv_obj_set_pos(qs_qr_modal_, 0, 0);
     lv_obj_set_style_bg_color(qs_qr_modal_, lv_color_black(), 0);
-    lv_obj_set_style_bg_opa(qs_qr_modal_, LV_OPA_70, 0);
+    lv_obj_set_style_bg_opa(qs_qr_modal_, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(qs_qr_modal_, 0, 0);
     lv_obj_set_style_pad_all(qs_qr_modal_, 0, 0);
     lv_obj_add_flag(qs_qr_modal_, LV_OBJ_FLAG_HIDDEN);
 
-    // Card popup ở giữa
-    lv_obj_t* card = lv_obj_create(qs_qr_modal_);
-    lv_obj_set_size(card, (width_ < height_) ? 224 : 256, (width_ < height_) ? 266 : 224);
-    lv_obj_center(card);
-    lv_obj_set_style_bg_color(card, lv_color_hex(0x1e293b), 0);
-    lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(card, 14, 0);
-    lv_obj_set_style_border_color(card, lv_color_hex(0x0d9488), 0);
-    lv_obj_set_style_border_width(card, 2, 0);
-    lv_obj_set_style_pad_all(card, 8, 0);
-    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    // Chạm vào viền đen bên ngoài để đóng modal
+    lv_obj_add_event_cb(qs_qr_modal_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->HideQrModal();
+    }, LV_EVENT_CLICKED, this);
 
-    // Title tiếng Việt có dấu đậm
-    lv_obj_t* title = lv_label_create(card);
-    lv_label_set_text(title, "Thêm ảnh nền");
-    lv_obj_set_style_text_font(title, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(title, lv_color_white(), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 2, 4);
+    // Card popup chứa nội dung
+    qs_qr_card_ = lv_obj_create(qs_qr_modal_);
+    lv_obj_clear_flag(qs_qr_card_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(qs_qr_card_, lv_color_hex(0x0f172a), 0);
+    lv_obj_set_style_bg_opa(qs_qr_card_, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(qs_qr_card_, 6, 0);
 
-    // Nút đóng to hơn (32x32) để chạm dễ dàng
-    lv_obj_t* close_btn = lv_button_create(card);
-    lv_obj_set_size(close_btn, 32, 32);
-    lv_obj_align(close_btn, LV_ALIGN_TOP_RIGHT, 0, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_color_hex(0xef4444), 0);
-    lv_obj_set_style_radius(close_btn, 16, 0);
-    lv_obj_t* close_lbl = lv_label_create(close_btn);
+    // Title tiếng Việt căn giữa
+    qs_qr_title_ = lv_label_create(qs_qr_card_);
+    lv_label_set_text(qs_qr_title_, "Thêm ảnh nền");
+    lv_obj_set_style_text_font(qs_qr_title_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(qs_qr_title_, lv_color_white(), 0);
+
+    // Nút đóng [✕] ở góc trên bên phải
+    qs_qr_close_btn_ = lv_button_create(qs_qr_card_);
+    lv_obj_set_style_bg_color(qs_qr_close_btn_, lv_color_hex(0xef4444), 0);
+    lv_obj_set_style_radius(qs_qr_close_btn_, 15, 0);
+    lv_obj_t* close_lbl = lv_label_create(qs_qr_close_btn_);
     lv_label_set_text(close_lbl, "X");
     lv_obj_set_style_text_font(close_lbl, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(close_lbl, lv_color_white(), 0);
     lv_obj_align(close_lbl, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_event_cb(close_btn, [](lv_event_t* e) {
+    lv_obj_add_event_cb(qs_qr_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         self->HideQrModal();
     }, LV_EVENT_CLICKED, this);
 
     // QR Image
-    qs_qr_img_ = lv_image_create(card);
-    lv_image_set_src(qs_qr_img_, &s_qr_dsc);
-    lv_obj_align(qs_qr_img_, LV_ALIGN_TOP_MID, 0, 32);
+    qs_qr_img_ = lv_image_create(qs_qr_card_);
+    lv_obj_clear_flag(qs_qr_img_, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_add_event_cb(card, [](lv_event_t* e) {
+    // Vuốt lên hoặc vuốt sang phải trên card để đóng
+    lv_obj_add_event_cb(qs_qr_card_, [](lv_event_t* e) {
         if (lv_event_get_code(e) == LV_EVENT_GESTURE) {
             lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
-            if (dir == LV_DIR_TOP) {
+            if (dir == LV_DIR_TOP || dir == LV_DIR_RIGHT) {
                 auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
                 self->HideQrModal();
             }
         }
     }, LV_EVENT_GESTURE, this);
 
-    // Label chỉ dẫn tiếng Việt có dấu với font custom 16
-    qs_qr_ip_lbl_ = lv_label_create(card);
+    // Label chỉ dẫn đặt ở đáy màn hình
+    qs_qr_ip_lbl_ = lv_label_create(qs_qr_card_);
     lv_label_set_text(qs_qr_ip_lbl_, "Quét mã QR hoặc truy cập:\nhttp://...");
-    lv_obj_set_style_text_font(qs_qr_ip_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(qs_qr_ip_lbl_, lv_color_hex(0x38bdf8), 0);
     lv_obj_set_style_text_align(qs_qr_ip_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(qs_qr_ip_lbl_, LV_ALIGN_BOTTOM_MID, 0, -4);
+
+    LayoutQrModalWidgets(height_ > width_);
 }
 
 void LcdDisplay::ShowQrModal() {
     CreateQrModal();
     if (qs_qr_modal_ == nullptr) return;
+
+    // Cập nhật layout theo kích thước/chiều xoay hiện tại
+    LayoutQrModalWidgets(height_ > width_);
 
     std::string ip = WifiManager::GetInstance().GetIpAddress();
     if (ip.empty() || ip == "--" || ip == "0.0.0.0") ip = "192.168.2.56";
@@ -15176,15 +15228,14 @@ void LcdDisplay::ShowQrModal() {
         bool ok = qrcodegen_encodeText(url.c_str(), tempBuffer, qrcode, qrcodegen_Ecc_LOW,
                                        qrcodegen_VERSION_MIN, 4, qrcodegen_Mask_AUTO, true);
         if (ok && qs_qr_img_ != nullptr) {
-            // Fill background white
-            for (int i = 0; i < 110 * 110; i++) {
+            // Fill background white hoàn toàn
+            for (int i = 0; i < QR_CANVAS_SIZE * QR_CANVAS_SIZE; i++) {
                 s_qr_pixels[i] = 0xFFFF;
             }
             int qr_size = qrcodegen_getSize(qrcode);
-            int canvas_size = 110;
-            int scale = canvas_size / (qr_size + 2);
+            int scale = QR_CANVAS_SIZE / (qr_size + 2);
             if (scale < 1) scale = 1;
-            int margin = (canvas_size - qr_size * scale) / 2;
+            int margin = (QR_CANVAS_SIZE - qr_size * scale) / 2;
 
             for (int y = 0; y < qr_size; y++) {
                 for (int x = 0; x < qr_size; x++) {
@@ -15193,11 +15244,11 @@ void LcdDisplay::ShowQrModal() {
                         int py0 = margin + y * scale;
                         for (int dy = 0; dy < scale; dy++) {
                             int py = py0 + dy;
-                            if (py >= 0 && py < 110) {
+                            if (py >= 0 && py < QR_CANVAS_SIZE) {
                                 for (int dx = 0; dx < scale; dx++) {
                                     int px = px0 + dx;
-                                    if (px >= 0 && px < 110) {
-                                        s_qr_pixels[py * 110 + px] = 0x0000;
+                                    if (px >= 0 && px < QR_CANVAS_SIZE) {
+                                        s_qr_pixels[py * QR_CANVAS_SIZE + px] = 0x0000;
                                     }
                                 }
                             }
@@ -15205,7 +15256,11 @@ void LcdDisplay::ShowQrModal() {
                     }
                 }
             }
+
+            // Xóa cache cũ trong LVGL Image Cache và nạp lại đảm bảo vẽ nét, không chồng hình
+            lv_image_cache_drop(&s_qr_dsc);
             lv_image_set_src(qs_qr_img_, &s_qr_dsc);
+            lv_obj_invalidate(qs_qr_img_);
         }
     }
     if (qrcode) free(qrcode);
@@ -15273,7 +15328,12 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_set_style_pad_column(wp_user_scroll_, 8, 0);
     lv_obj_set_flex_flow(wp_user_scroll_, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(wp_user_scroll_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_add_flag(wp_user_scroll_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scroll_dir(wp_user_scroll_, LV_DIR_HOR);
+    lv_obj_set_scrollbar_mode(wp_user_scroll_, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_add_flag(wp_user_scroll_, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_add_flag(wp_user_scroll_, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_set_scroll_snap_x(wp_user_scroll_, LV_SCROLL_SNAP_NONE);
 
     // Nút Save/Back không còn dùng: giữ lại biến wp_save_btn_ = nullptr để không crash
     wp_save_btn_ = nullptr;
@@ -15282,6 +15342,7 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     auto back_exit_action = [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         if (self->wallpaper_box_) lv_obj_add_flag(self->wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
+        self->ClearWpThumbnails();
         if (self->wp_preview_buf_ != nullptr) {
             heap_caps_free(self->wp_preview_buf_);
             self->wp_preview_buf_ = nullptr;
@@ -15302,6 +15363,7 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
             if (dir == LV_DIR_RIGHT) {
                 auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
                 if (self->wallpaper_box_) lv_obj_add_flag(self->wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
+                self->ClearWpThumbnails();
                 if (self->wp_preview_buf_ != nullptr) {
                     heap_caps_free(self->wp_preview_buf_);
                     self->wp_preview_buf_ = nullptr;
@@ -15316,11 +15378,23 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     }, LV_EVENT_GESTURE, this);
 }
 
+void LcdDisplay::ClearWpThumbnails() {
+    for (auto& item : wp_thumb_items_) {
+        if (item.buf != nullptr) {
+            heap_caps_free(item.buf);
+            item.buf = nullptr;
+        }
+    }
+    wp_thumb_items_.clear();
+}
+
 void LcdDisplay::UpdateWallpaperPreview() {
 }
 
 void LcdDisplay::UpdateWallpaperSettingsUI() {
     if (wallpaper_box_ == nullptr) return;
+
+    ClearWpThumbnails();
 
     // Danh sách "Ảnh đã thêm" (index >= 5)
     if (wp_user_scroll_ != nullptr) {
@@ -15351,10 +15425,11 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
             lv_obj_set_style_text_font(hint_lbl, &font_noto_sans_custom_14_1, 0);
             lv_obj_set_style_text_color(hint_lbl, lv_color_hex(0x64748b), 0);
         } else {
+            bool is_p = (height_ > width_);
             for (const auto& item : user_wallpapers) {
                 // Card chứa ảnh đã thêm và nút xóa
                 lv_obj_t* card = lv_obj_create(wp_user_scroll_);
-                lv_obj_set_size(card, 100, 140);
+                lv_obj_set_size(card, 110, 190);
                 lv_obj_set_style_radius(card, 10, 0);
                 bool is_sel = (item.index == wp_preview_idx_);
                 lv_obj_set_style_bg_color(card, is_sel ? lv_color_hex(0x1e3a5f) : lv_color_hex(0x1e293b), 0);
@@ -15365,34 +15440,11 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
                 lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
                 lv_obj_set_user_data(card, (void*)(intptr_t)item.index);
 
-                // Nút chọn ảnh / xem ảnh
-                lv_obj_t* select_area = lv_button_create(card);
-                lv_obj_set_size(select_area, 88, 76);
-                lv_obj_set_style_radius(select_area, 8, 0);
-                lv_obj_set_style_bg_color(select_area, is_sel ? lv_color_hex(0x0284c7) : lv_color_hex(0x0f172a), 0);
-                lv_obj_set_user_data(select_area, (void*)(intptr_t)item.index);
-
-                lv_obj_t* name_lbl = lv_label_create(select_area);
-                lv_label_set_text(name_lbl, item.name.c_str());
-                lv_obj_set_style_text_font(name_lbl, &font_noto_sans_custom_16_4, 0);
-                lv_obj_set_style_text_color(name_lbl, lv_color_white(), 0);
-                lv_obj_align(name_lbl, LV_ALIGN_CENTER, 0, 0);
-
-                // Khi click vào khu vực chọn -> áp dụng làm hình nền luôn
-                lv_obj_add_event_cb(select_area, [](lv_event_t* e) {
-                    auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-                    int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-                    self->wp_preview_idx_ = idx;
-                    WallpaperManager::GetInstance().SetActiveWallpaperIndex(idx);
-                    self->ReloadWallpaper();
-                    self->UpdateWallpaperSettingsUI();
-                }, LV_EVENT_CLICKED, this);
-
-                // Nút Xóa ảnh
+                // 1. Nút XÓA ảnh đặt ở TRÊN ĐẦU card
                 lv_obj_t* del_btn = lv_button_create(card);
-                lv_obj_set_size(del_btn, 88, 36);
+                lv_obj_set_size(del_btn, 98, 34);
                 lv_obj_set_style_radius(del_btn, 8, 0);
-                lv_obj_set_style_bg_color(del_btn, lv_color_hex(0xef4444), 0); // Đỏ
+                lv_obj_set_style_bg_color(del_btn, lv_color_hex(0xef4444), 0); // Đỏ nổi bật
                 lv_obj_set_user_data(del_btn, (void*)(intptr_t)item.index);
 
                 lv_obj_t* del_lbl = lv_label_create(del_btn);
@@ -15414,6 +15466,66 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
                         self->wp_preview_idx_ = 1;
                         WallpaperManager::GetInstance().SetActiveWallpaperIndex(1);
                     }
+                    self->ReloadWallpaper();
+                    self->UpdateWallpaperSettingsUI();
+                }, LV_EVENT_CLICKED, this);
+
+                // 2. Nút chọn ảnh / xem ảnh thumbnail đặt ở DƯỚI
+                lv_obj_t* select_area = lv_button_create(card);
+                lv_obj_set_size(select_area, 98, 132);
+                lv_obj_set_style_radius(select_area, 8, 0);
+                lv_obj_set_style_bg_color(select_area, is_sel ? lv_color_hex(0x0284c7) : lv_color_hex(0x0f172a), 0);
+                lv_obj_set_style_pad_all(select_area, 0, 0);
+                lv_obj_set_style_clip_corner(select_area, true, 0);
+                lv_obj_set_user_data(select_area, (void*)(intptr_t)item.index);
+
+                // Thử giải mã thumbnail thu nhỏ từ file JPEG (giới hạn 72x96 để decode nhẹ nhàng, mượt mà)
+                const uint8_t* img_data = nullptr;
+                size_t img_len = 0;
+                bool is_alloc = false;
+                bool decoded = false;
+
+                if (WallpaperManager::GetInstance().GetWallpaperJpeg(item.index, is_p, &img_data, &img_len, &is_alloc) && img_data != nullptr) {
+                    uint8_t* out_buf = nullptr;
+                    size_t out_len = 0, tw = 0, th = 0, stride = 0;
+                    if (jpeg_to_image_fit(img_data, img_len, 72, 96, &out_buf, &out_len, &tw, &th, &stride) == ESP_OK && out_buf != nullptr) {
+                        WpThumbItem thumb;
+                        thumb.buf = out_buf;
+                        thumb.dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+                        thumb.dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+                        thumb.dsc.header.flags = 0;
+                        thumb.dsc.header.w = (uint32_t)tw;
+                        thumb.dsc.header.h = (uint32_t)th;
+                        thumb.dsc.header.stride = (uint32_t)stride;
+                        thumb.dsc.data_size = out_len;
+                        thumb.dsc.data = out_buf;
+                        wp_thumb_items_.push_back(thumb);
+
+                        lv_obj_t* img_obj = lv_image_create(select_area);
+                        lv_image_set_src(img_obj, &wp_thumb_items_.back().dsc);
+                        lv_obj_align(img_obj, LV_ALIGN_CENTER, 0, 0);
+                        decoded = true;
+                    }
+                    if (is_alloc) {
+                        heap_caps_free((void*)img_data);
+                    }
+                }
+
+                // Nếu không giải mã được hình ảnh, hiển thị text tên ảnh
+                if (!decoded) {
+                    lv_obj_t* name_lbl = lv_label_create(select_area);
+                    lv_label_set_text(name_lbl, item.name.c_str());
+                    lv_obj_set_style_text_font(name_lbl, &font_noto_sans_custom_16_4, 0);
+                    lv_obj_set_style_text_color(name_lbl, lv_color_white(), 0);
+                    lv_obj_align(name_lbl, LV_ALIGN_CENTER, 0, 0);
+                }
+
+                // Khi click vào khu vực ảnh -> áp dụng làm hình nền luôn
+                lv_obj_add_event_cb(select_area, [](lv_event_t* e) {
+                    auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+                    int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+                    self->wp_preview_idx_ = idx;
+                    WallpaperManager::GetInstance().SetActiveWallpaperIndex(idx);
                     self->ReloadWallpaper();
                     self->UpdateWallpaperSettingsUI();
                 }, LV_EVENT_CLICKED, this);
