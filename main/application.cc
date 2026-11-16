@@ -1256,69 +1256,8 @@ void Application::HandleStateChangedEvent() {
 }
 
 void Application::ShowStartupWakeWordHint() {
-    // A coalesced activation/state event can queue another idle UI cleanup.
-    // Wait for it before adding the hint, or ClearChatMessages() would erase it.
-    if (!pending_startup_wake_word_hint_ ||
-        (xEventGroupGetBits(event_group_) & MAIN_EVENT_STATE_CHANGED)) {
-        return;
-    }
     pending_startup_wake_word_hint_ = false;
-    const auto state = GetDeviceState();
-    const bool wake_word_running = audio_service_.IsWakeWordRunning();
-    if (state != kDeviceStateIdle || !last_error_message_.empty() || !wake_word_running) {
-        ESP_LOGI(TAG, "Startup wake word hint skipped (state=%d, wake word running=%d, error=%d)",
-                 static_cast<int>(state), wake_word_running, !last_error_message_.empty());
-        return;
-    }
-
-    const auto wake_words = audio_service_.GetWakeWords();
-    std::string words;
-    for (auto it = wake_words.begin(); it != wake_words.end(); ++it) {
-        std::string w = *it;
-        bool has_non_ascii = false;
-        for (unsigned char c : w) {
-            if (c >= 0x80) { has_non_ascii = true; break; }
-        }
-        if (has_non_ascii || w.find("Lily") != std::string::npos || w.find("lily") != std::string::npos || w.find("hilili") != std::string::npos) {
-            w = "Hi Lily";
-        }
-        if (w.empty() || std::find(wake_words.begin(), it, *it) != it) {
-            continue;
-        }
-        if (!words.empty()) {
-            words += " / ";
-        }
-        words += w;
-    }
-    if (words.empty()) {
-        ESP_LOGW(TAG, "Startup wake word hint skipped: no available wake words");
-        return;
-    }
-    std::string message = Lang::Strings::WAKE_WORD_HINT;
-    const auto placeholder = message.find("%s");
-    if (placeholder == std::string::npos) {
-        ESP_LOGE(TAG, "Startup wake word hint skipped: invalid message template");
-        return;
-    }
-    message.replace(placeholder, 2, words);
-    if (startup_wake_word_hint_timer_ == nullptr) {
-        esp_timer_create_args_t timer_args = {
-            .callback =
-                [](void* arg) {
-                    auto app = static_cast<Application*>(arg);
-                    xEventGroupSetBits(app->event_group_, MAIN_EVENT_STARTUP_HINT_TIMEOUT);
-                },
-            .arg = this,
-            .dispatch_method = ESP_TIMER_TASK,
-            .name = "startup_hint",
-            .skip_unhandled_events = false,
-        };
-        ESP_ERROR_CHECK(esp_timer_create(&timer_args, &startup_wake_word_hint_timer_));
-    }
-    ESP_LOGI(TAG, "Startup wake word hint: %s", message.c_str());
-    Board::GetInstance().GetDisplay()->SetChatMessage("assistant", message.c_str());
-    startup_wake_word_hint_message_ = std::move(message);
-    ESP_ERROR_CHECK(esp_timer_start_once(startup_wake_word_hint_timer_, 5000 * 1000));
+    return;
 }
 
 void Application::HideStartupWakeWordHint() {

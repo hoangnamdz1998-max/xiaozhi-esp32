@@ -3523,44 +3523,14 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         lv_obj_set_width(lbl, LV_SIZE_CONTENT);
         lv_obj_set_style_max_width(lbl, max_b_w - 16, 0);
 
-        chat_message_label_ = lbl;
-
         lv_obj_update_layout(chat_box_);
         lv_obj_scroll_to_view_recursive(row, LV_ANIM_ON);
     }
 
-    lv_anim_delete(chat_message_label_, nullptr);
-
-    lv_label_set_text(chat_message_label_, content);
-
-    // Show bottom_bar_ only when there is content (and subtitle is not globally hidden)
-
+    // Keep bottom_bar_ hidden so it never overlaps chat_box_
     if (bottom_bar_ != nullptr) {
-
-        if (content == nullptr || content[0] == '\0') {
-
-            lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-
-        } else if (!hide_subtitle_ && (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || screen_mode_ == kScreenStandby3)) {
-
-            lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-
-            if (is_wallpaper_active_) {
-
-                lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
-
-                lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
-
-            }
-
-        } else {
-
-            lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-
-        }
-
+        lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     }
-
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
 
     // Re-align bottom_bar_ after text change so it stays anchored to the bottom
@@ -4227,18 +4197,39 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         // 1. Hide wallpaper completely
         lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 
-        // 2. Hide all standby / menu / settings boxes
+        // 2. Hide ALL standby / menu / settings boxes / apps / overlays
         if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
         if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
         if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+        if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+        if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+        if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+        if (status_label_ != nullptr) {
+            lv_label_set_text(status_label_, "");
+            lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (notification_label_ != nullptr) lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
+        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+        if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+        if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
         if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
         if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
         if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
         if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
         if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
-        if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
-        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
-        if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+        if (clock_box_ != nullptr) lv_obj_add_flag(clock_box_, LV_OBJ_FLAG_HIDDEN);
+        if (stopwatch_box_ != nullptr) lv_obj_add_flag(stopwatch_box_, LV_OBJ_FLAG_HIDDEN);
+        if (timer_box_ != nullptr) lv_obj_add_flag(timer_box_, LV_OBJ_FLAG_HIDDEN);
+        if (rates_box_ != nullptr) lv_obj_add_flag(rates_box_, LV_OBJ_FLAG_HIDDEN);
+        if (calc_box_ != nullptr) lv_obj_add_flag(calc_box_, LV_OBJ_FLAG_HIDDEN);
+        if (flashlight_box_ != nullptr) lv_obj_add_flag(flashlight_box_, LV_OBJ_FLAG_HIDDEN);
+        if (fm_box_ != nullptr) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
+        if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
+        if (fm_radio_box_ != nullptr) lv_obj_add_flag(fm_radio_box_, LV_OBJ_FLAG_HIDDEN);
+        if (quick_actions_box_ != nullptr) lv_obj_add_flag(quick_actions_box_, LV_OBJ_FLAG_HIDDEN);
+        if (time_box_ != nullptr) lv_obj_add_flag(time_box_, LV_OBJ_FLAG_HIDDEN);
+        if (date_box_ != nullptr) lv_obj_add_flag(date_box_, LV_OBJ_FLAG_HIDDEN);
+        if (network_box_ != nullptr) lv_obj_add_flag(network_box_, LV_OBJ_FLAG_HIDDEN);
 
         // 3. Layout and show animated robot eyes
         LayoutChatWidgets(height_ > width_);
@@ -4484,23 +4475,25 @@ void LcdDisplay::LayoutChatWidgets(bool is_portrait) {
     if (emoji_box_ != nullptr) {
         lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         if (is_portrait) {
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 18);
+            // Portrait: 240x320 - Eyes at top (y=6..110), chat box at bottom (y=135..318)
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 6);
             if (emoji_image_ != nullptr) {
-                lv_image_set_scale(emoji_image_, 180);
+                lv_image_set_scale(emoji_image_, 220);
             }
         } else {
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 8);
+            // Landscape: 320x240 - Eyes high at top (y=0..93), chat box at bottom (y=112..238)
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 0);
             if (emoji_image_ != nullptr) {
-                lv_image_set_scale(emoji_image_, 145);
+                lv_image_set_scale(emoji_image_, 200);
             }
         }
     }
     if (chat_box_ != nullptr) {
         if (is_portrait) {
-            lv_obj_set_size(chat_box_, width_ - 8, 142);
+            lv_obj_set_size(chat_box_, width_ - 8, 182);
             lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
         } else {
-            lv_obj_set_size(chat_box_, width_ - 8, 102);
+            lv_obj_set_size(chat_box_, width_ - 8, 126);
             lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
         }
     }
@@ -7478,7 +7471,7 @@ void LcdDisplay::CreateMenuUI() {
             } else if (index == 3) {
                 self->ShowExchangeRates();
             } else if (index == 4) {
-                self->ShowStandby();
+                if (self->menu_box_ != nullptr) lv_obj_add_flag(self->menu_box_, LV_OBJ_FLAG_HIDDEN);
                 Application::GetInstance().ToggleChatState();
             } else if (index == 5) {
                 self->ShowQuickSettings();

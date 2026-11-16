@@ -858,6 +858,12 @@ def get_emoji_collection_path(default_emoji_collection, noto_fonts_path, project
         return None
     
     # Special handling for otto-gif collection
+    if project_root:
+        custom_path = os.path.join(project_root, 'main', 'assets', 'emojis', default_emoji_collection)
+        if os.path.exists(custom_path):
+            print(f"Found custom emoji collection: {custom_path}")
+            return custom_path
+
     if default_emoji_collection == 'otto-gif':
         if project_root:
             otto_gif_path = os.path.join(project_root, 'managed_components', 
