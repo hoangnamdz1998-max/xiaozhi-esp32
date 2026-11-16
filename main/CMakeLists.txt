@@ -1192,9 +1192,6 @@ if(CONFIG_BOARD_TYPE_ESP32_P4_FUNCTION_EV_BOARD)
         sdmmc
     )
 endif()
-if(CONFIG_BOARD_TYPE_BREAD_COMPACT_ML307 OR CONFIG_BOARD_TYPE_XINGZHI_CUBE_0_85TFT_ML307 OR CONFIG_BOARD_TYPE_XINGZHI_CUBE_0_96OLED_ML307 OR CONFIG_BOARD_TYPE_XINGZHI_CUBE_1_54TFT_ML307 OR CONFIG_BOARD_TYPE_ZHENGCHEN_1_54TFT_ML307 OR CONFIG_BOARD_TYPE_ZHENGCHEN_CAM_ML307 OR CONFIG_BOARD_TYPE_ALIENTEK_ATK_DNESP32S3M_4G OR CONFIG_BOARD_TYPE_CHD_ESP32S3_BOX OR CONFIG_BOARD_TYPE_XMINI_C3_4G OR CONFIG_BOARD_TYPE_YUNLIAO_S3 OR CONFIG_BOARD_TYPE_NULLLAB_AI_VOX_V3)
-    list(APPEND MAIN_PRIV_REQUIRES_EXTRA esp-ml307)
-endif()
 idf_component_register(SRCS ${SOURCES}
                     EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS}
                                 "${CMAKE_CURRENT_SOURCE_DIR}/assets/wallpaper_portrait.bin"
@@ -1239,6 +1236,7 @@ idf_component_register(SRCS ${SOURCES}
                         esp_driver_sdmmc
                         sdmmc
                         xiaozhi-fonts
+                        esp-ml307
                         esp_http_server
                         spiffs
                                                                         ${MAIN_PRIV_REQUIRES_EXTRA}
