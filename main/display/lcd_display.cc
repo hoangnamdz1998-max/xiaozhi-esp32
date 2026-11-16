@@ -4289,23 +4289,16 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
     }
 
     if (top_bar_ != nullptr) {
-        if (screen_mode_ != kScreenDefault && !in_chat) {
+        if (!in_chat) {
             lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
         } else {
             lv_obj_remove_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_30, 0);
-            lv_obj_set_style_bg_color(top_bar_, lv_color_black(), 0);
+            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
         }
     }
 
     if (bottom_bar_ != nullptr) {
-        if (screen_mode_ != kScreenDefault && !in_chat) {
-            lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_30, 0);
-            lv_obj_set_style_bg_color(bottom_bar_, lv_color_black(), 0);
-        }
+        lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     }
 
     if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
@@ -5491,7 +5484,7 @@ void LcdDisplay::OnSwipeRight() {
         UpdateCalendarUI();
 
     } else if (screen_mode_ == kScreenWeatherDetail || screen_mode_ == kScreenClock ||
-               screen_mode_ == kScreenExchangeRates || screen_mode_ == kScreenDefault) {
+               screen_mode_ == kScreenExchangeRates ) {
 
         ShowMenu();
 
