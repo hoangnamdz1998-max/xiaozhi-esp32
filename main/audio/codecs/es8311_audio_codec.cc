@@ -16,7 +16,7 @@ Es8311AudioCodec::Es8311AudioCodec(void* i2c_master_handle, i2c_port_t i2c_port,
     output_sample_rate_ = output_sample_rate;
     pa_pin_ = pa_pin;
     pa_inverted_ = pa_inverted;
-    input_gain_ = 30;
+    input_gain_ = 42.0f;
 
     assert(input_sample_rate_ == output_sample_rate_);
     CreateDuplexChannels(mclk, bclk, ws, dout, din);
@@ -176,6 +176,15 @@ void Es8311AudioCodec::SetOutputVolume(int volume) {
         ESP_ERROR_CHECK(esp_codec_dev_set_out_vol(dev_, volume));
     }
     AudioCodec::SetOutputVolume(volume);
+}
+
+void Es8311AudioCodec::SetInputGain(float gain) {
+    std::lock_guard<std::mutex> lock(data_if_mutex_);
+    input_gain_ = gain;
+    if (dev_ != nullptr) {
+        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_codec_dev_set_in_gain(dev_, input_gain_));
+    }
+    AudioCodec::SetInputGain(gain);
 }
 
 void Es8311AudioCodec::EnableInput(bool enable) {

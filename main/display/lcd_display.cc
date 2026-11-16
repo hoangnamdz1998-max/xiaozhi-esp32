@@ -3612,6 +3612,21 @@ void LcdDisplay::ClearChatMessages() {
 
 
 
+void LcdDisplay::SetStatus(const char* status) {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+
+    if (status_label_ != nullptr) {
+        if (status != nullptr && status[0] != '\0') {
+            lv_label_set_text(status_label_, status);
+            lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_label_set_text(status_label_, "");
+            lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
 bool LcdDisplay::SetEmotion(const char* emotion) {
 
     if (!setup_ui_called_) {
@@ -3738,7 +3753,7 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
             // Set initial frame and start animation
 
             lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
-            lv_image_set_scale(emoji_image_, (height_ > width_) ? 180 : 145);
+            lv_image_set_scale(emoji_image_, 256);
             lv_obj_center(emoji_image_);
 
             gif_controller_->Start();
@@ -4501,8 +4516,8 @@ void LcdDisplay::LayoutChatWidgets(bool is_portrait) {
                 lv_image_set_scale(emoji_image_, 256);
             }
         } else {
-            // Landscape: 320x240 - Oval eyes centered below status bar (y: 22..122)
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 22);
+            // Landscape: 320x240 - Square eyes centered below status bar (y: 28..112)
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 28);
             if (emoji_image_ != nullptr) {
                 lv_image_set_scale(emoji_image_, 256);
             }
