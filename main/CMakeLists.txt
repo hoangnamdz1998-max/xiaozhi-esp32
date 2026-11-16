@@ -1246,7 +1246,7 @@ idf_component_register(SRCS ${SOURCES}
 # dialect; pin the baseline so main/ does not depend on it.
 if(NOT CMAKE_BUILD_EARLY_EXPANSION)
     target_compile_options(${COMPONENT_LIB} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++23>)
-    target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format)
+    target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format -Wno-format-truncation -Wno-error=format-truncation)
 endif()
 
 # Use target_compile_definitions to define the reported board identity

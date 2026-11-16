@@ -10892,7 +10892,7 @@ void LcdDisplay::CreateStopwatchUI() {
 
         self->cd_remain_ms_ = (int64_t)self->cd_minutes_ * 60 * 1000;
 
-        char buf[16];
+        char buf[32];
 
         snprintf(buf, sizeof(buf), "%02d:00.0", self->cd_minutes_);
 
@@ -10934,7 +10934,7 @@ void LcdDisplay::CreateStopwatchUI() {
 
         self->cd_remain_ms_ = (int64_t)self->cd_minutes_ * 60 * 1000;
 
-        char buf[16];
+        char buf[32];
 
         snprintf(buf, sizeof(buf), "%02d:00.0", self->cd_minutes_);
 
@@ -10988,7 +10988,7 @@ void LcdDisplay::CreateStopwatchUI() {
 
             self->cd_remain_ms_ = (int64_t)m * 60 * 1000;
 
-            char buf[16];
+            char buf[32];
 
             snprintf(buf, sizeof(buf), "%02d:00.0", m);
 
@@ -11098,7 +11098,7 @@ void LcdDisplay::CreateStopwatchUI() {
 
         lv_obj_set_style_text_color(self->cd_status_label_, lv_color_hex(0x94A3B8), 0);
 
-        char buf[16];
+        char buf[32];
 
         snprintf(buf, sizeof(buf), "%02d:00.0", self->cd_minutes_);
 
