@@ -128,6 +128,11 @@ static std::string NormalizeCityName(const std::string& raw_city) {
     if (lower.find("da lat") != std::string::npos) return "Đà Lạt";
     if (lower.find("ca mau") != std::string::npos) return "Cà Mau";
     if (lower.find("phu quoc") != std::string::npos) return "Phú Quốc";
+    if (lower.find("thoi son") != std::string::npos || lower.find("tan an") != std::string::npos) return "Tân An";
+    if (lower.find("long an") != std::string::npos) return "Long An";
+    if (lower.find("tay ninh") != std::string::npos) return "Tây Ninh";
+    if (lower.find("tien giang") != std::string::npos || lower.find("my tho") != std::string::npos) return "Mỹ Tho";
+    if (lower.find("ben tre") != std::string::npos) return "Bến Tre";
 
     return raw_city;
 }
@@ -167,6 +172,10 @@ bool WeatherService::FetchLocation(float& lat, float& lon, std::string& city) {
                                     city = NormalizeCityName(j_city->valuestring);
                                 } else if (j_region && j_region->valuestring && strlen(j_region->valuestring) > 0) {
                                     city = NormalizeCityName(j_region->valuestring);
+                                }
+                                if (city == "Tân An") {
+                                    lat = 10.5360f;
+                                    lon = 106.4137f;
                                 }
                                 ESP_LOGI(TAG, "Location acquired from WiFi (ipwho.is): %s (%.4f, %.4f)",
                                          city.c_str(), lat, lon);
@@ -212,6 +221,10 @@ bool WeatherService::FetchLocation(float& lat, float& lon, std::string& city) {
                                     city = NormalizeCityName(j_city->valuestring);
                                 } else if (j_region && j_region->valuestring && strlen(j_region->valuestring) > 0) {
                                     city = NormalizeCityName(j_region->valuestring);
+                                }
+                                if (city == "Tân An") {
+                                    lat = 10.5360f;
+                                    lon = 106.4137f;
                                 }
                                 ESP_LOGI(TAG, "Location acquired from WiFi (ip-api): %s (%.4f, %.4f)",
                                          city.c_str(), lat, lon);

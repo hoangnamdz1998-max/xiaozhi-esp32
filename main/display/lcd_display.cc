@@ -3465,7 +3465,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
-        } else if (!hide_subtitle_) {
+        } else if (!hide_subtitle_ && (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || screen_mode_ == kScreenStandby3)) {
 
             lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
@@ -3476,6 +3476,10 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
                 lv_obj_set_style_text_color(chat_message_label_, lv_color_white(), 0);
 
             }
+
+        } else {
+
+            lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
         }
 
@@ -5465,7 +5469,15 @@ void LcdDisplay::OnSwipeUp() {
         ShowClock(); // Thoát từ trang con về trang Đồng hồ chính (Báo thức vuốt từ mép dưới lên như iPhone)
 
     } else if (screen_mode_ == kScreenMusic) {
-        ShowMenu();
+        if (music_sub_view_ == kMusicViewChart) {
+            // Ở trang danh sách bài hát: TẮT tính năng vuốt lên trở về
+            // Người dùng chỉ thoát qua nút [X] cố định trên đỉnh
+            return;
+        } else {
+            // Ở trang phát nhạc: Vuốt lên sẽ thoát ra màn hình Menu (icon) luôn, nhưng nhạc VẪN TIẾP TỤC PHÁT!
+            ShowMenu();
+            return;
+        }
     } else if (screen_mode_ == kScreenWallpaperSettings) {
         WallpaperManager::GetInstance().SetActiveWallpaperIndex(wp_preview_idx_);
         WallpaperManager::GetInstance().SetActiveLayoutIndex(wp_preview_layout_);
@@ -5595,6 +5607,7 @@ void LcdDisplay::ShowStandby() {
 
 
 void LcdDisplay::ShowMenu() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -5765,6 +5778,7 @@ void LcdDisplay::ExitQuickSettings() {
 
 
 void LcdDisplay::ShowQuickSettings() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -5869,6 +5883,7 @@ void LcdDisplay::ShowQuickSettings() {
     UpdateColorDotsSelection();
 
     UpdateQuickSettingsInfo();
+    UpdateMusicUI();
 
 
 
@@ -5915,6 +5930,7 @@ void LcdDisplay::ShowQuickSettings() {
 
 
 void LcdDisplay::ShowCalendar() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -6004,6 +6020,7 @@ void LcdDisplay::ShowCalendar() {
 
 
 void LcdDisplay::ShowWeatherDetail() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -6082,6 +6099,7 @@ void LcdDisplay::ShowWeatherDetail() {
 
 
 void LcdDisplay::ShowClock() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -6158,6 +6176,7 @@ void LcdDisplay::ShowClock() {
 
 
 void LcdDisplay::ShowStopwatch() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -6201,6 +6220,7 @@ void LcdDisplay::ShowStopwatch() {
 
 
 void LcdDisplay::ShowTimer() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -6244,6 +6264,7 @@ void LcdDisplay::ShowTimer() {
 
 
 void LcdDisplay::ShowExchangeRates() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -6313,6 +6334,7 @@ void LcdDisplay::ShowExchangeRates() {
 
 
 void LcdDisplay::ShowCalculator() {
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     DisplayLockGuard lock(this);
 
@@ -7527,6 +7549,9 @@ void LcdDisplay::CreateQuickSettingsUI() {
     lv_obj_add_flag(qs_content_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scroll_dir(qs_content_box_, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(qs_content_box_, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_add_flag(qs_content_box_, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_add_flag(qs_content_box_, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_set_scroll_snap_y(qs_content_box_, LV_SCROLL_SNAP_NONE);
     lv_obj_add_event_cb(qs_content_box_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         if (self && self->qs_content_box_) {
@@ -7724,6 +7749,76 @@ void LcdDisplay::CreateQuickSettingsUI() {
         Board::GetInstance().EnterWifiConfigMode();
     }, LV_EVENT_CLICKED, this);
 
+    // 4.5. Mini Music Player Card (nằm trên nút Khởi động lại)
+    qs_music_card_ = lv_obj_create(qs_content_box_);
+    lv_obj_set_style_bg_color(qs_music_card_, lv_color_hex(0x151e2e), 0);
+    lv_obj_set_style_bg_opa(qs_music_card_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(qs_music_card_, 10, 0);
+    lv_obj_set_style_border_color(qs_music_card_, lv_color_hex(0x27354a), 0);
+    lv_obj_set_style_border_width(qs_music_card_, 1, 0);
+    lv_obj_set_style_pad_all(qs_music_card_, 4, 0);
+    lv_obj_clear_flag(qs_music_card_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Icon nốt nhạc / đĩa than nhỏ
+    qs_music_icon_ = lv_label_create(qs_music_card_);
+    lv_label_set_text(qs_music_icon_, MATERIAL_SYMBOLS_MUSIC_NOTE);
+    lv_obj_set_style_text_font(qs_music_icon_, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(qs_music_icon_, lv_color_hex(0xec4899), 0);
+    lv_obj_set_pos(qs_music_icon_, 4, 2);
+
+    // Tiêu đề bài hát
+    qs_music_title_ = lv_label_create(qs_music_card_);
+    lv_label_set_text(qs_music_title_, music_current_song_.c_str());
+    lv_obj_set_style_text_font(qs_music_title_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(qs_music_title_, lv_color_white(), 0);
+    lv_label_set_long_mode(qs_music_title_, LV_LABEL_LONG_DOT);
+    lv_obj_set_pos(qs_music_title_, 34, 4);
+
+    // Nút Back bài
+    qs_music_prev_btn_ = lv_button_create(qs_music_card_);
+    lv_obj_set_style_bg_color(qs_music_prev_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(qs_music_prev_btn_, 6, 0);
+    lv_obj_set_style_pad_all(qs_music_prev_btn_, 0, 0);
+    lv_obj_t* qs_prev_lbl = lv_label_create(qs_music_prev_btn_);
+    lv_label_set_text(qs_prev_lbl, "|<");
+    lv_obj_set_style_text_font(qs_prev_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(qs_prev_lbl, lv_color_white(), 0);
+    lv_obj_align(qs_prev_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(qs_music_prev_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->PlayPrevChartSong();
+    }, LV_EVENT_CLICKED, this);
+
+    // Nút Play/Pause
+    qs_music_play_btn_ = lv_button_create(qs_music_card_);
+    lv_obj_set_style_bg_color(qs_music_play_btn_, lv_color_hex(0x38bdf8), 0);
+    lv_obj_set_style_radius(qs_music_play_btn_, 6, 0);
+    lv_obj_set_style_pad_all(qs_music_play_btn_, 0, 0);
+    qs_music_play_lbl_ = lv_label_create(qs_music_play_btn_);
+    lv_label_set_text(qs_music_play_lbl_, music_is_playing_ ? "||" : ">");
+    lv_obj_set_style_text_font(qs_music_play_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(qs_music_play_lbl_, lv_color_hex(0x0f172a), 0);
+    lv_obj_align(qs_music_play_lbl_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(qs_music_play_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->ToggleMusicPlayPause();
+    }, LV_EVENT_CLICKED, this);
+
+    // Nút Next bài
+    qs_music_next_btn_ = lv_button_create(qs_music_card_);
+    lv_obj_set_style_bg_color(qs_music_next_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(qs_music_next_btn_, 6, 0);
+    lv_obj_set_style_pad_all(qs_music_next_btn_, 0, 0);
+    lv_obj_t* qs_next_lbl = lv_label_create(qs_music_next_btn_);
+    lv_label_set_text(qs_next_lbl, ">|");
+    lv_obj_set_style_text_font(qs_next_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(qs_next_lbl, lv_color_white(), 0);
+    lv_obj_align(qs_next_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(qs_music_next_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->PlayNextChartSong();
+    }, LV_EVENT_CLICKED, this);
+
     // 5. Restart Button - Giữ nguyên màu đỏ nổi bật (trong qs_content_box_)
     qs_restart_btn_ = lv_button_create(qs_content_box_);
     lv_obj_set_style_bg_color(qs_restart_btn_, lv_color_hex(0xDC2626), 0);
@@ -7875,16 +7970,39 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_pos(qs_wifi_btn_, 123, 206);
         }
 
-        // Hàng 3 (y = 248): Khởi động lại (to rõ 20pt, nút to 46px)
-        if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 230, 46);
-            lv_obj_set_pos(qs_restart_btn_, 5, 248);
+        // Hàng 2.5 (y = 248): Mini Music Player (nằm trên nút Khởi động lại)
+        if (qs_music_card_) {
+            lv_obj_set_size(qs_music_card_, 230, 68);
+            lv_obj_set_pos(qs_music_card_, 5, 248);
+            if (qs_music_icon_) lv_obj_set_pos(qs_music_icon_, 6, 6);
+            if (qs_music_title_) {
+                lv_obj_set_pos(qs_music_title_, 34, 8);
+                lv_obj_set_width(qs_music_title_, 186);
+            }
+            if (qs_music_prev_btn_) {
+                lv_obj_set_size(qs_music_prev_btn_, 56, 26);
+                lv_obj_set_pos(qs_music_prev_btn_, 18, 34);
+            }
+            if (qs_music_play_btn_) {
+                lv_obj_set_size(qs_music_play_btn_, 58, 26);
+                lv_obj_set_pos(qs_music_play_btn_, 86, 34);
+            }
+            if (qs_music_next_btn_) {
+                lv_obj_set_size(qs_music_next_btn_, 56, 26);
+                lv_obj_set_pos(qs_music_next_btn_, 156, 34);
+            }
         }
 
-        // Hàng 4 (y = 302): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
+        // Hàng 3 (y = 324): Khởi động lại (nằm dưới Mini Player)
+        if (qs_restart_btn_) {
+            lv_obj_set_size(qs_restart_btn_, 230, 44);
+            lv_obj_set_pos(qs_restart_btn_, 5, 324);
+        }
+
+        // Hàng 4 (y = 376): Thẻ thông tin hệ thống
         if (qs_info_card_) {
             lv_obj_set_size(qs_info_card_, 230, 134);
-            lv_obj_set_pos(qs_info_card_, 5, 302);
+            lv_obj_set_pos(qs_info_card_, 5, 376);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
         if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 38);
@@ -7966,16 +8084,39 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_pos(qs_wifi_btn_, 164, 176);
         }
 
-        // Hàng 3 (y = 216): Khởi động lại (to rõ 20pt, nút to 44px)
-        if (qs_restart_btn_) {
-            lv_obj_set_size(qs_restart_btn_, 304, 44);
-            lv_obj_set_pos(qs_restart_btn_, 8, 216);
+        // Hàng 2.5 (y = 216): Mini Music Player (nằm trên nút Khởi động lại)
+        if (qs_music_card_) {
+            lv_obj_set_size(qs_music_card_, 304, 64);
+            lv_obj_set_pos(qs_music_card_, 8, 216);
+            if (qs_music_icon_) lv_obj_set_pos(qs_music_icon_, 8, 6);
+            if (qs_music_title_) {
+                lv_obj_set_pos(qs_music_title_, 38, 8);
+                lv_obj_set_width(qs_music_title_, 256);
+            }
+            if (qs_music_prev_btn_) {
+                lv_obj_set_size(qs_music_prev_btn_, 62, 26);
+                lv_obj_set_pos(qs_music_prev_btn_, 46, 32);
+            }
+            if (qs_music_play_btn_) {
+                lv_obj_set_size(qs_music_play_btn_, 64, 26);
+                lv_obj_set_pos(qs_music_play_btn_, 120, 32);
+            }
+            if (qs_music_next_btn_) {
+                lv_obj_set_size(qs_music_next_btn_, 62, 26);
+                lv_obj_set_pos(qs_music_next_btn_, 196, 32);
+            }
         }
 
-        // Hàng 4 (y = 268): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
+        // Hàng 3 (y = 288): Khởi động lại (to rõ 20pt)
+        if (qs_restart_btn_) {
+            lv_obj_set_size(qs_restart_btn_, 304, 42);
+            lv_obj_set_pos(qs_restart_btn_, 8, 288);
+        }
+
+        // Hàng 4 (y = 338): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
         if (qs_info_card_) {
             lv_obj_set_size(qs_info_card_, 304, 134);
-            lv_obj_set_pos(qs_info_card_, 8, 268);
+            lv_obj_set_pos(qs_info_card_, 8, 338);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
         if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 38);
@@ -13577,31 +13718,198 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_clear_flag(music_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
 
-    // 1. Nút quay lại [✕]
-    music_back_btn_ = lv_button_create(music_box_);
-    lv_obj_set_size(music_back_btn_, 32, 32);
-    lv_obj_set_style_bg_color(music_back_btn_, lv_color_hex(0x1e293b), 0);
-    lv_obj_set_style_radius(music_back_btn_, 16, 0);
-    lv_obj_set_style_pad_all(music_back_btn_, 0, 0);
-    lv_obj_set_ext_click_area(music_back_btn_, 8);
-    lv_obj_t* back_lbl = lv_label_create(music_back_btn_);
-    lv_label_set_text(back_lbl, "X");
-    lv_obj_set_style_text_font(back_lbl, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(back_lbl, lv_color_white(), 0);
-    lv_obj_align(back_lbl, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_event_cb(music_back_btn_, [](lv_event_t* e) {
+    // ==========================================
+    // 1. SUB-VIEW: BẢNG XẾP HẠNG (CHART FULL MÀN HÌNH)
+    // ==========================================
+    music_chart_view_ = lv_obj_create(music_box_);
+    lv_obj_set_size(music_chart_view_, width_, height_);
+    lv_obj_set_pos(music_chart_view_, 0, 0);
+    lv_obj_set_style_bg_color(music_chart_view_, lv_color_hex(0x0b0f19), 0);
+    lv_obj_set_style_bg_opa(music_chart_view_, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(music_chart_view_, 0, 0);
+    lv_obj_set_style_border_width(music_chart_view_, 0, 0);
+    lv_obj_clear_flag(music_chart_view_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Header cố định trên đỉnh - KHÔNG BỊ CUỘN MẤT
+    music_chart_header_ = lv_obj_create(music_chart_view_);
+    lv_obj_set_style_bg_color(music_chart_header_, lv_color_hex(0x0f172a), 0);
+    lv_obj_set_style_bg_opa(music_chart_header_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(music_chart_header_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_border_width(music_chart_header_, 1, 0);
+    lv_obj_set_style_pad_all(music_chart_header_, 0, 0);
+    lv_obj_clear_flag(music_chart_header_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Tiêu đề BXH
+    music_chart_title_ = lv_label_create(music_chart_header_);
+    lv_label_set_text(music_chart_title_, "\xe2\x99\xab BXH ZING MP3");
+    lv_obj_set_style_text_font(music_chart_title_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(music_chart_title_, lv_color_hex(0x38bdf8), 0);
+
+    // Nút "Đang phát ▶" (chuyển sang Player view nếu đang nghe)
+    music_chart_now_playing_btn_ = lv_button_create(music_chart_header_);
+    lv_obj_set_size(music_chart_now_playing_btn_, 72, 28);
+    lv_obj_set_style_bg_color(music_chart_now_playing_btn_, lv_color_hex(0x0284c7), 0);
+    lv_obj_set_style_radius(music_chart_now_playing_btn_, 14, 0);
+    lv_obj_set_style_pad_all(music_chart_now_playing_btn_, 0, 0);
+    lv_obj_t* np_lbl = lv_label_create(music_chart_now_playing_btn_);
+    lv_label_set_text(np_lbl, "Phát >");
+    lv_obj_set_style_text_font(np_lbl, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(np_lbl, lv_color_white(), 0);
+    lv_obj_align(np_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(music_chart_now_playing_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->SwitchToMusicPlayer();
+    }, LV_EVENT_CLICKED, this);
+
+    // Nút [X] CỐ ĐỊNH trên header để quay về trang icon
+    music_chart_close_btn_ = lv_button_create(music_chart_header_);
+    lv_obj_set_size(music_chart_close_btn_, 34, 32);
+    lv_obj_set_style_bg_color(music_chart_close_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(music_chart_close_btn_, 16, 0);
+    lv_obj_set_style_pad_all(music_chart_close_btn_, 0, 0);
+    lv_obj_set_ext_click_area(music_chart_close_btn_, 8);
+    lv_obj_t* close_lbl = lv_label_create(music_chart_close_btn_);
+    lv_label_set_text(close_lbl, "X");
+    lv_obj_set_style_text_font(close_lbl, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(close_lbl, lv_color_white(), 0);
+    lv_obj_align(close_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(music_chart_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
 
-    // 2. Tiêu đề
-    music_title_badge_ = lv_label_create(music_box_);
+    // Danh sách bài hát cuộn dọc Full màn hình
+    music_chart_list_ = lv_obj_create(music_chart_view_);
+    lv_obj_set_style_bg_color(music_chart_list_, lv_color_hex(0x0b0f19), 0);
+    lv_obj_set_style_bg_opa(music_chart_list_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(music_chart_list_, 0, 0);
+    lv_obj_set_style_pad_all(music_chart_list_, 6, 0);
+    lv_obj_set_style_pad_row(music_chart_list_, 5, 0);
+    lv_obj_set_flex_flow(music_chart_list_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_scroll_dir(music_chart_list_, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(music_chart_list_, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_add_flag(music_chart_list_, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_add_flag(music_chart_list_, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_set_scroll_snap_y(music_chart_list_, LV_SCROLL_SNAP_NONE);
+
+    for (int i = 0; i < 10; ++i) {
+        lv_obj_t* item_btn = lv_button_create(music_chart_list_);
+        lv_obj_set_width(item_btn, lv_pct(100));
+        lv_obj_set_height(item_btn, 42);
+        lv_obj_set_style_bg_color(item_btn, lv_color_hex(0x151e2e), 0);
+        lv_obj_set_style_bg_opa(item_btn, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_color(item_btn, lv_color_hex(0x1e293b), 0);
+        lv_obj_set_style_border_width(item_btn, 1, 0);
+        lv_obj_set_style_radius(item_btn, 8, 0);
+        lv_obj_set_style_pad_all(item_btn, 4, 0);
+        lv_obj_clear_flag(item_btn, LV_OBJ_FLAG_SCROLLABLE);
+
+        // Rank badge
+        lv_obj_t* rank_lbl = lv_label_create(item_btn);
+        char rank_str[8];
+        snprintf(rank_str, sizeof(rank_str), "#%d", i + 1);
+        lv_label_set_text(rank_lbl, rank_str);
+        lv_obj_set_style_text_font(rank_lbl, &font_noto_sans_custom_16_4, 0);
+        if (i == 0) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0xef4444), 0);
+        else if (i == 1) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x38bdf8), 0);
+        else if (i == 2) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x10b981), 0);
+        else lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x94a3b8), 0);
+        lv_obj_align(rank_lbl, LV_ALIGN_LEFT_MID, 6, 0);
+
+        // Song Title
+        lv_obj_t* title_lbl = lv_label_create(item_btn);
+        music_chart_item_titles_[i] = title_lbl;
+        const char* init_title = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].title.c_str() : kZingTopSongsDefault[i].title.c_str();
+        lv_label_set_text(title_lbl, init_title);
+        lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
+        lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(title_lbl, 140);
+        lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 40, -8);
+
+        // Artist
+        lv_obj_t* artist_lbl = lv_label_create(item_btn);
+        music_chart_item_artists_[i] = artist_lbl;
+        const char* init_artist = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].artist.c_str() : kZingTopSongsDefault[i].artist.c_str();
+        lv_label_set_text(artist_lbl, init_artist);
+        lv_obj_set_style_text_font(artist_lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x64748b), 0);
+        lv_label_set_long_mode(artist_lbl, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(artist_lbl, 140);
+        lv_obj_align(artist_lbl, LV_ALIGN_LEFT_MID, 40, 8);
+
+        // Play icon
+        lv_obj_t* icon_lbl = lv_label_create(item_btn);
+        lv_label_set_text(icon_lbl, ">");
+        lv_obj_set_style_text_font(icon_lbl, &font_noto_sans_custom_16_4, 0);
+        lv_obj_set_style_text_color(icon_lbl, lv_color_hex(0x38bdf8), 0);
+        lv_obj_align(icon_lbl, LV_ALIGN_RIGHT_MID, -6, 0);
+
+        lv_obj_set_user_data(item_btn, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(item_btn, [](lv_event_t* e) {
+            auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+            self->music_current_chart_idx_ = idx;
+            self->PlayChartSong(idx);
+            self->SwitchToMusicPlayer();
+        }, LV_EVENT_CLICKED, this);
+    }
+
+    // ==========================================
+    // 2. SUB-VIEW: PHÁT NHẠC FULL TO (ĐĨA THAN & SÓNG NHẠC)
+    // ==========================================
+    music_player_view_ = lv_obj_create(music_box_);
+    lv_obj_set_size(music_player_view_, width_, height_);
+    lv_obj_set_pos(music_player_view_, 0, 0);
+    lv_obj_set_style_bg_color(music_player_view_, lv_color_hex(0x0b0f19), 0);
+    lv_obj_set_style_bg_opa(music_player_view_, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(music_player_view_, 0, 0);
+    lv_obj_set_style_border_width(music_player_view_, 0, 0);
+    lv_obj_clear_flag(music_player_view_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(music_player_view_, LV_OBJ_FLAG_HIDDEN); // Mặc định ẩn, vào trang danh sách trước
+
+    // Nút quay lại danh sách bài hát [<]
+    music_player_back_btn_ = lv_button_create(music_player_view_);
+    lv_obj_set_size(music_player_back_btn_, 34, 32);
+    lv_obj_set_style_bg_color(music_player_back_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(music_player_back_btn_, 16, 0);
+    lv_obj_set_style_pad_all(music_player_back_btn_, 0, 0);
+    lv_obj_set_ext_click_area(music_player_back_btn_, 8);
+    lv_obj_t* p_back_lbl = lv_label_create(music_player_back_btn_);
+    lv_label_set_text(p_back_lbl, "<");
+    lv_obj_set_style_text_font(p_back_lbl, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(p_back_lbl, lv_color_white(), 0);
+    lv_obj_align(p_back_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(music_player_back_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->SwitchToMusicChart();
+    }, LV_EVENT_CLICKED, this);
+
+    // Tiêu đề badge "Đang phát nhạc"
+    music_title_badge_ = lv_label_create(music_player_view_);
     lv_label_set_text(music_title_badge_, "Đang phát nhạc");
     lv_obj_set_style_text_font(music_title_badge_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(music_title_badge_, lv_color_hex(0x38bdf8), 0);
 
-    // 3. Đĩa than Vinyl cổ điển
-    music_vinyl_ = lv_obj_create(music_box_);
+    // Nút thoát ra Menu [X]
+    music_player_close_btn_ = lv_button_create(music_player_view_);
+    lv_obj_set_size(music_player_close_btn_, 34, 32);
+    lv_obj_set_style_bg_color(music_player_close_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(music_player_close_btn_, 16, 0);
+    lv_obj_set_style_pad_all(music_player_close_btn_, 0, 0);
+    lv_obj_set_ext_click_area(music_player_close_btn_, 8);
+    lv_obj_t* p_close_lbl = lv_label_create(music_player_close_btn_);
+    lv_label_set_text(p_close_lbl, "X");
+    lv_obj_set_style_text_font(p_close_lbl, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(p_close_lbl, lv_color_white(), 0);
+    lv_obj_align(p_close_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(music_player_close_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->ShowMenu();
+    }, LV_EVENT_CLICKED, this);
+
+    // Đĩa than Vinyl to
+    music_vinyl_ = lv_obj_create(music_player_view_);
     lv_obj_set_style_bg_color(music_vinyl_, lv_color_hex(0x111827), 0);
     lv_obj_set_style_border_color(music_vinyl_, lv_color_hex(0x374151), 0);
     lv_obj_set_style_border_width(music_vinyl_, 3, 0);
@@ -13609,22 +13917,22 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_clear_flag(music_vinyl_, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* groove = lv_obj_create(music_vinyl_);
-    lv_obj_set_size(groove, 68, 68);
+    lv_obj_set_size(groove, 80, 80);
     lv_obj_align(groove, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_bg_opa(groove, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_color(groove, lv_color_hex(0x1f2937), 0);
     lv_obj_set_style_border_width(groove, 1, 0);
-    lv_obj_set_style_radius(groove, 34, 0);
+    lv_obj_set_style_radius(groove, 40, 0);
     lv_obj_clear_flag(groove, LV_OBJ_FLAG_SCROLLABLE);
 
     music_vinyl_label_ = lv_obj_create(music_vinyl_);
-    lv_obj_set_size(music_vinyl_label_, 42, 42);
+    lv_obj_set_size(music_vinyl_label_, 46, 46);
     lv_obj_align(music_vinyl_label_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_bg_color(music_vinyl_label_, lv_color_hex(0xec4899), 0);
     lv_obj_set_style_bg_opa(music_vinyl_label_, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(music_vinyl_label_, lv_color_hex(0xf43f5e), 0);
     lv_obj_set_style_border_width(music_vinyl_label_, 2, 0);
-    lv_obj_set_style_radius(music_vinyl_label_, 21, 0);
+    lv_obj_set_style_radius(music_vinyl_label_, 23, 0);
     lv_obj_set_style_pad_all(music_vinyl_label_, 0, 0);
     lv_obj_clear_flag(music_vinyl_label_, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -13634,70 +13942,68 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_set_style_text_color(music_vinyl_note_, lv_color_white(), 0);
     lv_obj_align(music_vinyl_note_, LV_ALIGN_CENTER, 0, 0);
 
-    // 4. Thông tin bài hát & ca sĩ
-    music_song_lbl_ = lv_label_create(music_box_);
+    // Thông tin bài hát & ca sĩ
+    music_song_lbl_ = lv_label_create(music_player_view_);
     lv_label_set_text(music_song_lbl_, music_current_song_.c_str());
     lv_obj_set_style_text_font(music_song_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(music_song_lbl_, lv_color_white(), 0);
     lv_label_set_long_mode(music_song_lbl_, LV_LABEL_LONG_DOT);
 
-    music_artist_lbl_ = lv_label_create(music_box_);
+    music_artist_lbl_ = lv_label_create(music_player_view_);
     lv_label_set_text(music_artist_lbl_, music_current_artist_.c_str());
     lv_obj_set_style_text_font(music_artist_lbl_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(music_artist_lbl_, lv_color_hex(0x94a3b8), 0);
     lv_label_set_long_mode(music_artist_lbl_, LV_LABEL_LONG_DOT);
 
-    // 5. Nút điều khiển Phát / Dừng
-    music_play_btn_ = lv_button_create(music_box_);
+    // CỤM NÚT ĐIỀU KHIỂN: BACK BÀI, DỪNG/PHÁT, QUA BÀI
+    // Nút Back bài
+    music_prev_btn_ = lv_button_create(music_player_view_);
+    lv_obj_set_style_bg_color(music_prev_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(music_prev_btn_, 8, 0);
+    lv_obj_set_style_pad_all(music_prev_btn_, 0, 0);
+    lv_obj_t* p_prev_lbl = lv_label_create(music_prev_btn_);
+    lv_label_set_text(p_prev_lbl, "|<");
+    lv_obj_set_style_text_font(p_prev_lbl, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(p_prev_lbl, lv_color_white(), 0);
+    lv_obj_align(p_prev_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(music_prev_btn_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->PlayPrevChartSong();
+    }, LV_EVENT_CLICKED, this);
+
+    // Nút Play / Pause
+    music_play_btn_ = lv_button_create(music_player_view_);
     lv_obj_set_style_bg_color(music_play_btn_, lv_color_hex(0xdc2626), 0);
     lv_obj_set_style_bg_opa(music_play_btn_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(music_play_btn_, 8, 0);
     lv_obj_set_style_pad_all(music_play_btn_, 0, 0);
     music_play_lbl_ = lv_label_create(music_play_btn_);
-    lv_label_set_text(music_play_lbl_, "Dừng");
-    lv_obj_set_style_text_font(music_play_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_label_set_text(music_play_lbl_, music_is_playing_ ? "||" : ">");
+    lv_obj_set_style_text_font(music_play_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(music_play_lbl_, lv_color_white(), 0);
     lv_obj_align(music_play_lbl_, LV_ALIGN_CENTER, 0, 0);
-
     lv_obj_add_event_cb(music_play_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        auto music = Board::GetInstance().GetMusic();
-        if (!music) return;
-        if (self->music_is_playing_) {
-            self->music_is_playing_ = false;
-            std::thread([music]() {
-                music->StopStreaming();
-            }).detach();
-        }
-        self->UpdateMusicUI();
+        self->ToggleMusicPlayPause();
     }, LV_EVENT_CLICKED, this);
 
-    music_stop_btn_ = lv_button_create(music_box_);
-    lv_obj_set_style_bg_color(music_stop_btn_, lv_color_hex(0x1e293b), 0);
-    lv_obj_set_style_border_color(music_stop_btn_, lv_color_hex(0x475569), 0);
-    lv_obj_set_style_border_width(music_stop_btn_, 1, 0);
-    lv_obj_set_style_radius(music_stop_btn_, 8, 0);
-    lv_obj_set_style_pad_all(music_stop_btn_, 0, 0);
-    music_stop_lbl_ = lv_label_create(music_stop_btn_);
-    lv_label_set_text(music_stop_lbl_, "Thoát");
-    lv_obj_set_style_text_font(music_stop_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(music_stop_lbl_, lv_color_hex(0xcbd5e1), 0);
-    lv_obj_align(music_stop_lbl_, LV_ALIGN_CENTER, 0, 0);
-
-    lv_obj_add_event_cb(music_stop_btn_, [](lv_event_t* e) {
+    // Nút Next bài
+    music_next_btn_ = lv_button_create(music_player_view_);
+    lv_obj_set_style_bg_color(music_next_btn_, lv_color_hex(0x1e293b), 0);
+    lv_obj_set_style_radius(music_next_btn_, 8, 0);
+    lv_obj_set_style_pad_all(music_next_btn_, 0, 0);
+    lv_obj_t* p_next_lbl = lv_label_create(music_next_btn_);
+    lv_label_set_text(p_next_lbl, ">|");
+    lv_obj_set_style_text_font(p_next_lbl, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(p_next_lbl, lv_color_white(), 0);
+    lv_obj_align(p_next_lbl, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(music_next_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        auto music = Board::GetInstance().GetMusic();
-        if (music) {
-            self->music_is_playing_ = false;
-            std::thread([music]() {
-                music->StopStreaming();
-            }).detach();
-        }
-        self->ShowMenu();
+        self->PlayNextChartSong();
     }, LV_EVENT_CLICKED, this);
 
-    // 6. Dãy đèn nháy quang phổ Equalizer
-    music_visualizer_box_ = lv_obj_create(music_box_);
+    // Dãy đèn nháy quang phổ Equalizer
+    music_visualizer_box_ = lv_obj_create(music_player_view_);
     lv_obj_set_style_bg_opa(music_visualizer_box_, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(music_visualizer_box_, 0, 0);
     lv_obj_set_style_pad_all(music_visualizer_box_, 0, 0);
@@ -13716,14 +14022,15 @@ void LcdDisplay::CreateMusicScreenUI() {
         lv_obj_clear_flag(music_vis_bars_[i], LV_OBJ_FLAG_SCROLLABLE);
     }
 
-    // 7. Timer nhấp nháy đèn quang phổ
+    // Timer nhấp nháy đèn quang phổ
     music_vis_timer_ = lv_timer_create([](lv_timer_t* t) {
         auto* self = static_cast<LcdDisplay*>(lv_timer_get_user_data(t));
         if (!self || !self->music_box_ || lv_obj_has_flag(self->music_box_, LV_OBJ_FLAG_HIDDEN)) return;
+        if (self->music_sub_view_ != kMusicViewPlayer) return;
 
         static int tick = 0;
         tick++;
-        int max_h = (self->height_ > self->width_) ? 44 : 56;
+        int max_h = (self->height_ > self->width_) ? 42 : 52;
 
         for (int i = 0; i < self->kNumVisualizerBars; ++i) {
             if (!self->music_vis_bars_[i]) continue;
@@ -13740,169 +14047,147 @@ void LcdDisplay::CreateMusicScreenUI() {
             lv_obj_set_height(self->music_vis_bars_[i], h);
         }
     }, 70, this);
+}
 
-    // 8. Bảng xếp hạng Zing MP3 (Zing Chart)
-    music_chart_title_ = lv_label_create(music_box_);
-    lv_label_set_text(music_chart_title_, "\xe2\x99\xab B\xe1\xba\xa2NG X\xe1\xba\xbeP H\xe1\xba\xa0NG ZING MP3");
-    lv_obj_set_style_text_font(music_chart_title_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(music_chart_title_, lv_color_hex(0xfacc15), 0);
+void LcdDisplay::SwitchToMusicChart() {
+    music_sub_view_ = kMusicViewChart;
+    if (music_chart_view_) lv_obj_clear_flag(music_chart_view_, LV_OBJ_FLAG_HIDDEN);
+    if (music_player_view_) lv_obj_add_flag(music_player_view_, LV_OBJ_FLAG_HIDDEN);
+}
 
-    music_chart_list_ = lv_obj_create(music_box_);
-    lv_obj_set_style_bg_color(music_chart_list_, lv_color_hex(0x0f172a), 0);
-    lv_obj_set_style_bg_opa(music_chart_list_, LV_OPA_80, 0);
-    lv_obj_set_style_border_color(music_chart_list_, lv_color_hex(0x334155), 0);
-    lv_obj_set_style_border_width(music_chart_list_, 1, 0);
-    lv_obj_set_style_radius(music_chart_list_, 10, 0);
-    lv_obj_set_style_pad_all(music_chart_list_, 4, 0);
-    lv_obj_set_style_pad_row(music_chart_list_, 4, 0);
-    lv_obj_set_flex_flow(music_chart_list_, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_scroll_dir(music_chart_list_, LV_DIR_VER);
-    lv_obj_set_scrollbar_mode(music_chart_list_, LV_SCROLLBAR_MODE_ACTIVE);
-
-    for (int i = 0; i < 10; ++i) {
-        lv_obj_t* item_btn = lv_button_create(music_chart_list_);
-        lv_obj_set_width(item_btn, lv_pct(100));
-        lv_obj_set_height(item_btn, 36);
-        lv_obj_set_style_bg_color(item_btn, lv_color_hex(0x1e293b), 0);
-        lv_obj_set_style_bg_opa(item_btn, LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(item_btn, 6, 0);
-        lv_obj_set_style_pad_all(item_btn, 4, 0);
-        lv_obj_clear_flag(item_btn, LV_OBJ_FLAG_SCROLLABLE);
-
-        // Rank badge
-        lv_obj_t* rank_lbl = lv_label_create(item_btn);
-        char rank_str[8];
-        snprintf(rank_str, sizeof(rank_str), "#%d", i + 1);
-        lv_label_set_text(rank_lbl, rank_str);
-        lv_obj_set_style_text_font(rank_lbl, &font_noto_sans_custom_14_1, 0);
-        if (i == 0) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0xef4444), 0);
-        else if (i == 1) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x3b82f6), 0);
-        else if (i == 2) lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x10b981), 0);
-        else lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x94a3b8), 0);
-        lv_obj_align(rank_lbl, LV_ALIGN_LEFT_MID, 4, 0);
-
-        // Song Title
-        lv_obj_t* title_lbl = lv_label_create(item_btn);
-        music_chart_item_titles_[i] = title_lbl;
-        const char* init_title = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].title.c_str() : kZingTopSongsDefault[i].title.c_str();
-        lv_label_set_text(title_lbl, init_title);
-        lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
-        lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(title_lbl, 110);
-        lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 32, -6);
-
-        // Artist
-        lv_obj_t* artist_lbl = lv_label_create(item_btn);
-        music_chart_item_artists_[i] = artist_lbl;
-        const char* init_artist = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].artist.c_str() : kZingTopSongsDefault[i].artist.c_str();
-        lv_label_set_text(artist_lbl, init_artist);
-        lv_obj_set_style_text_font(artist_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x64748b), 0);
-        lv_label_set_long_mode(artist_lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(artist_lbl, 110);
-        lv_obj_align(artist_lbl, LV_ALIGN_LEFT_MID, 32, 8);
-
-        // Play icon
-        lv_obj_t* icon_lbl = lv_label_create(item_btn);
-        lv_label_set_text(icon_lbl, ">");
-        lv_obj_set_style_text_font(icon_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(icon_lbl, lv_color_hex(0x38bdf8), 0);
-        lv_obj_align(icon_lbl, LV_ALIGN_RIGHT_MID, -4, 0);
-
-        lv_obj_set_user_data(item_btn, (void*)(intptr_t)i);
-        lv_obj_add_event_cb(item_btn, [](lv_event_t* e) {
-            auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-            self->PlayChartSong(idx);
-        }, LV_EVENT_CLICKED, this);
-    }
+void LcdDisplay::SwitchToMusicPlayer() {
+    music_sub_view_ = kMusicViewPlayer;
+    if (music_player_view_) lv_obj_clear_flag(music_player_view_, LV_OBJ_FLAG_HIDDEN);
+    if (music_chart_view_) lv_obj_add_flag(music_chart_view_, LV_OBJ_FLAG_HIDDEN);
+    UpdateMusicUI();
 }
 
 void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
     if (!music_box_) return;
     lv_obj_set_size(music_box_, width_, height_);
 
-    if (is_portrait) {
-        if (music_back_btn_) lv_obj_set_pos(music_back_btn_, 6, 6);
-        if (music_title_badge_) lv_obj_align(music_title_badge_, LV_ALIGN_TOP_MID, 0, 8);
-        if (music_vinyl_) {
-            lv_obj_set_size(music_vinyl_, 72, 72);
-            lv_obj_set_style_radius(music_vinyl_, 36, 0);
-            lv_obj_set_pos(music_vinyl_, 12, 32);
-        }
-        if (music_song_lbl_) {
-            lv_obj_set_width(music_song_lbl_, 136);
-            lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_LEFT, 0);
-            lv_obj_set_pos(music_song_lbl_, 92, 32);
-        }
-        if (music_artist_lbl_) {
-            lv_obj_set_width(music_artist_lbl_, 136);
-            lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_LEFT, 0);
-            lv_obj_set_pos(music_artist_lbl_, 92, 54);
-        }
-        if (music_play_btn_) {
-            lv_obj_set_size(music_play_btn_, 64, 28);
-            lv_obj_set_pos(music_play_btn_, 92, 76);
-        }
-        if (music_stop_btn_) {
-            lv_obj_set_size(music_stop_btn_, 58, 28);
-            lv_obj_set_pos(music_stop_btn_, 162, 76);
-        }
-        if (music_visualizer_box_) {
-            lv_obj_set_size(music_visualizer_box_, 224, 24);
-            lv_obj_set_pos(music_visualizer_box_, 8, 110);
-            for (int i = 0; i < kNumVisualizerBars; ++i) {
-                if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 10);
-            }
+    // 1. Layout Chart View
+    if (music_chart_view_) {
+        lv_obj_set_size(music_chart_view_, width_, height_);
+        if (music_chart_header_) {
+            lv_obj_set_size(music_chart_header_, width_, 42);
+            lv_obj_set_pos(music_chart_header_, 0, 0);
         }
         if (music_chart_title_) {
-            lv_obj_align(music_chart_title_, LV_ALIGN_TOP_LEFT, 12, 140);
+            lv_obj_align(music_chart_title_, LV_ALIGN_LEFT_MID, 10, 0);
+        }
+        if (music_chart_now_playing_btn_) {
+            lv_obj_align(music_chart_now_playing_btn_, LV_ALIGN_RIGHT_MID, -48, 0);
+        }
+        if (music_chart_close_btn_) {
+            lv_obj_align(music_chart_close_btn_, LV_ALIGN_RIGHT_MID, -8, 0);
         }
         if (music_chart_list_) {
-            lv_obj_set_size(music_chart_list_, 224, 160);
-            lv_obj_set_pos(music_chart_list_, 8, 156);
+            lv_obj_set_size(music_chart_list_, width_, height_ - 42);
+            lv_obj_set_pos(music_chart_list_, 0, 42);
         }
-    } else {
-        // Landscape (320x240): Left half = Player, Right half = Zing Chart list
-        if (music_back_btn_) lv_obj_set_pos(music_back_btn_, 6, 4);
-        if (music_title_badge_) lv_obj_set_pos(music_title_badge_, 44, 10);
-        if (music_vinyl_) {
-            lv_obj_set_size(music_vinyl_, 84, 84);
-            lv_obj_set_style_radius(music_vinyl_, 42, 0);
-            lv_obj_set_pos(music_vinyl_, 26, 36);
-        }
-        if (music_song_lbl_) {
-            lv_obj_set_width(music_song_lbl_, 130);
-            lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(music_song_lbl_, 6, 124);
-        }
-        if (music_artist_lbl_) {
-            lv_obj_set_width(music_artist_lbl_, 130);
-            lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_set_pos(music_artist_lbl_, 6, 146);
-        }
-        if (music_play_btn_) {
-            lv_obj_set_size(music_play_btn_, 60, 28);
-            lv_obj_set_pos(music_play_btn_, 8, 168);
-        }
-        if (music_stop_btn_) {
-            lv_obj_set_size(music_stop_btn_, 56, 28);
-            lv_obj_set_pos(music_stop_btn_, 74, 168);
-        }
-        if (music_visualizer_box_) {
-            lv_obj_set_size(music_visualizer_box_, 124, 28);
-            lv_obj_set_pos(music_visualizer_box_, 8, 202);
-            for (int i = 0; i < kNumVisualizerBars; ++i) {
-                if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 6);
+    }
+
+    // 2. Layout Player View (FULL TO)
+    if (music_player_view_) {
+        lv_obj_set_size(music_player_view_, width_, height_);
+
+        if (is_portrait) {
+            // Header
+            if (music_player_back_btn_) lv_obj_set_pos(music_player_back_btn_, 8, 6);
+            if (music_title_badge_) lv_obj_align(music_title_badge_, LV_ALIGN_TOP_MID, 0, 10);
+            if (music_player_close_btn_) lv_obj_set_pos(music_player_close_btn_, width_ - 42, 6);
+
+            // Đĩa than to
+            if (music_vinyl_) {
+                int v_size = 120;
+                lv_obj_set_size(music_vinyl_, v_size, v_size);
+                lv_obj_set_style_radius(music_vinyl_, v_size / 2, 0);
+                lv_obj_set_pos(music_vinyl_, (width_ - v_size) / 2, 42);
             }
-        }
-        if (music_chart_title_) {
-            lv_obj_set_pos(music_chart_title_, 142, 8);
-        }
-        if (music_chart_list_) {
-            lv_obj_set_size(music_chart_list_, 172, 204);
-            lv_obj_set_pos(music_chart_list_, 142, 28);
+
+            // Tên bài hát & ca sĩ
+            if (music_song_lbl_) {
+                lv_obj_set_width(music_song_lbl_, width_ - 24);
+                lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(music_song_lbl_, 12, 168);
+            }
+            if (music_artist_lbl_) {
+                lv_obj_set_width(music_artist_lbl_, width_ - 24);
+                lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_pos(music_artist_lbl_, 12, 192);
+            }
+
+            // Cụm nút: Back | Play/Pause | Next
+            if (music_prev_btn_) {
+                lv_obj_set_size(music_prev_btn_, 48, 34);
+                lv_obj_set_pos(music_prev_btn_, 34, 222);
+            }
+            if (music_play_btn_) {
+                lv_obj_set_size(music_play_btn_, 56, 34);
+                lv_obj_set_pos(music_play_btn_, 92, 222);
+            }
+            if (music_next_btn_) {
+                lv_obj_set_size(music_next_btn_, 48, 34);
+                lv_obj_set_pos(music_next_btn_, 158, 222);
+            }
+
+            // Sóng quang phổ Equalizer ở đáy
+            if (music_visualizer_box_) {
+                lv_obj_set_size(music_visualizer_box_, width_ - 20, 36);
+                lv_obj_set_pos(music_visualizer_box_, 10, 268);
+                for (int i = 0; i < kNumVisualizerBars; ++i) {
+                    if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 10);
+                }
+            }
+        } else {
+            // Landscape (320x240) Full To
+            if (music_player_back_btn_) lv_obj_set_pos(music_player_back_btn_, 8, 6);
+            if (music_title_badge_) lv_obj_align(music_title_badge_, LV_ALIGN_TOP_MID, 0, 10);
+            if (music_player_close_btn_) lv_obj_set_pos(music_player_close_btn_, width_ - 42, 6);
+
+            // Đĩa than to bên trái
+            if (music_vinyl_) {
+                int v_size = 110;
+                lv_obj_set_size(music_vinyl_, v_size, v_size);
+                lv_obj_set_style_radius(music_vinyl_, v_size / 2, 0);
+                lv_obj_set_pos(music_vinyl_, 18, 44);
+            }
+
+            // Tên bài hát & ca sĩ bên phải
+            if (music_song_lbl_) {
+                lv_obj_set_width(music_song_lbl_, 164);
+                lv_obj_set_style_text_align(music_song_lbl_, LV_TEXT_ALIGN_LEFT, 0);
+                lv_obj_set_pos(music_song_lbl_, 142, 46);
+            }
+            if (music_artist_lbl_) {
+                lv_obj_set_width(music_artist_lbl_, 164);
+                lv_obj_set_style_text_align(music_artist_lbl_, LV_TEXT_ALIGN_LEFT, 0);
+                lv_obj_set_pos(music_artist_lbl_, 142, 72);
+            }
+
+            // Cụm nút
+            if (music_prev_btn_) {
+                lv_obj_set_size(music_prev_btn_, 48, 34);
+                lv_obj_set_pos(music_prev_btn_, 142, 104);
+            }
+            if (music_play_btn_) {
+                lv_obj_set_size(music_play_btn_, 56, 34);
+                lv_obj_set_pos(music_play_btn_, 198, 104);
+            }
+            if (music_next_btn_) {
+                lv_obj_set_size(music_next_btn_, 48, 34);
+                lv_obj_set_pos(music_next_btn_, 262, 104);
+            }
+
+            // Sóng quang phổ ở đáy
+            if (music_visualizer_box_) {
+                lv_obj_set_size(music_visualizer_box_, width_ - 24, 38);
+                lv_obj_set_pos(music_visualizer_box_, 12, 186);
+                for (int i = 0; i < kNumVisualizerBars; ++i) {
+                    if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 14);
+                }
+            }
         }
     }
 }
@@ -13974,6 +14259,7 @@ void LcdDisplay::FetchRealtimeChart() {
 
 void LcdDisplay::PlayChartSong(int index) {
     if (index < 0 || index >= 10) return;
+    music_current_chart_idx_ = index;
     std::string s_title = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].title : kZingTopSongsDefault[index].title;
     std::string s_artist = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].artist : kZingTopSongsDefault[index].artist;
 
@@ -13995,19 +14281,65 @@ void LcdDisplay::PlayChartSong(int index) {
     }
 }
 
+void LcdDisplay::PlayNextChartSong() {
+    int total = music_chart_songs_.empty() ? 10 : (int)music_chart_songs_.size();
+    int next_idx = (music_current_chart_idx_ + 1) % total;
+    PlayChartSong(next_idx);
+}
+
+void LcdDisplay::PlayPrevChartSong() {
+    int total = music_chart_songs_.empty() ? 10 : (int)music_chart_songs_.size();
+    int prev_idx = (music_current_chart_idx_ - 1 + total) % total;
+    PlayChartSong(prev_idx);
+}
+
+void LcdDisplay::ToggleMusicPlayPause() {
+    auto music = Board::GetInstance().GetMusic();
+    if (!music) return;
+    if (music_is_playing_) {
+        music_is_playing_ = false;
+        std::thread([music]() {
+            music->StopStreaming();
+        }).detach();
+    } else {
+        PlayChartSong(music_current_chart_idx_);
+    }
+    UpdateMusicUI();
+}
+
 void LcdDisplay::UpdateMusicUI() {
     if (!music_box_) return;
+
+    // Cập nhật Player View
     if (music_song_lbl_) lv_label_set_text(music_song_lbl_, music_current_song_.c_str());
     if (music_artist_lbl_) lv_label_set_text(music_artist_lbl_, music_current_artist_.c_str());
 
     if (music_play_lbl_) {
-        lv_label_set_text(music_play_lbl_, music_is_playing_ ? "Dừng" : "Phát");
+        lv_label_set_text(music_play_lbl_, music_is_playing_ ? "||" : ">");
     }
     if (music_play_btn_) {
-        lv_obj_set_style_bg_color(music_play_btn_, music_is_playing_ ? lv_color_hex(0xdc2626) : lv_color_hex(0x2563eb), 0);
+        lv_obj_set_style_bg_color(music_play_btn_, music_is_playing_ ? lv_color_hex(0xdc2626) : lv_color_hex(0x0284c7), 0);
     }
     if (music_vinyl_label_) {
         lv_obj_set_style_border_color(music_vinyl_label_, music_is_playing_ ? lv_color_hex(0x38bdf8) : lv_color_hex(0xf43f5e), 0);
+    }
+
+    // Cập nhật Chart View header now playing button
+    if (music_chart_now_playing_btn_) {
+        if (music_is_playing_) {
+            lv_obj_clear_flag(music_chart_now_playing_btn_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(music_chart_now_playing_btn_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    // Cập nhật Quick Settings Mini Player
+    if (qs_music_title_) lv_label_set_text(qs_music_title_, music_current_song_.c_str());
+    if (qs_music_play_lbl_) {
+        lv_label_set_text(qs_music_play_lbl_, music_is_playing_ ? "||" : ">");
+    }
+    if (qs_music_play_btn_) {
+        lv_obj_set_style_bg_color(qs_music_play_btn_, music_is_playing_ ? lv_color_hex(0xdc2626) : lv_color_hex(0x38bdf8), 0);
     }
 }
 
@@ -14036,6 +14368,8 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
     if (!artist_name.empty()) music_current_artist_ = artist_name;
 
     CreateMusicScreenUI();
+    // Mặc định luôn mở trang Danh sách bài hát full màn hình
+    SwitchToMusicChart();
     LayoutMusicWidgets(height_ > width_);
     UpdateMusicUI();
     FetchRealtimeChart();
@@ -14045,6 +14379,7 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
         lv_obj_move_foreground(music_box_);
     }
 }
+
 
 void LcdDisplay::UpdateMusicPlaybackState(bool is_playing, const std::string& song_name, const std::string& artist_name) {
     DisplayLockGuard lock(this);
@@ -14919,25 +15254,13 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
     lv_obj_align(title_lbl, LV_ALIGN_TOP_MID, 0, 8);
 
-    // 1. Nhóm Ảnh hệ thống (Ảnh 1, Ảnh 2, Ảnh 3, Ảnh 4)
-    wp_sec1_lbl_ = lv_label_create(wallpaper_box_);
-    lv_label_set_text(wp_sec1_lbl_, "Ảnh hệ thống:");
-    lv_obj_set_style_text_font(wp_sec1_lbl_, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(wp_sec1_lbl_, lv_color_hex(0x38bdf8), 0);
+    // Ảnh hệ thống: ẩn hoàn toàn, không hiển thị trong UI mới
+    wp_sec1_lbl_ = nullptr;
+    wp_img_scroll_ = nullptr;
 
-    wp_img_scroll_ = lv_obj_create(wallpaper_box_);
-    lv_obj_set_style_bg_color(wp_img_scroll_, lv_color_hex(0x131d2e), 0);
-    lv_obj_set_style_border_color(wp_img_scroll_, lv_color_hex(0x334155), 0);
-    lv_obj_set_style_border_width(wp_img_scroll_, 1, 0);
-    lv_obj_set_style_radius(wp_img_scroll_, 10, 0);
-    lv_obj_set_style_pad_all(wp_img_scroll_, 4, 0);
-    lv_obj_set_flex_flow(wp_img_scroll_, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(wp_img_scroll_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_scroll_dir(wp_img_scroll_, LV_DIR_HOR);
-
-    // 2. Nhóm Ảnh của tôi (Ảnh tải lên, nếu chưa thì hiển thị Trống)
+    // Nhóm "Ảnh của tôi" - chiếm phần lớn màn hình, cuộn ngang
     wp_sec2_lbl_ = lv_label_create(wallpaper_box_);
-    lv_label_set_text(wp_sec2_lbl_, "Ảnh của tôi:");
+    lv_label_set_text(wp_sec2_lbl_, "Ảnh đã thêm:");
     lv_obj_set_style_text_font(wp_sec2_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(wp_sec2_lbl_, lv_color_hex(0x38bdf8), 0);
 
@@ -14946,30 +15269,23 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
     lv_obj_set_style_border_color(wp_user_scroll_, lv_color_hex(0x334155), 0);
     lv_obj_set_style_border_width(wp_user_scroll_, 1, 0);
     lv_obj_set_style_radius(wp_user_scroll_, 10, 0);
-    lv_obj_set_style_pad_all(wp_user_scroll_, 4, 0);
+    lv_obj_set_style_pad_all(wp_user_scroll_, 6, 0);
+    lv_obj_set_style_pad_column(wp_user_scroll_, 8, 0);
     lv_obj_set_flex_flow(wp_user_scroll_, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(wp_user_scroll_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_scroll_dir(wp_user_scroll_, LV_DIR_HOR);
 
-    // 3. Nút Lưu & Áp dụng
-    wp_save_btn_ = lv_button_create(wallpaper_box_);
-    lv_obj_set_style_bg_color(wp_save_btn_, lv_color_hex(0x0d9488), 0);
-    lv_obj_set_style_radius(wp_save_btn_, 10, 0);
-    lv_obj_t* save_lbl = lv_label_create(wp_save_btn_);
-    lv_label_set_text(save_lbl, "Lưu & áp dụng");
-    lv_obj_set_style_text_font(save_lbl, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(save_lbl, lv_color_white(), 0);
-    lv_obj_align(save_lbl, LV_ALIGN_CENTER, 0, 0);
+    // Nút Save/Back không còn dùng: giữ lại biến wp_save_btn_ = nullptr để không crash
+    wp_save_btn_ = nullptr;
 
-    auto save_exit_action = [](lv_event_t* e) {
+    // Nút Back: chỉ thoát về màn trước, KHÔNG lưu wallpaper
+    auto back_exit_action = [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        WallpaperManager::GetInstance().SetActiveWallpaperIndex(self->wp_preview_idx_);
         if (self->wallpaper_box_) lv_obj_add_flag(self->wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
         if (self->wp_preview_buf_ != nullptr) {
             heap_caps_free(self->wp_preview_buf_);
             self->wp_preview_buf_ = nullptr;
         }
-        self->ReloadWallpaper();
         if (self->wp_opened_from_menu_) {
             self->ShowMenu();
         } else {
@@ -14977,22 +15293,19 @@ void LcdDisplay::CreateWallpaperSettingsUI() {
         }
     };
 
-    lv_obj_add_event_cb(wp_save_btn_, save_exit_action, LV_EVENT_CLICKED, this);
-    lv_obj_add_event_cb(back_btn, save_exit_action, LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(back_btn, back_exit_action, LV_EVENT_CLICKED, this);
 
-    // Hiệu ứng vuốt lên hoặc sang phải để thoát và tự lưu
+    // Hiệu ứng vuốt sang phải để thoát (không lưu wallpaper)
     lv_obj_add_event_cb(wallpaper_box_, [](lv_event_t* e) {
         if (lv_event_get_code(e) == LV_EVENT_GESTURE) {
             lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
-            if (dir == LV_DIR_TOP || dir == LV_DIR_RIGHT) {
+            if (dir == LV_DIR_RIGHT) {
                 auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-                WallpaperManager::GetInstance().SetActiveWallpaperIndex(self->wp_preview_idx_);
                 if (self->wallpaper_box_) lv_obj_add_flag(self->wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
                 if (self->wp_preview_buf_ != nullptr) {
                     heap_caps_free(self->wp_preview_buf_);
                     self->wp_preview_buf_ = nullptr;
                 }
-                self->ReloadWallpaper();
                 if (self->wp_opened_from_menu_) {
                     self->ShowMenu();
                 } else {
@@ -15009,37 +15322,7 @@ void LcdDisplay::UpdateWallpaperPreview() {
 void LcdDisplay::UpdateWallpaperSettingsUI() {
     if (wallpaper_box_ == nullptr) return;
 
-    // 1. Nhóm Ảnh hệ thống (Ảnh 1, Ảnh 2, Ảnh 3, Ảnh 4)
-    if (wp_img_scroll_ != nullptr) {
-        lv_obj_clean(wp_img_scroll_);
-        for (int i = 1; i <= 4; ++i) {
-            lv_obj_t* btn = lv_button_create(wp_img_scroll_);
-            lv_obj_set_size(btn, 88, 40);
-            lv_obj_set_style_radius(btn, 8, 0);
-            bool is_sel = (i == wp_preview_idx_);
-            lv_obj_set_style_bg_color(btn, is_sel ? lv_color_hex(0x0d9488) : lv_color_hex(0x1e293b), 0);
-            lv_obj_set_style_border_color(btn, is_sel ? lv_color_hex(0x2dd4bf) : lv_color_hex(0x334155), 0);
-            lv_obj_set_style_border_width(btn, is_sel ? 2 : 1, 0);
-            lv_obj_set_user_data(btn, (void*)(intptr_t)i);
-
-            lv_obj_t* lbl = lv_label_create(btn);
-            char btn_txt[16];
-            snprintf(btn_txt, sizeof(btn_txt), "Ảnh %d", i);
-            lv_label_set_text(lbl, btn_txt);
-            lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
-            lv_obj_set_style_text_color(lbl, is_sel ? lv_color_white() : lv_color_hex(0x94a3b8), 0);
-            lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
-
-            lv_obj_add_event_cb(btn, [](lv_event_t* e) {
-                auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-                int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
-                self->wp_preview_idx_ = idx;
-                self->UpdateWallpaperSettingsUI();
-            }, LV_EVENT_CLICKED, this);
-        }
-    }
-
-    // 2. Nhóm Ảnh của tôi (tải lên >= 5, đánh số Ảnh 1, Ảnh 2... nếu không có thì Trống)
+    // Danh sách "Ảnh đã thêm" (index >= 5)
     if (wp_user_scroll_ != nullptr) {
         lv_obj_clean(wp_user_scroll_);
         auto list = WallpaperManager::GetInstance().GetWallpaperList();
@@ -15051,33 +15334,87 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
         }
 
         if (user_wallpapers.empty()) {
-            lv_obj_t* empty_lbl = lv_label_create(wp_user_scroll_);
-            lv_label_set_text(empty_lbl, "Trống (Chưa có ảnh tải lên)");
-            lv_obj_set_style_text_font(empty_lbl, &font_noto_sans_custom_14_1, 0);
+            lv_obj_t* empty_box = lv_obj_create(wp_user_scroll_);
+            lv_obj_set_size(empty_box, LV_PCT(100), LV_PCT(100));
+            lv_obj_set_style_bg_opa(empty_box, LV_OPA_TRANSP, 0);
+            lv_obj_set_style_border_width(empty_box, 0, 0);
+            lv_obj_set_flex_flow(empty_box, LV_FLEX_FLOW_COLUMN);
+            lv_obj_set_flex_align(empty_box, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+            lv_obj_t* empty_lbl = lv_label_create(empty_box);
+            lv_label_set_text(empty_lbl, "Chưa có ảnh nào được thêm");
+            lv_obj_set_style_text_font(empty_lbl, &font_noto_sans_custom_16_4, 0);
             lv_obj_set_style_text_color(empty_lbl, lv_color_hex(0x94a3b8), 0);
-            lv_obj_set_size(empty_lbl, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-            lv_obj_align(empty_lbl, LV_ALIGN_CENTER, 0, 0);
+
+            lv_obj_t* hint_lbl = lv_label_create(empty_box);
+            lv_label_set_text(hint_lbl, "Quét mã QR trong Cài đặt nhanh để thêm ảnh");
+            lv_obj_set_style_text_font(hint_lbl, &font_noto_sans_custom_14_1, 0);
+            lv_obj_set_style_text_color(hint_lbl, lv_color_hex(0x64748b), 0);
         } else {
             for (const auto& item : user_wallpapers) {
-                lv_obj_t* btn = lv_button_create(wp_user_scroll_);
-                lv_obj_set_size(btn, 88, 40);
-                lv_obj_set_style_radius(btn, 8, 0);
+                // Card chứa ảnh đã thêm và nút xóa
+                lv_obj_t* card = lv_obj_create(wp_user_scroll_);
+                lv_obj_set_size(card, 100, 140);
+                lv_obj_set_style_radius(card, 10, 0);
                 bool is_sel = (item.index == wp_preview_idx_);
-                lv_obj_set_style_bg_color(btn, is_sel ? lv_color_hex(0x0d9488) : lv_color_hex(0x1e293b), 0);
-                lv_obj_set_style_border_color(btn, is_sel ? lv_color_hex(0x2dd4bf) : lv_color_hex(0x334155), 0);
-                lv_obj_set_style_border_width(btn, is_sel ? 2 : 1, 0);
-                lv_obj_set_user_data(btn, (void*)(intptr_t)item.index);
+                lv_obj_set_style_bg_color(card, is_sel ? lv_color_hex(0x1e3a5f) : lv_color_hex(0x1e293b), 0);
+                lv_obj_set_style_border_color(card, is_sel ? lv_color_hex(0x38bdf8) : lv_color_hex(0x334155), 0);
+                lv_obj_set_style_border_width(card, is_sel ? 2 : 1, 0);
+                lv_obj_set_style_pad_all(card, 6, 0);
+                lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+                lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+                lv_obj_set_user_data(card, (void*)(intptr_t)item.index);
 
-                lv_obj_t* lbl = lv_label_create(btn);
-                lv_label_set_text(lbl, item.name.c_str());
-                lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
-                lv_obj_set_style_text_color(lbl, is_sel ? lv_color_white() : lv_color_hex(0x94a3b8), 0);
-                lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+                // Nút chọn ảnh / xem ảnh
+                lv_obj_t* select_area = lv_button_create(card);
+                lv_obj_set_size(select_area, 88, 76);
+                lv_obj_set_style_radius(select_area, 8, 0);
+                lv_obj_set_style_bg_color(select_area, is_sel ? lv_color_hex(0x0284c7) : lv_color_hex(0x0f172a), 0);
+                lv_obj_set_user_data(select_area, (void*)(intptr_t)item.index);
 
-                lv_obj_add_event_cb(btn, [](lv_event_t* e) {
+                lv_obj_t* name_lbl = lv_label_create(select_area);
+                lv_label_set_text(name_lbl, item.name.c_str());
+                lv_obj_set_style_text_font(name_lbl, &font_noto_sans_custom_16_4, 0);
+                lv_obj_set_style_text_color(name_lbl, lv_color_white(), 0);
+                lv_obj_align(name_lbl, LV_ALIGN_CENTER, 0, 0);
+
+                // Khi click vào khu vực chọn -> áp dụng làm hình nền luôn
+                lv_obj_add_event_cb(select_area, [](lv_event_t* e) {
                     auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
                     int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
                     self->wp_preview_idx_ = idx;
+                    WallpaperManager::GetInstance().SetActiveWallpaperIndex(idx);
+                    self->ReloadWallpaper();
+                    self->UpdateWallpaperSettingsUI();
+                }, LV_EVENT_CLICKED, this);
+
+                // Nút Xóa ảnh
+                lv_obj_t* del_btn = lv_button_create(card);
+                lv_obj_set_size(del_btn, 88, 36);
+                lv_obj_set_style_radius(del_btn, 8, 0);
+                lv_obj_set_style_bg_color(del_btn, lv_color_hex(0xef4444), 0); // Đỏ
+                lv_obj_set_user_data(del_btn, (void*)(intptr_t)item.index);
+
+                lv_obj_t* del_lbl = lv_label_create(del_btn);
+                lv_label_set_text(del_lbl, "Xóa");
+                lv_obj_set_style_text_font(del_lbl, &font_noto_sans_custom_14_1, 0);
+                lv_obj_set_style_text_color(del_lbl, lv_color_white(), 0);
+                lv_obj_align(del_lbl, LV_ALIGN_CENTER, 0, 0);
+
+                // Sự kiện click nút xóa
+                lv_obj_add_event_cb(del_btn, [](lv_event_t* e) {
+                    auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+                    int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
+                    
+                    // Thực hiện xóa hình nền
+                    WallpaperManager::GetInstance().DeleteWallpaper(idx);
+
+                    // Nếu ảnh đang preview/active bị xóa thì chuyển về ảnh hệ thống (1)
+                    if (self->wp_preview_idx_ == idx) {
+                        self->wp_preview_idx_ = 1;
+                        WallpaperManager::GetInstance().SetActiveWallpaperIndex(1);
+                    }
+                    self->ReloadWallpaper();
                     self->UpdateWallpaperSettingsUI();
                 }, LV_EVENT_CLICKED, this);
             }
@@ -15118,36 +15455,18 @@ void LcdDisplay::LayoutWallpaperSettingsWidgets(bool is_portrait) {
     lv_obj_set_size(wallpaper_box_, width_, height_);
 
     if (is_portrait) {
-        // Dọc 240x320: Bố trí thoáng đãng
-        if (wp_sec1_lbl_) lv_obj_set_pos(wp_sec1_lbl_, 10, 48);
-        if (wp_img_scroll_) {
-            lv_obj_set_size(wp_img_scroll_, 224, 52);
-            lv_obj_set_pos(wp_img_scroll_, 8, 72);
-        }
-        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 10, 134);
+        // Dọc 240x320: Danh sách ảnh chiếm toàn bộ không gian bên dưới
+        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 12, 44);
         if (wp_user_scroll_) {
-            lv_obj_set_size(wp_user_scroll_, 224, 52);
-            lv_obj_set_pos(wp_user_scroll_, 8, 158);
-        }
-        if (wp_save_btn_) {
-            lv_obj_set_size(wp_save_btn_, 224, 46);
-            lv_obj_set_pos(wp_save_btn_, 8, 240);
+            lv_obj_set_size(wp_user_scroll_, 224, 240);
+            lv_obj_set_pos(wp_user_scroll_, 8, 68);
         }
     } else {
         // Ngang 320x240
-        if (wp_sec1_lbl_) lv_obj_set_pos(wp_sec1_lbl_, 12, 36);
-        if (wp_img_scroll_) {
-            lv_obj_set_size(wp_img_scroll_, 296, 46);
-            lv_obj_set_pos(wp_img_scroll_, 12, 56);
-        }
-        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 12, 108);
+        if (wp_sec2_lbl_) lv_obj_set_pos(wp_sec2_lbl_, 16, 40);
         if (wp_user_scroll_) {
-            lv_obj_set_size(wp_user_scroll_, 296, 46);
-            lv_obj_set_pos(wp_user_scroll_, 12, 128);
-        }
-        if (wp_save_btn_) {
-            lv_obj_set_size(wp_save_btn_, 240, 40);
-            lv_obj_set_pos(wp_save_btn_, 40, 186);
+            lv_obj_set_size(wp_user_scroll_, 296, 170);
+            lv_obj_set_pos(wp_user_scroll_, 12, 62);
         }
     }
 }

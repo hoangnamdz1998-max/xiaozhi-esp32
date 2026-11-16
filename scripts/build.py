@@ -20,7 +20,7 @@ os.chdir(Path(__file__).resolve().parent.parent)
 
 
 _DEFAULT_IDF_VERSION = (6, 0, 2)
-_DEFAULT_LANGUAGE = "en-US"
+_DEFAULT_LANGUAGE = "vi-VN"
 
 _LITE_WAKE_WORD_TARGETS = {"esp32c3", "esp32c5", "esp32c6"}
 _AFE_WAKE_WORD_TARGETS = {"esp32s3", "esp32p4", "esp32s31"}

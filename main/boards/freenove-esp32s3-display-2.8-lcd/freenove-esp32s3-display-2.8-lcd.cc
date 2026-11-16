@@ -925,9 +925,12 @@ private:
 
                     bool allow_vert_swipe = true;
 
-                    if (mode == LcdDisplay::kScreenQuickSettings) {
-                        // Trong QuickSettings: khong nhan cu chi vuot de cuon noi dung tu do, chi thoat qua nut X
+                    bool is_music_chart = (mode == LcdDisplay::kScreenMusic && self->display_ && self->display_->GetMusicSubView() == LcdDisplay::kMusicViewChart);
+                    if (mode == LcdDisplay::kScreenQuickSettings || is_music_chart) {
+                        // Trong QuickSettings và BXH Nhạc: TẮT toàn bộ gesture vuốt toàn màn hình
+                        // Để 100% sự kiện chạm và kéo ngón tay được giao trọn vẹn cho LVGL cuộn siêu mượt!
                         allow_vert_swipe = false;
+                        allow_horiz_swipe = false;
                     } else if (mode == LcdDisplay::kScreenTimer) {
                         // Trong Bao thuc: vuot tu mep duoi len de thoat ve Dong ho, hoac vuot tu dinh xuong de mo Cai dat nhanh
                         int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 260 : 185;
@@ -1020,17 +1023,10 @@ private:
 
                 bool allow_vert_swipe = true;
 
-                if (mode == LcdDisplay::kScreenQuickSettings) {
-
-                    int bottom_edge = (self->display_ && self->display_->height() > self->display_->width()) ? 290 : 210;
-
-                    bool at_bottom = self->display_ && self->display_->IsQuickSettingsAtBottom();
-
-                    if ((start_screen_y < bottom_edge && !at_bottom) || delta_y > -30) {
-
-                        allow_vert_swipe = false;
-
-                    }
+                bool is_music_chart_rel = (mode == LcdDisplay::kScreenMusic && self->display_ && self->display_->GetMusicSubView() == LcdDisplay::kMusicViewChart);
+                if (mode == LcdDisplay::kScreenQuickSettings || is_music_chart_rel) {
+                    allow_vert_swipe = false;
+                    allow_horiz_swipe = false;
 
                 } else if (mode == LcdDisplay::kScreenTimer) {
 
@@ -1158,7 +1154,7 @@ private:
 
 
 
-            vTaskDelay(pdMS_TO_TICKS(20));
+            vTaskDelay(pdMS_TO_TICKS(10));
 
         }
 
@@ -1183,6 +1179,8 @@ private:
         lv_indev_set_user_data(indev_, this);
 
         lv_indev_set_disp(indev_, lv_display_get_default());
+        lv_indev_set_scroll_limit(indev_, 3);
+        lv_indev_set_scroll_throw(indev_, 25);
 
 
 

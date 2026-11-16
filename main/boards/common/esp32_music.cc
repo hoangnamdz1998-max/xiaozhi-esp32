@@ -1727,7 +1727,7 @@ void Esp32Music::PlayAudioStream() {
 
                 std::string formatted = "《" + current_song_name_ + "》播放中...";
 
-                display->SetChatMessage("assistant", formatted.c_str());
+                // display->SetChatMessage("assistant", formatted.c_str());
 
                 song_name_displayed_ = true;
 
@@ -2721,7 +2721,7 @@ void Esp32Music::UpdateLyricDisplay(int64_t current_time_ms) {
 
             
 
-            display->SetChatMessage("assistant", lyric_text.c_str());
+            // display->SetChatMessage("assistant", lyric_text.c_str());
 
         }
 

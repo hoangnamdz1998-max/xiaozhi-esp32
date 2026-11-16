@@ -125,6 +125,11 @@ public:
     virtual void ShowFmRadio();
     void SetMenuPage(int page, bool animate = false, bool swipe_left = true);
     void SetStandbyTextColor(uint32_t color_hex);
+    enum MusicSubView {
+        kMusicViewChart = 0,
+        kMusicViewPlayer = 1
+    };
+    MusicSubView GetMusicSubView() const { return music_sub_view_; }
     ScreenMode GetScreenMode() const { return screen_mode_; }
     bool IsQuickSettingsAtBottom() const { return qs_at_bottom_.load(); }
 
@@ -193,6 +198,13 @@ protected:
     lv_obj_t* qs_restart_btn_ = nullptr;
     lv_obj_t* qs_close_btn_ = nullptr;
     lv_obj_t* qs_title_ = nullptr;
+    lv_obj_t* qs_music_card_ = nullptr;
+    lv_obj_t* qs_music_icon_ = nullptr;
+    lv_obj_t* qs_music_title_ = nullptr;
+    lv_obj_t* qs_music_prev_btn_ = nullptr;
+    lv_obj_t* qs_music_play_btn_ = nullptr;
+    lv_obj_t* qs_music_play_lbl_ = nullptr;
+    lv_obj_t* qs_music_next_btn_ = nullptr;
     lv_obj_t* qs_info_card_ = nullptr;
     lv_obj_t* qs_info_wifi_ = nullptr;
     lv_obj_t* qs_info_ip_ = nullptr;
@@ -381,28 +393,46 @@ protected:
     lv_obj_t* music_chart_item_titles_[10] = {nullptr};
     lv_obj_t* music_chart_item_artists_[10] = {nullptr};
 
+    MusicSubView music_sub_view_ = kMusicViewChart;
+    int music_current_chart_idx_ = 0;
+
     lv_obj_t* music_box_ = nullptr;
-    lv_obj_t* music_back_btn_ = nullptr;
+    // Sub-view 1: Chart List (Full màn hình)
+    lv_obj_t* music_chart_view_ = nullptr;
+    lv_obj_t* music_chart_header_ = nullptr;
+    lv_obj_t* music_chart_title_ = nullptr;
+    lv_obj_t* music_chart_close_btn_ = nullptr;
+    lv_obj_t* music_chart_now_playing_btn_ = nullptr;
+    lv_obj_t* music_chart_list_ = nullptr;
+
+    // Sub-view 2: Now Playing (Full to với đĩa than và sóng nhạc)
+    lv_obj_t* music_player_view_ = nullptr;
+    lv_obj_t* music_player_back_btn_ = nullptr;
     lv_obj_t* music_title_badge_ = nullptr;
+    lv_obj_t* music_player_close_btn_ = nullptr;
     lv_obj_t* music_vinyl_ = nullptr;
     lv_obj_t* music_vinyl_label_ = nullptr;
     lv_obj_t* music_vinyl_note_ = nullptr;
     lv_obj_t* music_song_lbl_ = nullptr;
     lv_obj_t* music_artist_lbl_ = nullptr;
+    lv_obj_t* music_prev_btn_ = nullptr;
     lv_obj_t* music_play_btn_ = nullptr;
     lv_obj_t* music_play_lbl_ = nullptr;
-    lv_obj_t* music_stop_btn_ = nullptr;
-    lv_obj_t* music_stop_lbl_ = nullptr;
+    lv_obj_t* music_next_btn_ = nullptr;
     lv_obj_t* music_visualizer_box_ = nullptr;
-    lv_obj_t* music_chart_list_ = nullptr;
-    lv_obj_t* music_chart_title_ = nullptr;
     static constexpr int kNumVisualizerBars = 16;
     lv_obj_t* music_vis_bars_[16] = {nullptr};
     lv_timer_t* music_vis_timer_ = nullptr;
     std::string music_current_song_ = "Chưa phát nhạc";
     std::string music_current_artist_ = "Zing MP3 Online";
     bool music_is_playing_ = false;
+
     void PlayChartSong(int index);
+    void PlayNextChartSong();
+    void PlayPrevChartSong();
+    void ToggleMusicPlayPause();
+    void SwitchToMusicChart();
+    void SwitchToMusicPlayer();
     void FetchRealtimeChart();
     void UpdateChartSongsUI();
     void CreateFmRadioUI();

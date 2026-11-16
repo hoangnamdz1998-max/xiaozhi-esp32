@@ -6,7 +6,9 @@
             "name": "freenove-esp32s3-display-2.8-lcd",
             "sdkconfig_append": [
                 "CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y",
-                "CONFIG_ESP_CONSOLE_SECONDARY_NONE=y"
+                "CONFIG_ESP_CONSOLE_SECONDARY_NONE=y",
+                "CONFIG_ESP_BROWNOUT_DET=n",
+                "CONFIG_LANGUAGE_VI_VN=y"
             ]
         }
     ]
