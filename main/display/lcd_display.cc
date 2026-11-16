@@ -4225,11 +4225,6 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         if (flashlight_box_ != nullptr) lv_obj_add_flag(flashlight_box_, LV_OBJ_FLAG_HIDDEN);
         if (fm_box_ != nullptr) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
         if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
-        if (fm_radio_box_ != nullptr) lv_obj_add_flag(fm_radio_box_, LV_OBJ_FLAG_HIDDEN);
-        if (quick_actions_box_ != nullptr) lv_obj_add_flag(quick_actions_box_, LV_OBJ_FLAG_HIDDEN);
-        if (time_box_ != nullptr) lv_obj_add_flag(time_box_, LV_OBJ_FLAG_HIDDEN);
-        if (date_box_ != nullptr) lv_obj_add_flag(date_box_, LV_OBJ_FLAG_HIDDEN);
-        if (network_box_ != nullptr) lv_obj_add_flag(network_box_, LV_OBJ_FLAG_HIDDEN);
 
         // 3. Layout and show animated robot eyes
         LayoutChatWidgets(height_ > width_);
