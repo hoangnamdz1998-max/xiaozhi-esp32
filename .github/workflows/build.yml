@@ -25,7 +25,7 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           . $IDF_PATH/export.sh
           idf.py set-target esp32s3
-          python scripts/build.py freenove-esp32s3-display-2.8-lcd
+          python scripts/build.py freenove-esp32s3-display-2.8-lcd --wake-word wn9_hilili_tts
 
       - name: Upload merged binary
         uses: actions/upload-artifact@v4

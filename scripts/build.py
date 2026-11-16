@@ -1612,7 +1612,7 @@ def build_board(
             ([option.split("=", 1)[0]], "--language")
         )
         wake_word_supported = _board_supports_wake_word(target, sdkconfig_append)
-        requested_wake_word = wake_word
+        requested_wake_word = wake_word or build.get("wake_word")
         if requested_wake_word is None:
             requested_wake_word = "disabled"
             if wake_word_supported:
