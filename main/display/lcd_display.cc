@@ -4211,9 +4211,12 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
         if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+        if (status_bar_ != nullptr) {
+            lv_obj_remove_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(status_bar_);
+        }
         if (status_label_ != nullptr) {
-            lv_label_set_text(status_label_, "");
-            lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
         }
         if (notification_label_ != nullptr) lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
         if (calendar_label_ != nullptr) {
@@ -4286,8 +4289,7 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
     }
 
     if (top_bar_ != nullptr) {
-        if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || 
-            screen_mode_ == kScreenStandby3 || screen_mode_ == kScreenQuickSettings) {
+        if (screen_mode_ != kScreenDefault && !in_chat) {
             lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
         } else {
             lv_obj_remove_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
@@ -4297,8 +4299,7 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
     }
 
     if (bottom_bar_ != nullptr) {
-        if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || 
-            screen_mode_ == kScreenStandby3 || screen_mode_ == kScreenQuickSettings) {
+        if (screen_mode_ != kScreenDefault && !in_chat) {
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         } else {
             lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
@@ -4481,29 +4482,45 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
 
 
 void LcdDisplay::LayoutChatWidgets(bool is_portrait) {
+    if (status_bar_ != nullptr) {
+        lv_obj_set_size(status_bar_, width_ - 90, 24);
+        lv_obj_set_style_bg_opa(status_bar_, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_pad_all(status_bar_, 0, 0);
+        lv_obj_align(status_bar_, LV_ALIGN_TOP_LEFT, 8, 2);
+        lv_obj_remove_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(status_bar_);
+    }
+    if (status_label_ != nullptr) {
+        lv_obj_set_width(status_label_, width_ - 90);
+        lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_LEFT, 0);
+        lv_obj_set_style_text_font(status_label_, &font_noto_sans_custom_16_4, 0);
+        lv_obj_set_style_text_color(status_label_, lv_color_hex(0x38BDF8), 0);
+        lv_obj_align(status_label_, LV_ALIGN_LEFT_MID, 0, 0);
+        lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+    }
     if (emoji_box_ != nullptr) {
         lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         lv_obj_set_style_bg_opa(emoji_box_, LV_OPA_TRANSP, 0);
         if (is_portrait) {
-            // Portrait: 240x320 - Otto Eyes centered at top, chat box at bottom
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, -10);
+            // Portrait: 240x320
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 26);
             if (emoji_image_ != nullptr) {
-                lv_image_set_scale(emoji_image_, 170);
+                lv_image_set_scale(emoji_image_, 256);
             }
         } else {
-            // Landscape: 320x240 - Otto Eyes at top, chat box at bottom
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, -22);
+            // Landscape: 320x240 - Oval eyes centered below status bar (y: 22..122)
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 22);
             if (emoji_image_ != nullptr) {
-                lv_image_set_scale(emoji_image_, 140);
+                lv_image_set_scale(emoji_image_, 256);
             }
         }
     }
     if (chat_box_ != nullptr) {
         if (is_portrait) {
-            lv_obj_set_size(chat_box_, width_ - 8, 150);
+            lv_obj_set_size(chat_box_, width_ - 8, 175);
             lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
         } else {
-            lv_obj_set_size(chat_box_, width_ - 8, 108);
+            lv_obj_set_size(chat_box_, width_ - 8, 114);
             lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
         }
     }
@@ -5474,8 +5491,7 @@ void LcdDisplay::OnSwipeRight() {
         UpdateCalendarUI();
 
     } else if (screen_mode_ == kScreenWeatherDetail || screen_mode_ == kScreenClock ||
-
-               screen_mode_ == kScreenExchangeRates) {
+               screen_mode_ == kScreenExchangeRates || screen_mode_ == kScreenDefault) {
 
         ShowMenu();
 
@@ -5687,6 +5703,7 @@ void LcdDisplay::ShowStandby() {
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
     if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+    if (status_bar_ != nullptr) lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
 
     if (menu_box_ != nullptr) {
 
