@@ -2576,6 +2576,20 @@ void LcdDisplay::SetupUI() {
 
     lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
 
+    /* Chat message history container (like messaging app dialogue) */
+    chat_box_ = lv_obj_create(screen);
+    lv_obj_set_style_radius(chat_box_, 10, 0);
+    lv_obj_set_style_bg_color(chat_box_, lv_color_hex(0x0F172A), 0);
+    lv_obj_set_style_bg_opa(chat_box_, LV_OPA_80, 0);
+    lv_obj_set_style_border_color(chat_box_, lv_color_hex(0x334155), 0);
+    lv_obj_set_style_border_width(chat_box_, 1, 0);
+    lv_obj_set_style_pad_all(chat_box_, 6, 0);
+    lv_obj_set_style_pad_row(chat_box_, 6, 0);
+    lv_obj_set_flex_flow(chat_box_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_scrollbar_mode(chat_box_, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_scroll_dir(chat_box_, LV_DIR_VER);
+    lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+
 
 
     /* Middle layer: preview_image_ - centered display */
@@ -3454,6 +3468,67 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
     }
 
+    if (chat_box_ != nullptr && content != nullptr && content[0] != '\0') {
+        LayoutChatWidgets(height_ > width_);
+        lv_obj_remove_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(chat_box_);
+
+        uint32_t cnt = lv_obj_get_child_cnt(chat_box_);
+        if (cnt >= 15) {
+            lv_obj_t* oldest = lv_obj_get_child(chat_box_, 0);
+            if (oldest != nullptr) {
+                lv_obj_del(oldest);
+            }
+        }
+
+        lv_obj_t* row = lv_obj_create(chat_box_);
+        lv_obj_set_width(row, lv_pct(100));
+        lv_obj_set_height(row, LV_SIZE_CONTENT);
+        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_set_scrollbar_mode(row, LV_SCROLLBAR_MODE_OFF);
+
+        bool is_user = (role != nullptr && strcmp(role, "user") == 0);
+
+        lv_obj_t* bubble = lv_obj_create(row);
+        lv_obj_set_style_radius(bubble, 8, 0);
+        lv_obj_set_style_border_width(bubble, 0, 0);
+        lv_obj_set_style_pad_hor(bubble, 8, 0);
+        lv_obj_set_style_pad_ver(bubble, 4, 0);
+        lv_obj_set_scrollbar_mode(bubble, LV_SCROLLBAR_MODE_OFF);
+
+        if (is_user) {
+            lv_obj_set_style_bg_color(bubble, lv_color_hex(0x0284C7), 0); // Sky Blue
+            lv_obj_set_style_bg_opa(bubble, LV_OPA_90, 0);
+            lv_obj_align(bubble, LV_ALIGN_RIGHT_MID, 0, 0);
+        } else {
+            lv_obj_set_style_bg_color(bubble, lv_color_hex(0x1E293B), 0); // Slate Dark
+            lv_obj_set_style_bg_opa(bubble, LV_OPA_90, 0);
+            lv_obj_align(bubble, LV_ALIGN_LEFT_MID, 0, 0);
+        }
+
+        lv_coord_t max_b_w = (width_ > 0 ? width_ : 320) * 85 / 100 - 16;
+        lv_obj_set_width(bubble, LV_SIZE_CONTENT);
+        lv_obj_set_style_max_width(bubble, max_b_w, 0);
+        lv_obj_set_height(bubble, LV_SIZE_CONTENT);
+
+        lv_obj_t* lbl = lv_label_create(bubble);
+        std::string prefix = is_user ? "Bạn: " : "Xiaozhi: ";
+        std::string full_txt = prefix + content;
+        lv_label_set_text(lbl, full_txt.c_str());
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
+        lv_obj_set_width(lbl, LV_SIZE_CONTENT);
+        lv_obj_set_style_max_width(lbl, max_b_w - 16, 0);
+
+        chat_message_label_ = lbl;
+
+        lv_obj_update_layout(chat_box_);
+        lv_obj_scroll_to_view_recursive(row, LV_ANIM_ON);
+    }
+
     lv_anim_delete(chat_message_label_, nullptr);
 
     lv_label_set_text(chat_message_label_, content);
@@ -3544,8 +3619,6 @@ void LcdDisplay::ClearChatMessages() {
 
     DisplayLockGuard lock(this);
 
-    // In non-wechat mode, just clear the chat message label and hide the bar
-
     if (chat_message_label_ != nullptr) {
 
         lv_label_set_text(chat_message_label_, "");
@@ -3556,6 +3629,11 @@ void LcdDisplay::ClearChatMessages() {
 
         lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
+    }
+
+    if (chat_box_ != nullptr) {
+        lv_obj_clean(chat_box_);
+        lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
     }
 
 }
@@ -3597,6 +3675,9 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
     auto emoji_collection = static_cast<LvglTheme*>(current_theme_)->emoji_collection();
 
     auto image = emoji_collection != nullptr ? emoji_collection->GetEmojiImage(emotion) : nullptr;
+    if (image == nullptr && emoji_collection != nullptr) {
+        image = emoji_collection->GetEmojiImage("neutral");
+    }
 
     if (image == nullptr) {
 
@@ -3687,6 +3768,8 @@ bool LcdDisplay::SetEmotion(const char* emotion) {
             // Set initial frame and start animation
 
             lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
+            lv_image_set_scale(emoji_image_, (height_ > width_) ? 180 : 145);
+            lv_obj_center(emoji_image_);
 
             gif_controller_->Start();
 
@@ -4138,24 +4221,61 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
 
 
 
-    if (screen_mode_ == kScreenMenu || screen_mode_ == kScreenQuickSettings || 
-
-        screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
-
-        (screen_mode_ == kScreenStandby && state == kDeviceStateIdle)) {
-
+    bool in_chat = (state == kDeviceStateConnecting || state == kDeviceStateListening || state == kDeviceStateSpeaking);
+    if (in_chat) {
+        // Chat mode with Xiaozhi:
+        // 1. Hide wallpaper completely
         lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 
-    } else {
+        // 2. Hide all standby / menu / settings boxes
+        if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+        if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+        if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+        if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+        if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+        if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+        if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
+        if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+        if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+        if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
 
-        lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        // 3. Layout and show animated robot eyes
+        LayoutChatWidgets(height_ > width_);
+        if (emoji_box_ != nullptr) {
+            lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(emoji_box_);
+            if (!gif_controller_) {
+                SetEmotion("neutral");
+            }
+        }
 
+        // 4. Show chat dialogue box if it has messages
+        if (chat_box_ != nullptr && lv_obj_get_child_cnt(chat_box_) > 0) {
+            lv_obj_remove_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(chat_box_);
+        }
+
+        if (top_bar_ != nullptr) {
+            lv_obj_remove_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(top_bar_);
+        }
+        return;
     }
 
     if (emoji_box_ != nullptr) {
-
         lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (chat_box_ != nullptr) {
+        lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+    }
 
+    if (screen_mode_ == kScreenMenu || screen_mode_ == kScreenQuickSettings || 
+        screen_mode_ == kScreenCalendar || screen_mode_ == kScreenWeatherDetail ||
+        (screen_mode_ == kScreenStandby && state == kDeviceStateIdle)) {
+        lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
     }
 
     if (container_ != nullptr) {
@@ -4360,6 +4480,32 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
 
 
 
+void LcdDisplay::LayoutChatWidgets(bool is_portrait) {
+    if (emoji_box_ != nullptr) {
+        lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        if (is_portrait) {
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 18);
+            if (emoji_image_ != nullptr) {
+                lv_image_set_scale(emoji_image_, 180);
+            }
+        } else {
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 8);
+            if (emoji_image_ != nullptr) {
+                lv_image_set_scale(emoji_image_, 145);
+            }
+        }
+    }
+    if (chat_box_ != nullptr) {
+        if (is_portrait) {
+            lv_obj_set_size(chat_box_, width_ - 8, 142);
+            lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
+        } else {
+            lv_obj_set_size(chat_box_, width_ - 8, 102);
+            lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
+        }
+    }
+}
+
 void LcdDisplay::SetOrientation(bool is_portrait) {
 
     DisplayLockGuard lock(this);
@@ -4551,6 +4697,7 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
     LayoutFmRadioWidgets(is_portrait);
 
     LayoutMusicWidgets(is_portrait);
+    LayoutChatWidgets(is_portrait);
 
 
 
@@ -5396,6 +5543,8 @@ void LcdDisplay::OnSwipeUp() {
 
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
 
+        if (chat_box_ != nullptr) lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+
         if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
 
         if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
@@ -5584,6 +5733,8 @@ void LcdDisplay::ShowStandby() {
 
         if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
 
+        if (chat_box_ != nullptr) lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+
         if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
@@ -5595,11 +5746,20 @@ void LcdDisplay::ShowStandby() {
 
     } else {
 
-        if (container_ != nullptr) lv_obj_remove_flag(container_, LV_OBJ_FLAG_HIDDEN);
-
-        if (content_ != nullptr) lv_obj_remove_flag(content_, LV_OBJ_FLAG_HIDDEN);
-
-        if (wallpaper_image_ != nullptr) lv_obj_remove_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+        if (emoji_box_ != nullptr) {
+            LayoutChatWidgets(height_ > width_);
+            lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(emoji_box_);
+            if (!gif_controller_) {
+                SetEmotion("neutral");
+            }
+        }
+        if (chat_box_ != nullptr && lv_obj_get_child_cnt(chat_box_) > 0) {
+            LayoutChatWidgets(height_ > width_);
+            lv_obj_remove_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_move_foreground(chat_box_);
+        }
 
     }
 
@@ -5623,6 +5783,8 @@ void LcdDisplay::ShowMenu() {
     if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
 
     if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+
+    if (chat_box_ != nullptr) lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 

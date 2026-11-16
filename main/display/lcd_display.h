@@ -31,6 +31,7 @@ protected:
     std::unique_ptr<LvglGif> gif_controller_ = nullptr;
     lv_obj_t* emoji_box_ = nullptr;
     lv_obj_t* chat_message_label_ = nullptr;
+    lv_obj_t* chat_box_ = nullptr;
     esp_timer_handle_t preview_timer_ = nullptr;
     std::unique_ptr<LvglImage> preview_image_cached_ = nullptr;
     bool hide_subtitle_ = false;  // Control whether to hide chat messages/subtitles
@@ -524,6 +525,7 @@ protected:
     void LayoutStopwatchWidgets(bool is_portrait);
     void LayoutTimerWidgets(bool is_portrait);
     void LayoutExchangeRatesWidgets(bool is_portrait);
+    void LayoutChatWidgets(bool is_portrait);
 
     void InitializeLcdThemes();
     virtual bool Lock(int timeout_ms = 0) override;
