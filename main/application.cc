@@ -1221,7 +1221,7 @@ void Application::HandleStateChangedEvent() {
                 // voice processing. This prevents audio truncation when STOP arrives
                 // late due to network jitter. Instead of blocking the main loop here,
                 // defer the start until MAIN_EVENT_PLAYBACK_DRAINED arrives.
-                if (listening_mode_ == kListeningModeAutoStop && !audio_service_.IsPlaybackIdle()) {
+                if (listening_mode_ != kListeningModeRealtime && !audio_service_.IsPlaybackIdle()) {
                     pending_listening_start_ = true;
                 } else {
                     StartListeningAudio();
@@ -1393,7 +1393,7 @@ void Application::SetListeningMode(ListeningMode mode) {
 }
 
 ListeningMode Application::GetDefaultListeningMode() const {
-    return aec_mode_ == kAecOff ? kListeningModeAutoStop : kListeningModeRealtime;
+    return aec_mode_ == kAecOff ? kListeningModeManualStop : kListeningModeRealtime;
 }
 
 void Application::Reboot() {
