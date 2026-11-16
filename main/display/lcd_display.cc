@@ -4194,6 +4194,17 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
     bool in_chat = (state == kDeviceStateConnecting || state == kDeviceStateListening || state == kDeviceStateSpeaking);
     if (in_chat) {
         // Chat mode with Xiaozhi:
+        // Set entire screen background to pure black (#000000)
+        lv_obj_t* active_scr = lv_screen_active();
+        if (active_scr != nullptr) {
+            lv_obj_set_style_bg_color(active_scr, lv_color_black(), 0);
+            lv_obj_set_style_bg_opa(active_scr, LV_OPA_COVER, 0);
+        }
+        if (screen != nullptr) {
+            lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
+            lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
+        }
+
         // 1. Hide wallpaper completely
         lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 
@@ -4214,7 +4225,11 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
         if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
         if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
-        if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
         if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
         if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
         if (clock_box_ != nullptr) lv_obj_add_flag(clock_box_, LV_OBJ_FLAG_HIDDEN);
@@ -4243,6 +4258,7 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         }
 
         if (top_bar_ != nullptr) {
+            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
             lv_obj_remove_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
             lv_obj_move_foreground(top_bar_);
         }
@@ -4311,34 +4327,23 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         }
 
         if (calendar_label_ != nullptr) {
-
-            lv_obj_set_style_text_color(calendar_label_, lv_color_white(), 0);
-
-            lv_obj_remove_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
-
+            lv_label_set_text(calendar_label_, "");
+            lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
         }
 
         if (idle_clock_label_ != nullptr) {
-
-            lv_obj_set_style_text_color(idle_clock_label_, lv_color_white(), 0);
-
-            lv_obj_remove_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
-
+            lv_label_set_text(idle_clock_label_, "");
+            lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
         }
 
         if (status_label_ != nullptr) {
-
             lv_label_set_text(status_label_, "");
-
             lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-
         }
 
-            if (weather_box_ != nullptr && weather_ready_) {
-
-                lv_obj_remove_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
-
-            }
+        if (weather_box_ != nullptr) {
+            lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+        }
 
             if (screen_mode_ == kScreenMenu && menu_box_ != nullptr) {
 
@@ -4455,7 +4460,11 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
 
             if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
-            if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+            if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
             if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
@@ -4469,26 +4478,27 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
 void LcdDisplay::LayoutChatWidgets(bool is_portrait) {
     if (emoji_box_ != nullptr) {
         lv_obj_set_size(emoji_box_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_set_style_bg_opa(emoji_box_, LV_OPA_TRANSP, 0);
         if (is_portrait) {
-            // Portrait: 240x320 - Eyes at top (y=6..110), chat box at bottom (y=135..318)
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 6);
+            // Portrait: 240x320 - Otto Eyes centered at top, chat box at bottom
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, -10);
             if (emoji_image_ != nullptr) {
-                lv_image_set_scale(emoji_image_, 220);
+                lv_image_set_scale(emoji_image_, 170);
             }
         } else {
-            // Landscape: 320x240 - Eyes high at top (y=0..93), chat box at bottom (y=112..238)
-            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 0);
+            // Landscape: 320x240 - Otto Eyes at top, chat box at bottom
+            lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, -22);
             if (emoji_image_ != nullptr) {
-                lv_image_set_scale(emoji_image_, 200);
+                lv_image_set_scale(emoji_image_, 140);
             }
         }
     }
     if (chat_box_ != nullptr) {
         if (is_portrait) {
-            lv_obj_set_size(chat_box_, width_ - 8, 182);
+            lv_obj_set_size(chat_box_, width_ - 8, 150);
             lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
         } else {
-            lv_obj_set_size(chat_box_, width_ - 8, 126);
+            lv_obj_set_size(chat_box_, width_ - 8, 108);
             lv_obj_align(chat_box_, LV_ALIGN_BOTTOM_MID, 0, -2);
         }
     }
@@ -4843,7 +4853,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
 
                 }
 
-                lv_obj_remove_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
 
             }
 
@@ -4927,7 +4937,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
 
                 }
 
-                lv_obj_remove_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
 
             }
 
@@ -5691,6 +5701,10 @@ void LcdDisplay::ShowStandby() {
 
     }
 
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
@@ -5726,6 +5740,10 @@ void LcdDisplay::ShowStandby() {
         if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 
         if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+
+        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+        if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+        if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
         if (standby_box_ != nullptr) {
             lv_obj_remove_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
@@ -5792,6 +5810,10 @@ void LcdDisplay::ShowMenu() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
@@ -5964,6 +5986,10 @@ void LcdDisplay::ShowQuickSettings() {
         lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
 
     }
+
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
@@ -6209,6 +6235,10 @@ void LcdDisplay::ShowWeatherDetail() {
 
     }
 
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
@@ -6287,6 +6317,10 @@ void LcdDisplay::ShowClock() {
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
     }
+
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
@@ -6453,6 +6487,10 @@ void LcdDisplay::ShowExchangeRates() {
 
     }
 
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
 
@@ -6522,6 +6560,10 @@ void LcdDisplay::ShowCalculator() {
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
     }
+
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
@@ -6596,6 +6638,10 @@ void LcdDisplay::ShowFlashlight() {
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
     }
+
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
@@ -6684,6 +6730,10 @@ void LcdDisplay::ShowFmRadio() {
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
 
     }
+
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
@@ -15149,6 +15199,10 @@ void LcdDisplay::ShowStandby2() {
         lv_obj_set_y(quick_settings_box_, 0);
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
     }
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
@@ -15197,6 +15251,10 @@ void LcdDisplay::ShowStandby3() {
         lv_obj_set_y(quick_settings_box_, 0);
         lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
     }
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
     if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
