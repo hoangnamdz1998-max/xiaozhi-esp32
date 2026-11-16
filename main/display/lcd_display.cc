@@ -4286,19 +4286,25 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
     }
 
     if (top_bar_ != nullptr) {
-
-        lv_obj_set_style_bg_opa(top_bar_, LV_OPA_30, 0);
-
-        lv_obj_set_style_bg_color(top_bar_, lv_color_black(), 0);
-
+        if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || 
+            screen_mode_ == kScreenStandby3 || screen_mode_ == kScreenQuickSettings) {
+            lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_opa(top_bar_, LV_OPA_30, 0);
+            lv_obj_set_style_bg_color(top_bar_, lv_color_black(), 0);
+        }
     }
 
     if (bottom_bar_ != nullptr) {
-
-        lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_30, 0);
-
-        lv_obj_set_style_bg_color(bottom_bar_, lv_color_black(), 0);
-
+        if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || 
+            screen_mode_ == kScreenStandby3 || screen_mode_ == kScreenQuickSettings) {
+            lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_30, 0);
+            lv_obj_set_style_bg_color(bottom_bar_, lv_color_black(), 0);
+        }
     }
 
     if (network_label_ != nullptr) lv_obj_set_style_text_color(network_label_, lv_color_white(), 0);
@@ -5679,6 +5685,8 @@ void LcdDisplay::ShowStandby() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 
     if (menu_box_ != nullptr) {
 
@@ -5809,6 +5817,8 @@ void LcdDisplay::ShowMenu() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
     if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
     if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
@@ -5966,6 +5976,8 @@ void LcdDisplay::ShowQuickSettings() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+    if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
