@@ -4200,10 +4200,6 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
             lv_obj_set_style_bg_color(active_scr, lv_color_black(), 0);
             lv_obj_set_style_bg_opa(active_scr, LV_OPA_COVER, 0);
         }
-        if (screen != nullptr) {
-            lv_obj_set_style_bg_color(screen, lv_color_black(), 0);
-            lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
-        }
 
         // 1. Hide wallpaper completely
         lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
@@ -4220,14 +4216,17 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
             lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
         }
         if (notification_label_ != nullptr) lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
-        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
-        if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+        if (calendar_label_ != nullptr) {
+            lv_label_set_text(calendar_label_, "");
+            lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (idle_clock_label_ != nullptr) {
+            lv_label_set_text(idle_clock_label_, "");
+            lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+        }
         if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
         if (menu_box_ != nullptr) lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
         if (quick_settings_box_ != nullptr) lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
-        if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
-    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
-    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
 
     if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
         if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
@@ -4787,7 +4786,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
 
                     strftime(time_str, sizeof(time_str), "%H:%M:%S", tm_now);
 
-                    lv_label_set_text(idle_clock_label_, time_str);
+                    // lv_label_set_text(idle_clock_label_, time_str); // Disabled to prevent overlap
 
                     if (standby_clock_ != nullptr) {
 
@@ -4891,7 +4890,7 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
 
                     }
 
-                    lv_label_set_text(calendar_label_, buf);
+                    // lv_label_set_text(calendar_label_, buf); // Disabled to prevent overlap
 
                     if (standby_weekday_ != nullptr) {
 
