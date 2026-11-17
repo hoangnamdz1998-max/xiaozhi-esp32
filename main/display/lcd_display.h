@@ -400,6 +400,7 @@ protected:
     struct SongItem {
         std::string title;
         std::string artist;
+        std::string encode_id;
     };
     static const SongItem kZingTopSongsDefault[10];
     std::vector<SongItem> music_chart_songs_;

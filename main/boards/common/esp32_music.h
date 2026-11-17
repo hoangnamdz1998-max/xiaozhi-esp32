@@ -98,6 +98,7 @@ public:
     
     // 新增方法
     virtual bool StartStreaming(const std::string& music_url) override;
+    virtual bool StartStreamingDirect(const std::string& audio_url, const std::string& song_name, const std::string& artist_name, const std::string& lyric_url = "") override;
     virtual bool StopStreaming() override;  // 停止流式播放
     virtual size_t GetBufferSize() const override { return buffer_size_; }
     virtual bool IsDownloading() const override { return is_downloading_; }

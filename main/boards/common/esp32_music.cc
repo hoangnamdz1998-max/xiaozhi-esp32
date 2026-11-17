@@ -1113,6 +1113,23 @@ std::string Esp32Music::GetDownloadResult() {
 
 
 
+bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::string& song_name, const std::string& artist_name, const std::string& lyric_url) {
+    ESP_LOGI(TAG, "=== StartStreamingDirect: %s - %s ===", song_name.c_str(), audio_url.c_str());
+    ForceCleanupCache();
+    is_downloading_ = true;
+    current_song_name_ = song_name;
+    current_music_url_ = audio_url;
+
+    auto disp = Board::GetInstance().GetDisplay();
+    if (disp) {
+        disp->UpdateMusicPlaybackState(true, song_name, artist_name);
+        disp->SwitchToMusicPlayer();
+    }
+
+    song_name_displayed_ = false;
+    return StartStreaming(current_music_url_);
+}
+
 bool Esp32Music::StartStreaming(const std::string& music_url) {
 
     if (music_url.empty()) {

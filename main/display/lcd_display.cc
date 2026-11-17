@@ -118,16 +118,16 @@ const LcdDisplay::FmChannel LcdDisplay::kFmChannels[4] = {
 };
 
 const LcdDisplay::SongItem LcdDisplay::kZingTopSongsDefault[10] = {
-    {"Không Môn Đăng Hộ Đối", "Nguyễn Vĩ"},
-    {"Giá Như Anh Là Em", "Lệ Quyên"},
-    {"Kẻ Say Tình 2", "Quốc Thiên"},
-    {"Ngồi Nghe Em Khóc", "Đạt G"},
-    {"Ngày Còn Đôi Mươi", "Chú Út Lông Bông, Tiểu Mỹ"},
-    {"Đáng Ra Anh Không Nên", "Nhiều nghệ sĩ"},
-    {"Ngân Hàng Nỗi Nhớ", "Đạt G"},
-    {"Thắng Đời Thua Em", "Thái Học"},
-    {"Nói Buông Là Buông", "Đình Dũng"},
-    {"Tự Do Như Cơn Gió", "Xanh"}
+    {"Không Môn Đăng Hộ Đối", "Nguyễn Vĩ", "B1rufxZw5zN9"},
+    {"Kẻ Say Tình 2", "Quốc Thiên", "nzb2F6USwSQR"},
+    {"Giá Như Anh Là Em", "Lệ Quyên", "CaBURT2uECZr"},
+    {"Ngồi Nghe Em Khóc", "Đạt G", "wmxSiXIavacQ"},
+    {"Ngày Còn Đôi Mươi", "Chú Út Lông Bông, Tiểu Mỹ", "144hCBTk3jDt"},
+    {"Mình Cùng Nhau Yêu Đương Đi", "Vũ Thịnh, Cô Dâu", "yEPOvYgqK33j"},
+    {"Tự Do Như Cơn Gió", "Xanh", "Cr8SxQFgHrNL"},
+    {"Đáng Ra Anh Không Nên", "Nhiều nghệ sĩ", "z7Qawf4lkYIB"},
+    {"Ngân Hàng Nỗi Nhớ", "Đạt G", "ygVt8jAsYfnK"},
+    {"Anh Đến Đây Để Bù Đắp", "Khiêm Quỳnh", "ykNaqhL1529w"}
 };
 
 
@@ -14503,10 +14503,12 @@ void LcdDisplay::FetchRealtimeChart() {
                 if (item) {
                     cJSON* title_item = cJSON_GetObjectItem(item, "title");
                     cJSON* artist_item = cJSON_GetObjectItem(item, "artist");
+                    cJSON* encode_item = cJSON_GetObjectItem(item, "encodeId");
                     if (title_item && title_item->valuestring) {
                         SongItem s;
                         s.title = title_item->valuestring;
                         s.artist = (artist_item && artist_item->valuestring) ? artist_item->valuestring : "";
+                        s.encode_id = (encode_item && encode_item->valuestring) ? encode_item->valuestring : "";
                         new_songs.push_back(s);
                     }
                 }
@@ -14523,11 +14525,13 @@ void LcdDisplay::FetchRealtimeChart() {
 void LcdDisplay::PlayChartSong(int index) {
     if (index < 0 || index >= 10) return;
     music_current_chart_idx_ = index;
-    std::string s_title = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].title : kZingTopSongsDefault[index].title;
-    std::string s_artist = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].artist : kZingTopSongsDefault[index].artist;
+    const SongItem& s = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index] : kZingTopSongsDefault[index];
+    std::string s_title = s.title;
+    std::string s_artist = s.artist;
+    std::string s_encode_id = s.encode_id;
 
     music_current_song_ = s_title;
-    music_current_artist_ = "Đang tải bài hát...";
+    music_current_artist_ = s_artist;
     music_is_playing_ = true;
     UpdateMusicUI();
 
@@ -14538,8 +14542,14 @@ void LcdDisplay::PlayChartSong(int index) {
         cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
         cfg.thread_name = "play_chart";
         esp_pthread_set_cfg(&cfg);
-        std::thread([music, s_title, s_artist]() {
-            music->Download(s_title, s_artist);
+        std::thread([music, s_title, s_artist, s_encode_id]() {
+            if (!s_encode_id.empty()) {
+                std::string audio_url = "https://server-mcp-xiaozhi-dz.onrender.com/proxy_audio?id=" + s_encode_id;
+                std::string lyric_url = "https://server-mcp-xiaozhi-dz.onrender.com/proxy_lyric?id=" + s_encode_id;
+                music->StartStreamingDirect(audio_url, s_title, s_artist, lyric_url);
+            } else {
+                music->Download(s_title, s_artist);
+            }
         }).detach();
     }
 }

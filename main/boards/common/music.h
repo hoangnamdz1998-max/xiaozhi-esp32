@@ -12,6 +12,10 @@ public:
     
     // 新增流式播放相关方法
     virtual bool StartStreaming(const std::string& music_url) = 0;
+    virtual bool StartStreamingDirect(const std::string& audio_url, const std::string& song_name, const std::string& artist_name, const std::string& lyric_url = "") {
+        (void)audio_url; (void)song_name; (void)artist_name; (void)lyric_url;
+        return false;
+    }
     virtual bool StopStreaming() = 0;  // 停止流式播放
     virtual size_t GetBufferSize() const = 0;
     virtual bool IsDownloading() const = 0;
