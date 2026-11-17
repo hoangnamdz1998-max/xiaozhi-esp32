@@ -11,6 +11,8 @@
 
 #include "music.h"
 
+class Http;
+
 // MP3解码器支持
 extern "C" {
 #include "mp3dec.h"
@@ -87,7 +89,12 @@ private:
     size_t SkipId3Tag(uint8_t* data, size_t size);
 
     int16_t* final_pcm_data_fft = nullptr;
+    uint8_t visualizer_bands_[16] = {0};
+    void UpdateVisualizerBands(const int16_t* pcm, size_t count);
     void ForceCleanupCache();  // ← THÊM DÒNG NÀY
+
+    std::atomic<Http*> current_http_{nullptr};
+    std::mutex stream_start_mutex_;
 public:
     Esp32Music();
     ~Esp32Music();
@@ -104,6 +111,9 @@ public:
     virtual bool IsDownloading() const override { return is_downloading_; }
     virtual bool IsPlaying() const override { return is_playing_; }
     virtual int16_t* GetAudioData() override { return final_pcm_data_fft; }
+    virtual void GetVisualizerBands(uint8_t bands[16]) override {
+        for (int i = 0; i < 16; ++i) bands[i] = visualizer_bands_[i];
+    }
     
     // 显示模式控制方法
     void SetDisplayMode(DisplayMode mode);

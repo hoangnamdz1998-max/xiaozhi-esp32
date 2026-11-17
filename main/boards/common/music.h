@@ -21,6 +21,9 @@ public:
     virtual bool IsDownloading() const = 0;
     virtual bool IsPlaying() const = 0;
     virtual int16_t* GetAudioData() = 0;
+    virtual void GetVisualizerBands(uint8_t bands[16]) {
+        for (int i = 0; i < 16; ++i) bands[i] = 0;
+    }
 };
 
 #endif // MUSIC_H 

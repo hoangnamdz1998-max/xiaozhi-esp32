@@ -36,7 +36,7 @@
 #include <src/misc/cache/instance/lv_image_cache.h>
 
 #include <algorithm>
-
+#include <cmath>
 #include <cstring>
 
 #include <vector>
@@ -1636,6 +1636,7 @@ void LcdDisplay::SetupUI() {
 
     CreateStandby2UI();
     CreateStandby3UI();
+    CreateStandby4UI();
 
     CreateMenuUI();
 
@@ -3136,6 +3137,7 @@ void LcdDisplay::SetupUI() {
 
     CreateStandby2UI();
     CreateStandby3UI();
+    CreateStandby4UI();
 
     CreateMenuUI();
 
@@ -4705,6 +4707,7 @@ void LcdDisplay::SetOrientation(bool is_portrait) {
     LayoutStandbyWidgets(is_portrait);
     LayoutStandby2Widgets(is_portrait);
     LayoutStandby3Widgets(is_portrait);
+    LayoutStandby4Widgets(is_portrait);
     LayoutWallpaperSettingsWidgets(is_portrait);
     UpdateStandbyStatusBar();
 
@@ -5007,6 +5010,13 @@ void LcdDisplay::UpdateStatusBar(bool update_all) {
         struct tm* tm3 = localtime(&now3);
         if (tm3 != nullptr) {
             UpdateStandby3Clock(tm3);
+        }
+    }
+    if (screen_mode_ == kScreenStandby4 || (standby4_box_ != nullptr && !lv_obj_has_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN))) {
+        time_t now4 = time(nullptr);
+        struct tm* tm4 = localtime(&now4);
+        if (tm4 != nullptr) {
+            UpdateStandby4Clock(tm4);
         }
     }
 
@@ -5417,6 +5427,11 @@ void LcdDisplay::OnSwipeLeft() {
     }
 
     if (screen_mode_ == kScreenStandby3) {
+        ShowStandby4();
+        return;
+    }
+
+    if (screen_mode_ == kScreenStandby4) {
         return;
     }
 
@@ -5466,6 +5481,11 @@ void LcdDisplay::OnSwipeRight() {
 
         indev = lv_indev_get_next(indev);
 
+    }
+
+    if (screen_mode_ == kScreenStandby4) {
+        ShowStandby3();
+        return;
     }
 
     if (screen_mode_ == kScreenStandby3) {
@@ -5595,7 +5615,8 @@ void LcdDisplay::OnSwipeUp() {
 
 
 
-    if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 || screen_mode_ == kScreenStandby3) {
+    if (screen_mode_ == kScreenStandby || screen_mode_ == kScreenStandby2 ||
+        screen_mode_ == kScreenStandby3 || screen_mode_ == kScreenStandby4) {
 
         ShowMenu(); // Swipe up from standby opens icon menu
 
@@ -5713,6 +5734,8 @@ void LcdDisplay::ShowStandby() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
     if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
     if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     if (status_bar_ != nullptr) lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
@@ -5846,6 +5869,8 @@ void LcdDisplay::ShowMenu() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
     if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
     if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
@@ -5946,6 +5971,9 @@ void LcdDisplay::ExitQuickSettings() {
         case kScreenStandby3:
             ShowStandby3();
             break;
+        case kScreenStandby4:
+            ShowStandby4();
+            break;
         case kScreenCalendar:
             ShowCalendar();
             break;
@@ -6005,6 +6033,8 @@ void LcdDisplay::ShowQuickSettings() {
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
     if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
     if (bottom_bar_ != nullptr) lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
@@ -14139,12 +14169,12 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_set_style_text_color(music_vinyl_note_, lv_color_hex(0x38bdf8), 0);
     lv_obj_align(music_vinyl_note_, LV_ALIGN_CENTER, 0, 0);
 
-    // Tên bài hát - CỐ ĐỊNH CHIỀU CAO 1 DÒNG, CUỘN TRÒN MƯỢT MÀ, KHÔNG BAO GIỜ XUỐNG DÒNG
+    // Tên bài hát - CỐ ĐỊNH CHIỀU CAO 24PX (ĐỦ CAO FONT 16 ĐỂ LUÔN CUỘN NGANG, TUYỆT ĐỐI KHÔNG CHẠY LÊN)
     music_song_lbl_ = lv_label_create(music_player_view_);
     lv_label_set_text(music_song_lbl_, music_current_song_.c_str());
     lv_obj_set_style_text_font(music_song_lbl_, &font_noto_sans_custom_16_4, 0);
     lv_obj_set_style_text_color(music_song_lbl_, lv_color_white(), 0);
-    lv_obj_set_height(music_song_lbl_, 20);
+    lv_obj_set_height(music_song_lbl_, 24);
     lv_label_set_long_mode(music_song_lbl_, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     // Tên ca sĩ - 1 dòng với dấu chấm lửng ...
@@ -14205,7 +14235,7 @@ void LcdDisplay::CreateMusicScreenUI() {
 
     for (int i = 0; i < kNumVisualizerBars; ++i) {
         music_vis_cols_[i] = lv_obj_create(music_visualizer_box_);
-        lv_obj_set_size(music_vis_cols_[i], 12, 68);
+        lv_obj_set_size(music_vis_cols_[i], 12, 50);
         lv_obj_set_style_bg_opa(music_vis_cols_[i], LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(music_vis_cols_[i], 0, 0);
         lv_obj_set_style_pad_all(music_vis_cols_[i], 0, 0);
@@ -14220,7 +14250,7 @@ void LcdDisplay::CreateMusicScreenUI() {
         lv_obj_set_style_bg_color(music_vis_bars_[i], lv_color_hex(kSpectrumColors[i]), 0);
         lv_obj_set_style_bg_opa(music_vis_bars_[i], LV_OPA_COVER, 0);
         lv_obj_clear_flag(music_vis_bars_[i], LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(music_vis_bars_[i], 0, 64);
+        lv_obj_set_pos(music_vis_bars_[i], 0, 46);
 
         // Falling Peak Dot (Ô LED đỉnh giữ lại rồi rơi xuống)
         music_vis_peaks_[i] = lv_obj_create(music_vis_cols_[i]);
@@ -14231,7 +14261,7 @@ void LcdDisplay::CreateMusicScreenUI() {
         lv_obj_set_style_bg_color(music_vis_peaks_[i], lv_color_white(), 0);
         lv_obj_set_style_bg_opa(music_vis_peaks_[i], LV_OPA_COVER, 0);
         lv_obj_clear_flag(music_vis_peaks_[i], LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(music_vis_peaks_[i], 0, 60);
+        lv_obj_set_pos(music_vis_peaks_[i], 0, 42);
     }
 
     // 3. THANH TIẾN TRÌNH & THỜI GIAN
@@ -14324,42 +14354,44 @@ void LcdDisplay::CreateMusicScreenUI() {
         static int tick = 0;
         tick++;
 
-        int col_h = (self->height_ > self->width_) ? 95 : 68;
-        int max_h = col_h - 10;
+        int col_h = (self->height_ > self->width_) ? 72 : 50;
+        int max_h = (self->height_ > self->width_) ? 50 : 34;
+
+        // Lấy 16 dải tần số âm thanh thực tế từ bộ giải mã MP3
+        uint8_t real_bands[16] = {0};
+        auto music = Board::GetInstance().GetMusic();
+        if (music && self->music_is_playing_) {
+            music->GetVisualizerBands(real_bands);
+        }
 
         for (int i = 0; i < self->kNumVisualizerBars; ++i) {
             if (!self->music_vis_bars_[i] || !self->music_vis_peaks_[i]) continue;
             
             float target_h = 3.0f;
             if (self->music_is_playing_) {
-                float wave1 = sinf((tick * 0.30f) + (i * 0.45f));
-                float wave2 = cosf((tick * 0.20f) - (i * 0.65f));
-                float wave3 = sinf((tick * 0.52f) + (i * 1.15f));
-                float bass = (i < 4) ? (sinf(tick * 0.38f) > 0.25f ? 0.35f : 0.0f) : 0.0f;
-                float norm = (wave1 * 0.38f + wave2 * 0.32f + wave3 * 0.30f + 1.0f) * 0.5f + bass;
-                if (norm > 1.0f) norm = 1.0f;
-                if (norm < 0.05f) norm = 0.05f;
-                target_h = norm * max_h;
+                float audio_energy = (float)real_bands[i] / 255.0f;
+                // Nháy trực tiếp theo nhịp điệu bài hát thực tế từ loa
+                target_h = audio_energy * max_h;
                 if (target_h < 3.0f) target_h = 3.0f;
             }
 
-            // Tăng nhanh - giảm êm
+            // Bắt nhịp tức thì (fast attack), hạ xuống dứt khoát nảy tanh tách
             if (target_h > current_h[i]) {
                 current_h[i] = target_h;
             } else {
-                current_h[i] -= 2.0f;
+                current_h[i] -= 3.6f;
                 if (current_h[i] < target_h) current_h[i] = target_h;
             }
 
             // HIỆU ỨNG RƠI: Ô LED ở cột nháy cao nhất sẽ giữ lại một lúc rồi rơi từ từ!
             if (current_h[i] >= peak_h[i]) {
                 peak_h[i] = current_h[i];
-                peak_hold[i] = 10; // Giữ lại ở đỉnh trong 10 ticks (~400ms)
+                peak_hold[i] = 4; // Giữ lại ở đỉnh trong 4 ticks (~100ms) vừa vặn cho nhịp beat
             } else {
                 if (peak_hold[i] > 0) {
                     peak_hold[i]--; // Đang giữ lại ở đỉnh
                 } else {
-                    peak_h[i] -= 1.4f; // Rơi xuống theo gia tốc mượt mà
+                    peak_h[i] -= 2.2f; // Rơi xuống dứt khoát để đón nhịp trống kế tiếp
                     if (peak_h[i] < current_h[i]) {
                         peak_h[i] = current_h[i];
                     }
@@ -14368,8 +14400,12 @@ void LcdDisplay::CreateMusicScreenUI() {
             if (peak_h[i] < 3.0f) peak_h[i] = 3.0f;
 
             int bar_h_int = (int)current_h[i];
-            int peak_y = col_h - (int)peak_h[i] - 5;
-            if (peak_y < 0) peak_y = 0;
+            if (bar_h_int > max_h) bar_h_int = max_h;
+            int peak_h_int = (int)peak_h[i];
+            if (peak_h_int > max_h) peak_h_int = max_h;
+
+            int peak_y = col_h - peak_h_int - 4;
+            if (peak_y < 2) peak_y = 2;
 
             lv_obj_set_size(self->music_vis_bars_[i], 12, bar_h_int);
             lv_obj_set_pos(self->music_vis_bars_[i], 0, col_h - bar_h_int);
@@ -14385,7 +14421,7 @@ void LcdDisplay::CreateMusicScreenUI() {
             play_seconds = 0;
         }
         if (self->music_is_playing_) {
-            if (tick % 25 == 0) { // Mỗi 1 giây (25 * 40ms)
+            if (tick % 40 == 0) { // Mỗi 1 giây (40 * 25ms)
                 play_seconds++;
                 if (self->music_time_lbl_) {
                     char time_buf[16];
@@ -14399,7 +14435,7 @@ void LcdDisplay::CreateMusicScreenUI() {
                 }
             }
         }
-    }, 40, this);
+    }, 25, this);
 }
 
 void LcdDisplay::SwitchToMusicChart() {
@@ -14463,34 +14499,34 @@ void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
                 lv_obj_set_pos(music_vinyl_, 10, 10);
             }
             if (music_song_lbl_) {
-                lv_obj_set_width(music_song_lbl_, 116);
-                lv_obj_set_pos(music_song_lbl_, 58, 12);
+                lv_obj_set_size(music_song_lbl_, 116, 24);
+                lv_obj_set_pos(music_song_lbl_, 58, 10);
             }
             if (music_artist_lbl_) {
-                lv_obj_set_width(music_artist_lbl_, 116);
+                lv_obj_set_size(music_artist_lbl_, 116, 18);
                 lv_obj_set_pos(music_artist_lbl_, 58, 34);
             }
             if (music_player_back_btn_) lv_obj_set_pos(music_player_back_btn_, 176, 15);
             if (music_player_close_btn_) lv_obj_set_pos(music_player_close_btn_, 206, 15);
 
-            // Sóng quang phổ ở giữa
+            // Sóng quang phổ ở giữa (Portrait)
             if (music_visualizer_box_) {
-                lv_obj_set_size(music_visualizer_box_, width_ - 20, 100);
-                lv_obj_set_pos(music_visualizer_box_, 10, 68);
+                lv_obj_set_size(music_visualizer_box_, width_ - 24, 76);
+                lv_obj_set_pos(music_visualizer_box_, 12, 82);
                 for (int i = 0; i < kNumVisualizerBars; ++i) {
-                    if (music_vis_cols_[i]) lv_obj_set_size(music_vis_cols_[i], 11, 95);
+                    if (music_vis_cols_[i]) lv_obj_set_size(music_vis_cols_[i], 11, 72);
                     if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 11);
                     if (music_vis_peaks_[i]) lv_obj_set_width(music_vis_peaks_[i], 11);
                 }
             }
 
             // Thanh tiến trình
-            if (music_time_lbl_) lv_obj_set_pos(music_time_lbl_, 10, 184);
+            if (music_time_lbl_) lv_obj_set_pos(music_time_lbl_, 12, 176);
             if (music_progress_bar_) {
                 lv_obj_set_size(music_progress_bar_, 140, 4);
-                lv_obj_set_pos(music_progress_bar_, 50, 190);
+                lv_obj_set_pos(music_progress_bar_, 50, 182);
             }
-            if (music_total_time_lbl_) lv_obj_set_pos(music_total_time_lbl_, 198, 184);
+            if (music_total_time_lbl_) lv_obj_set_pos(music_total_time_lbl_, 196, 176);
 
             // Cụm nút điều khiển
             if (music_prev_btn_) {
@@ -14512,47 +14548,48 @@ void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
                 lv_obj_set_pos(music_vinyl_, 14, 10);
             }
             if (music_song_lbl_) {
-                lv_obj_set_width(music_song_lbl_, 170);
-                lv_obj_set_pos(music_song_lbl_, 68, 12);
+                // Chiều cao 24px + chiều rộng 155px ép LVGL luôn cuộn NGANG khi tên bài hát dài
+                lv_obj_set_size(music_song_lbl_, 155, 24);
+                lv_obj_set_pos(music_song_lbl_, 68, 10);
             }
             if (music_artist_lbl_) {
-                lv_obj_set_width(music_artist_lbl_, 170);
+                lv_obj_set_size(music_artist_lbl_, 155, 18);
                 lv_obj_set_pos(music_artist_lbl_, 68, 34);
             }
             if (music_player_back_btn_) lv_obj_set_pos(music_player_back_btn_, 244, 16);
             if (music_player_close_btn_) lv_obj_set_pos(music_player_close_btn_, 280, 16);
 
-            // Sóng quang phổ ở giữa
+            // Sóng quang phổ ở giữa (Landscape: hạ thấp và giảm chiều cao để không bị sát phía trên)
             if (music_visualizer_box_) {
-                lv_obj_set_size(music_visualizer_box_, width_ - 26, 72);
-                lv_obj_set_pos(music_visualizer_box_, 13, 62);
+                lv_obj_set_size(music_visualizer_box_, width_ - 32, 54);
+                lv_obj_set_pos(music_visualizer_box_, 16, 72);
                 for (int i = 0; i < kNumVisualizerBars; ++i) {
-                    if (music_vis_cols_[i]) lv_obj_set_size(music_vis_cols_[i], 12, 68);
+                    if (music_vis_cols_[i]) lv_obj_set_size(music_vis_cols_[i], 12, 50);
                     if (music_vis_bars_[i]) lv_obj_set_width(music_vis_bars_[i], 12);
                     if (music_vis_peaks_[i]) lv_obj_set_width(music_vis_peaks_[i], 12);
                 }
             }
 
             // Thanh tiến trình
-            if (music_time_lbl_) lv_obj_set_pos(music_time_lbl_, 14, 140);
+            if (music_time_lbl_) lv_obj_set_pos(music_time_lbl_, 16, 136);
             if (music_progress_bar_) {
-                lv_obj_set_size(music_progress_bar_, 200, 4);
-                lv_obj_set_pos(music_progress_bar_, 58, 146);
+                lv_obj_set_size(music_progress_bar_, 196, 4);
+                lv_obj_set_pos(music_progress_bar_, 62, 142);
             }
-            if (music_total_time_lbl_) lv_obj_set_pos(music_total_time_lbl_, 268, 140);
+            if (music_total_time_lbl_) lv_obj_set_pos(music_total_time_lbl_, 266, 136);
 
             // Cụm nút điều khiển
             if (music_prev_btn_) {
                 lv_obj_set_size(music_prev_btn_, 44, 38);
-                lv_obj_set_pos(music_prev_btn_, 72, 174);
+                lv_obj_set_pos(music_prev_btn_, 72, 172);
             }
             if (music_play_btn_) {
                 lv_obj_set_size(music_play_btn_, 52, 52);
-                lv_obj_set_pos(music_play_btn_, 134, 166);
+                lv_obj_set_pos(music_play_btn_, 134, 165);
             }
             if (music_next_btn_) {
                 lv_obj_set_size(music_next_btn_, 44, 38);
-                lv_obj_set_pos(music_next_btn_, 204, 174);
+                lv_obj_set_pos(music_next_btn_, 204, 172);
             }
         }
     }
@@ -14638,22 +14675,43 @@ void LcdDisplay::PlayChartSong(int index) {
     music_is_playing_ = true;
     UpdateMusicUI();
 
-    auto music = Board::GetInstance().GetMusic();
-    if (music) {
-        esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-        cfg.stack_size = 12288;
-        cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
-        cfg.thread_name = "play_chart";
-        esp_pthread_set_cfg(&cfg);
-        std::thread([music, s_title, s_artist, s_encode_id]() {
-            if (!s_encode_id.empty()) {
-                std::string audio_url = "https://server-mcp-xiaozhi-dz.onrender.com/proxy_audio?id=" + s_encode_id;
-                std::string lyric_url = "https://server-mcp-xiaozhi-dz.onrender.com/proxy_lyric?id=" + s_encode_id;
-                music->StartStreamingDirect(audio_url, s_title, s_artist, lyric_url);
-            } else {
-                music->Download(s_title, s_artist);
-            }
-        }).detach();
+    // DEBOUNCE CHUYỂN BÀI: Bảo vệ thiết bị khi người dùng bấm Next/Prev liên tục
+    static lv_timer_t* chart_debounce_timer = nullptr;
+    static std::string pending_title = "";
+    static std::string pending_artist = "";
+    static std::string pending_encode_id = "";
+    pending_title = s_title;
+    pending_artist = s_artist;
+    pending_encode_id = s_encode_id;
+
+    if (chart_debounce_timer) {
+        lv_timer_reset(chart_debounce_timer);
+    } else {
+        chart_debounce_timer = lv_timer_create([](lv_timer_t* t) {
+            lv_timer_delete(t);
+            chart_debounce_timer = nullptr;
+
+            auto music = Board::GetInstance().GetMusic();
+            if (!music) return;
+            std::string t_title = pending_title;
+            std::string t_artist = pending_artist;
+            std::string t_id = pending_encode_id;
+
+            esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+            cfg.stack_size = 12288;
+            cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+            cfg.thread_name = "play_chart";
+            esp_pthread_set_cfg(&cfg);
+            std::thread([music, t_title, t_artist, t_id]() {
+                if (!t_id.empty()) {
+                    std::string audio_url = "https://server-mcp-xiaozhi-dz.onrender.com/proxy_audio?id=" + t_id;
+                    std::string lyric_url = "https://server-mcp-xiaozhi-dz.onrender.com/proxy_lyric?id=" + t_id;
+                    music->StartStreamingDirect(audio_url, t_title, t_artist, lyric_url);
+                } else {
+                    music->Download(t_title, t_artist);
+                }
+            }).detach();
+        }, 350, nullptr);
     }
 }
 
@@ -15370,6 +15428,8 @@ void LcdDisplay::ShowStandby2() {
 
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_set_y(menu_box_, 0);
@@ -15422,6 +15482,8 @@ void LcdDisplay::ShowStandby3() {
 
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
         lv_obj_set_y(menu_box_, 0);
@@ -15462,6 +15524,413 @@ void LcdDisplay::ShowStandby3() {
         if (tm_now) {
             UpdateStandby3Clock(tm_now);
         }
+    }
+}
+
+// =========================================================================
+// MÀN HÌNH CHỜ 4 (Standby 4): Mặt đồng hồ Chronograph thể thao tròn
+// Kim giây xoay đều liên tục (Smooth Sweeping Hand - 33 FPS)
+// =========================================================================
+
+void LcdDisplay::CreateStandby4UI() {
+    if (standby4_box_ != nullptr) return;
+
+    auto screen = lv_screen_active();
+    standby4_box_ = lv_obj_create(screen);
+    lv_obj_set_size(standby4_box_, width_, height_);
+    lv_obj_set_pos(standby4_box_, 0, 0);
+    lv_obj_set_style_bg_color(standby4_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(standby4_box_, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(standby4_box_, 0, 0);
+    lv_obj_set_style_border_width(standby4_box_, 0, 0);
+    lv_obj_set_style_pad_all(standby4_box_, 0, 0);
+    lv_obj_clear_flag(standby4_box_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+
+    // Watch Dial container (224 x 224 tròn thể thao chính giữa)
+    standby4_dial_ = lv_obj_create(standby4_box_);
+    lv_obj_set_size(standby4_dial_, 224, 224);
+    lv_obj_center(standby4_dial_);
+    lv_obj_set_style_radius(standby4_dial_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(standby4_dial_, lv_color_hex(0x0C1017), 0);
+    lv_obj_set_style_border_color(standby4_dial_, lv_color_hex(0x2A3441), 0);
+    lv_obj_set_style_border_width(standby4_dial_, 3, 0);
+    lv_obj_set_style_pad_all(standby4_dial_, 0, 0);
+    lv_obj_clear_flag(standby4_dial_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 1. Cardinal Orange Markers (12h, 3h, 6h, 9h)
+    auto create_accent_bar = [this](int x, int y, int w, int h) {
+        lv_obj_t* bar = lv_obj_create(standby4_dial_);
+        lv_obj_set_size(bar, w, h);
+        lv_obj_set_pos(bar, x, y);
+        lv_obj_set_style_radius(bar, 2, 0);
+        lv_obj_set_style_bg_color(bar, lv_color_hex(0xFF4500), 0);
+        lv_obj_set_style_border_width(bar, 0, 0);
+        lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE);
+    };
+    create_accent_bar(110, 5, 4, 10);    // 12h
+    create_accent_bar(209, 110, 10, 4);  // 3h
+    create_accent_bar(110, 209, 4, 10);  // 6h
+    create_accent_bar(5, 110, 10, 4);    // 9h
+
+    // 2. White tick dots around bezel (at hours 1, 2, 4, 5, 7, 8, 10, 11)
+    for (int h = 1; h <= 12; ++h) {
+        if (h % 3 == 0) continue;
+        float angle = (h * 30.0f - 90.0f) * (3.14159265f / 180.0f);
+        int dot_x = (int)roundf(112.0f + 102.0f * cosf(angle));
+        int dot_y = (int)roundf(112.0f + 102.0f * sinf(angle));
+        lv_obj_t* dot = lv_obj_create(standby4_dial_);
+        lv_obj_set_size(dot, 3, 3);
+        lv_obj_set_pos(dot, dot_x - 1, dot_y - 1);
+        lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(dot, lv_color_hex(0x94A3B8), 0);
+        lv_obj_set_style_border_width(dot, 0, 0);
+        lv_obj_remove_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(dot, LV_OBJ_FLAG_CLICKABLE);
+    }
+
+    // 3. Sports Bezel Arabic Numbers
+    auto create_dial_num = [this](const char* txt, int x, int y) {
+        lv_obj_t* lbl = lv_label_create(standby4_dial_);
+        lv_label_set_text(lbl, txt);
+        lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_set_pos(lbl, x, y);
+        lv_obj_remove_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
+    };
+    create_dial_num("12", 104, 16);
+    create_dial_num("2", 175, 46);
+    create_dial_num("4", 175, 160);
+    create_dial_num("6", 108, 188);
+    create_dial_num("8", 38, 160);
+    create_dial_num("10", 30, 46);
+    create_dial_num("9", 18, 103);
+
+    // 4. Orange Sports Arc (curved gauge like Huawei GT)
+    lv_obj_t* arc = lv_arc_create(standby4_dial_);
+    lv_obj_set_size(arc, 194, 194);
+    lv_obj_center(arc);
+    lv_arc_set_angles(arc, 290, 40);
+    lv_arc_set_bg_angles(arc, 290, 40);
+    lv_obj_remove_style(arc, nullptr, LV_PART_KNOB);
+    lv_obj_set_style_arc_color(arc, lv_color_hex(0xFF4500), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(arc, 3, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(arc, lv_color_hex(0x232B36), LV_PART_MAIN);
+    lv_obj_set_style_arc_width(arc, 3, LV_PART_MAIN);
+    lv_obj_remove_flag(arc, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(arc, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 5. SUB-DIALS (3 mặt phụ + 1 ô điện tử)
+    // A. Top Sub-dial (12h - Thời tiết)
+    lv_obj_t* top_sd = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(top_sd, 46, 46);
+    lv_obj_set_pos(top_sd, 89, 36);
+    lv_obj_set_style_radius(top_sd, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(top_sd, lv_color_hex(0x141A23), 0);
+    lv_obj_set_style_border_color(top_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_style_border_width(top_sd, 1, 0);
+    lv_obj_set_style_pad_all(top_sd, 0, 0);
+    lv_obj_remove_flag(top_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(top_sd, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_weather_icon_ = lv_image_create(top_sd);
+    lv_image_set_src(standby4_weather_icon_, &weather_icon_cloud_24_dsc);
+    lv_obj_set_pos(standby4_weather_icon_, 11, 2);
+
+    standby4_weather_temp_ = lv_label_create(top_sd);
+    lv_label_set_text(standby4_weather_temp_, "--°C");
+    lv_obj_set_style_text_font(standby4_weather_temp_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_weather_temp_, lv_color_hex(0x38BDF8), 0);
+    lv_obj_set_pos(standby4_weather_temp_, 7, 26);
+
+    // B. Left Sub-dial (9h - Bước chân / Hoạt động)
+    lv_obj_t* left_sd = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(left_sd, 46, 46);
+    lv_obj_set_pos(left_sd, 37, 89);
+    lv_obj_set_style_radius(left_sd, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(left_sd, lv_color_hex(0x141A23), 0);
+    lv_obj_set_style_border_color(left_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_style_border_width(left_sd, 1, 0);
+    lv_obj_set_style_pad_all(left_sd, 0, 0);
+    lv_obj_remove_flag(left_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(left_sd, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* stp_title = lv_label_create(left_sd);
+    lv_label_set_text(stp_title, "STP");
+    lv_obj_set_style_text_font(stp_title, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(stp_title, lv_color_hex(0xFF9800), 0);
+    lv_obj_set_pos(stp_title, 11, 3);
+
+    standby4_steps_lbl_ = lv_label_create(left_sd);
+    lv_label_set_text(standby4_steps_lbl_, "2726");
+    lv_obj_set_style_text_font(standby4_steps_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_steps_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_steps_lbl_, 8, 24);
+
+    // C. Bottom Sub-dial (6h - Nhịp tim Heart Rate)
+    lv_obj_t* bot_sd = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(bot_sd, 46, 46);
+    lv_obj_set_pos(bot_sd, 89, 142);
+    lv_obj_set_style_radius(bot_sd, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(bot_sd, lv_color_hex(0x141A23), 0);
+    lv_obj_set_style_border_color(bot_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_style_border_width(bot_sd, 1, 0);
+    lv_obj_set_style_pad_all(bot_sd, 0, 0);
+    lv_obj_remove_flag(bot_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(bot_sd, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* hr_icon = lv_label_create(bot_sd);
+    lv_label_set_text(hr_icon, "BPM");
+    lv_obj_set_style_text_font(hr_icon, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(hr_icon, lv_color_hex(0xFF334B), 0);
+    lv_obj_set_pos(hr_icon, 9, 3);
+
+    standby4_bpm_lbl_ = lv_label_create(bot_sd);
+    lv_label_set_text(standby4_bpm_lbl_, "76");
+    lv_obj_set_style_text_font(standby4_bpm_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_bpm_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_bpm_lbl_, 15, 24);
+
+    // D. Right Sub-area (3h - Ô thông tin điện tử)
+    lv_obj_t* right_sd = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(right_sd, 54, 50);
+    lv_obj_set_pos(right_sd, 137, 87);
+    lv_obj_set_style_radius(right_sd, 6, 0);
+    lv_obj_set_style_bg_color(right_sd, lv_color_hex(0x141A23), 0);
+    lv_obj_set_style_border_color(right_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_style_border_width(right_sd, 1, 0);
+    lv_obj_set_style_pad_all(right_sd, 0, 0);
+    lv_obj_remove_flag(right_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(right_sd, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_wday_lbl_ = lv_label_create(right_sd);
+    lv_label_set_text(standby4_wday_lbl_, "TUE");
+    lv_obj_set_style_text_font(standby4_wday_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_wday_lbl_, lv_color_hex(0x94A3B8), 0);
+    lv_obj_set_pos(standby4_wday_lbl_, 13, 1);
+
+    standby4_digi_time_lbl_ = lv_label_create(right_sd);
+    lv_label_set_text(standby4_digi_time_lbl_, "17:24");
+    lv_obj_set_style_text_font(standby4_digi_time_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_digi_time_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_digi_time_lbl_, 8, 16);
+
+    standby4_date_bat_lbl_ = lv_label_create(right_sd);
+    lv_label_set_text(standby4_date_bat_lbl_, "11-17");
+    lv_obj_set_style_text_font(standby4_date_bat_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_date_bat_lbl_, lv_color_hex(0xFF4500), 0);
+    lv_obj_set_pos(standby4_date_bat_lbl_, 8, 32);
+
+    // 6. MECHANICAL HANDS (3 Kim)
+    // A. Hour Hand (Kim giờ - Trắng thể thao, rộng 5px)
+    standby4_hour_hand_ = lv_line_create(standby4_dial_);
+    lv_obj_set_size(standby4_hour_hand_, 224, 224);
+    lv_obj_set_pos(standby4_hour_hand_, 0, 0);
+    lv_obj_set_style_line_width(standby4_hour_hand_, 5, 0);
+    lv_obj_set_style_line_rounded(standby4_hour_hand_, true, 0);
+    lv_obj_set_style_line_color(standby4_hour_hand_, lv_color_white(), 0);
+    lv_obj_remove_flag(standby4_hour_hand_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(standby4_hour_hand_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // B. Minute Hand (Kim phút - Cam thể thao rực rỡ, rộng 4px)
+    standby4_min_hand_ = lv_line_create(standby4_dial_);
+    lv_obj_set_size(standby4_min_hand_, 224, 224);
+    lv_obj_set_pos(standby4_min_hand_, 0, 0);
+    lv_obj_set_style_line_width(standby4_min_hand_, 4, 0);
+    lv_obj_set_style_line_rounded(standby4_min_hand_, true, 0);
+    lv_obj_set_style_line_color(standby4_min_hand_, lv_color_hex(0xFF4500), 0);
+    lv_obj_remove_flag(standby4_min_hand_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(standby4_min_hand_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // C. Second Hand (Kim giây xoay đều liên tục! - Đỏ cam, rộng 2px)
+    standby4_sec_hand_ = lv_line_create(standby4_dial_);
+    lv_obj_set_size(standby4_sec_hand_, 224, 224);
+    lv_obj_set_pos(standby4_sec_hand_, 0, 0);
+    lv_obj_set_style_line_width(standby4_sec_hand_, 2, 0);
+    lv_obj_set_style_line_rounded(standby4_sec_hand_, true, 0);
+    lv_obj_set_style_line_color(standby4_sec_hand_, lv_color_hex(0xFF1E00), 0);
+    lv_obj_remove_flag(standby4_sec_hand_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(standby4_sec_hand_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // D. Center Pivot Cap (Nắp trục giữa kim)
+    lv_obj_t* pin = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(pin, 12, 12);
+    lv_obj_set_pos(pin, 106, 106);
+    lv_obj_set_style_radius(pin, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(pin, lv_color_hex(0xFF4500), 0);
+    lv_obj_set_style_border_color(pin, lv_color_white(), 0);
+    lv_obj_set_style_border_width(pin, 2, 0);
+    lv_obj_remove_flag(pin, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(pin, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_move_foreground(pin);
+
+    // 7. Timer quét 30ms (33.3 FPS) cho kim giây xoay mượt mà không nấc
+    standby4_sweep_timer_ = lv_timer_create([](lv_timer_t* t) {
+        auto* self = static_cast<LcdDisplay*>(lv_timer_get_user_data(t));
+        if (!self || self->screen_mode_ != kScreenStandby4 || !self->standby4_box_ ||
+            lv_obj_has_flag(self->standby4_box_, LV_OBJ_FLAG_HIDDEN)) return;
+        self->UpdateStandby4HandsSmooth();
+    }, 30, this);
+
+    LayoutStandby4Widgets(height_ > width_);
+    UpdateStandby4HandsSmooth();
+}
+
+void LcdDisplay::LayoutStandby4Widgets(bool is_portrait) {
+    if (standby4_box_ == nullptr) return;
+    lv_obj_set_size(standby4_box_, width_, height_);
+    if (standby4_dial_ != nullptr) {
+        lv_obj_center(standby4_dial_);
+    }
+}
+
+void LcdDisplay::UpdateStandby4HandsSmooth() {
+    if (standby4_dial_ == nullptr || standby4_sec_hand_ == nullptr) return;
+
+    int64_t now_us = esp_timer_get_time();
+    time_t now_s = time(nullptr);
+    struct tm* tm_now = localtime(&now_s);
+    if (tm_now == nullptr) return;
+
+    float ms = (float)((now_us / 1000) % 1000);
+    float sec_float = (float)tm_now->tm_sec + ms / 1000.0f;
+    float min_float = (float)tm_now->tm_min + sec_float / 60.0f;
+    float hour_float = (float)(tm_now->tm_hour % 12) + min_float / 60.0f;
+
+    const float cx = 112.0f;
+    const float cy = 112.0f;
+    const float deg2rad = 3.14159265f / 180.0f;
+
+    // 1. Hour Hand (length: 44px, tail: 8px)
+    float hour_rad = (hour_float * 30.0f - 90.0f) * deg2rad;
+    standby4_hour_pts_[0].x = (lv_value_precise_t)roundf(cx - 8.0f * cosf(hour_rad));
+    standby4_hour_pts_[0].y = (lv_value_precise_t)roundf(cy - 8.0f * sinf(hour_rad));
+    standby4_hour_pts_[1].x = (lv_value_precise_t)roundf(cx + 44.0f * cosf(hour_rad));
+    standby4_hour_pts_[1].y = (lv_value_precise_t)roundf(cy + 44.0f * sinf(hour_rad));
+    lv_line_set_points(standby4_hour_hand_, standby4_hour_pts_, 2);
+
+    // 2. Minute Hand (length: 68px, tail: 12px)
+    float min_rad = (min_float * 6.0f - 90.0f) * deg2rad;
+    standby4_min_pts_[0].x = (lv_value_precise_t)roundf(cx - 12.0f * cosf(min_rad));
+    standby4_min_pts_[0].y = (lv_value_precise_t)roundf(cy - 12.0f * sinf(min_rad));
+    standby4_min_pts_[1].x = (lv_value_precise_t)roundf(cx + 68.0f * cosf(min_rad));
+    standby4_min_pts_[1].y = (lv_value_precise_t)roundf(cy + 68.0f * sinf(min_rad));
+    lv_line_set_points(standby4_min_hand_, standby4_min_pts_, 2);
+
+    // 3. Second Hand (Smooth Sweeping, length: 86px, tail: 18px)
+    float sec_rad = (sec_float * 6.0f - 90.0f) * deg2rad;
+    standby4_sec_pts_[0].x = (lv_value_precise_t)roundf(cx - 18.0f * cosf(sec_rad));
+    standby4_sec_pts_[0].y = (lv_value_precise_t)roundf(cy - 18.0f * sinf(sec_rad));
+    standby4_sec_pts_[1].x = (lv_value_precise_t)roundf(cx + 86.0f * cosf(sec_rad));
+    standby4_sec_pts_[1].y = (lv_value_precise_t)roundf(cy + 86.0f * sinf(sec_rad));
+    lv_line_set_points(standby4_sec_hand_, standby4_sec_pts_, 2);
+}
+
+void LcdDisplay::UpdateStandby4Clock(const struct tm* tm_now) {
+    if (standby4_box_ == nullptr) return;
+
+    if (standby4_digi_time_lbl_ != nullptr) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", tm_now->tm_hour, tm_now->tm_min);
+        lv_label_set_text(standby4_digi_time_lbl_, tbuf);
+    }
+
+    if (standby4_wday_lbl_ != nullptr) {
+        static const char* kDays[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
+        lv_label_set_text(standby4_wday_lbl_, kDays[tm_now->tm_wday % 7]);
+    }
+
+    if (standby4_date_bat_lbl_ != nullptr) {
+        int bat = 100;
+        bool charging = false, discharging = false;
+        Board::GetInstance().GetBatteryLevel(bat, charging, discharging);
+        char dbuf[32];
+        snprintf(dbuf, sizeof(dbuf), "%02d-%02d %d%%", tm_now->tm_mon + 1, tm_now->tm_mday, bat);
+        lv_label_set_text(standby4_date_bat_lbl_, dbuf);
+    }
+
+    SyncStandby4Weather();
+}
+
+void LcdDisplay::SyncStandby4Weather() {
+    if (standby4_weather_temp_ == nullptr) return;
+    const auto& info = WeatherService::GetInstance().GetWeatherInfo();
+    if (info.temp > -60.0f && info.temp < 80.0f && info.temp != 0.0f) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%.0f°C", info.temp);
+        lv_label_set_text(standby4_weather_temp_, tbuf);
+    } else if (standby_temp_ != nullptr) {
+        const char* t = lv_label_get_text(standby_temp_);
+        if (t && strlen(t) > 0) {
+            lv_label_set_text(standby4_weather_temp_, t);
+        }
+    }
+    if (standby4_weather_icon_ != nullptr) {
+        const lv_image_dsc_t* dsc = &weather_icon_cloud_24_dsc;
+        switch (info.icon_type) {
+            case 0: dsc = &weather_icon_sun_24_dsc; break;
+            case 1: dsc = &weather_icon_sun_cloud_24_dsc; break;
+            case 2: dsc = &weather_icon_cloud_24_dsc; break;
+            default: dsc = &weather_icon_cloud_24_dsc; break;
+        }
+        lv_image_set_src(standby4_weather_icon_, dsc);
+    }
+}
+
+void LcdDisplay::ShowStandby4() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+
+    screen_mode_ = kScreenStandby4;
+    previous_screen_mode_ = kScreenStandby4;
+
+    if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
+    if (menu_box_ != nullptr) {
+        lv_anim_delete(menu_box_, nullptr);
+        lv_obj_set_y(menu_box_, 0);
+        lv_obj_add_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (quick_settings_box_ != nullptr) {
+        lv_anim_delete(quick_settings_box_, nullptr);
+        lv_obj_set_y(quick_settings_box_, 0);
+        lv_obj_add_flag(quick_settings_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (calendar_label_ != nullptr) lv_obj_add_flag(calendar_label_, LV_OBJ_FLAG_HIDDEN);
+    if (idle_clock_label_ != nullptr) lv_obj_add_flag(idle_clock_label_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_box_ != nullptr) lv_obj_add_flag(weather_box_, LV_OBJ_FLAG_HIDDEN);
+
+    if (calendar_box_ != nullptr) lv_obj_add_flag(calendar_box_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_box_ != nullptr) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
+    if (weather_detail_box_ != nullptr) lv_obj_add_flag(weather_detail_box_, LV_OBJ_FLAG_HIDDEN);
+    if (clock_box_ != nullptr) lv_obj_add_flag(clock_box_, LV_OBJ_FLAG_HIDDEN);
+    if (stopwatch_box_ != nullptr) lv_obj_add_flag(stopwatch_box_, LV_OBJ_FLAG_HIDDEN);
+    if (timer_box_ != nullptr) lv_obj_add_flag(timer_box_, LV_OBJ_FLAG_HIDDEN);
+    if (rates_box_ != nullptr) lv_obj_add_flag(rates_box_, LV_OBJ_FLAG_HIDDEN);
+    if (calc_box_ != nullptr) lv_obj_add_flag(calc_box_, LV_OBJ_FLAG_HIDDEN);
+    if (flashlight_box_ != nullptr) lv_obj_add_flag(flashlight_box_, LV_OBJ_FLAG_HIDDEN);
+    if (fm_box_ != nullptr) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
+    if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
+
+    if (standby4_box_ == nullptr) {
+        CreateStandby4UI();
+    }
+    if (standby4_box_ != nullptr) {
+        bool is_p = (height_ > width_);
+        LayoutStandby4Widgets(is_p);
+        lv_obj_remove_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(standby4_box_);
+        if (standby4_sweep_timer_ != nullptr) {
+            lv_timer_resume(standby4_sweep_timer_);
+        }
+        time_t now = time(nullptr);
+        struct tm* tm_now = localtime(&now);
+        if (tm_now) {
+            UpdateStandby4Clock(tm_now);
+        }
+        UpdateStandby4HandsSmooth();
     }
 }
 

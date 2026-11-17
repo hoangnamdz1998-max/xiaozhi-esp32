@@ -81,6 +81,7 @@ public:
         kScreenStandby,
         kScreenStandby2,
         kScreenStandby3,
+        kScreenStandby4,
         kScreenMenu,
         kScreenQuickSettings,
         kScreenCalendar,
@@ -107,6 +108,7 @@ public:
     virtual void ShowStandby() override;
     virtual void ShowStandby2();
     virtual void ShowStandby3();
+    virtual void ShowStandby4();
     virtual void ShowQuickSettings() override;
     virtual void ShowCalendar() override;
     virtual void ShowWeatherDetail() override;
@@ -507,6 +509,30 @@ protected:
     void CreateStandby3UI();
     void LayoutStandby3Widgets(bool is_portrait);
     void UpdateStandby3Clock(const struct tm* tm_now);
+
+    // Standby Screen 4 (Chronograph Sport Watch Face - Smooth Sweeping Second Hand)
+    lv_obj_t* standby4_box_ = nullptr;
+    lv_obj_t* standby4_dial_ = nullptr;
+    lv_obj_t* standby4_hour_hand_ = nullptr;
+    lv_obj_t* standby4_min_hand_ = nullptr;
+    lv_obj_t* standby4_sec_hand_ = nullptr;
+    lv_point_precise_t standby4_hour_pts_[2] = {{0, 0}, {0, 0}};
+    lv_point_precise_t standby4_min_pts_[2] = {{0, 0}, {0, 0}};
+    lv_point_precise_t standby4_sec_pts_[2] = {{0, 0}, {0, 0}};
+    lv_obj_t* standby4_weather_icon_ = nullptr;
+    lv_obj_t* standby4_weather_temp_ = nullptr;
+    lv_obj_t* standby4_steps_lbl_ = nullptr;
+    lv_obj_t* standby4_bpm_lbl_ = nullptr;
+    lv_obj_t* standby4_wday_lbl_ = nullptr;
+    lv_obj_t* standby4_digi_time_lbl_ = nullptr;
+    lv_obj_t* standby4_date_bat_lbl_ = nullptr;
+    lv_timer_t* standby4_sweep_timer_ = nullptr;
+
+    void CreateStandby4UI();
+    void LayoutStandby4Widgets(bool is_portrait);
+    void UpdateStandby4Clock(const struct tm* tm_now);
+    void UpdateStandby4HandsSmooth();
+    void SyncStandby4Weather();
 
     void CreateMenuUI();
     void UpdateMenuStatusBar();

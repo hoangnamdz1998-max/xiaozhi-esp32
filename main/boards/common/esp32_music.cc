@@ -1,4 +1,5 @@
 #include "esp32_music.h"
+#include <cmath>
 
 #include "board.h"
 
@@ -613,147 +614,47 @@ Esp32Music::~Esp32Music() {
 // Mới thêm vào
 
 void Esp32Music::ForceCleanupCache() {
-
     ESP_LOGI(TAG, "=== FORCE CACHE CLEANUP START ===");
-
     
-
-    // 1. Stop tất cả threads
-
+    // 1. Dừng tất cả cờ điều khiển
     is_downloading_ = false;
-
     is_playing_ = false;
-
     is_lyric_running_ = false;
-
     
+    // 2. Đóng kết nối HTTP đang mở để download thread thoát khỏi Read() ngay lập tức
+    Http* h = current_http_.exchange(nullptr);
+    if (h) {
+        ESP_LOGI(TAG, "Closing active HTTP connection immediately...");
+        h->Close();
+    }
 
-    // 2. Notify để threads thoát nhanh
-
+    // 3. Đánh thức condition variable để các thread thức giấc và thoát
     {
-
         std::lock_guard<std::mutex> lock(buffer_mutex_);
-
         buffer_cv_.notify_all();
-
     }
-
     
-
-    // 3. Đợi download thread
-
+    // 4. Dừng download thread
     if (download_thread_.joinable()) {
-
-        ESP_LOGI(TAG, "Waiting for download thread...");
-
-        auto start = std::chrono::steady_clock::now();
-
-        
-
-        while (download_thread_.joinable()) {
-
-            vTaskDelay(pdMS_TO_TICKS(50));
-
-            
-
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-
-                std::chrono::steady_clock::now() - start).count();
-
-            
-
-            if (elapsed >= 3) {
-
-                ESP_LOGW(TAG, "Download thread timeout, detaching");
-
-                download_thread_.detach();
-
-                break;
-
-            }
-
-        }
-
-        
-
-        if (download_thread_.joinable()) {
-
-            download_thread_.join();
-
-        }
-
+        ESP_LOGI(TAG, "Joining download thread...");
+        download_thread_.join();
         ESP_LOGI(TAG, "Download thread stopped");
-
     }
-
     
-
-    // 4. Đợi playback thread
-
+    // 5. Dừng playback thread
     if (play_thread_.joinable()) {
-
-        ESP_LOGI(TAG, "Waiting for playback thread...");
-
-        auto start = std::chrono::steady_clock::now();
-
-        
-
-        while (play_thread_.joinable()) {
-
-            vTaskDelay(pdMS_TO_TICKS(50));
-
-            
-
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-
-                std::chrono::steady_clock::now() - start).count();
-
-            
-
-            if (elapsed >= 3) {
-
-                ESP_LOGW(TAG, "Playback thread timeout, detaching");
-
-                play_thread_.detach();
-
-                break;
-
-            }
-
-        }
-
-        
-
-        if (play_thread_.joinable()) {
-
-            play_thread_.join();
-
-        }
-
+        ESP_LOGI(TAG, "Joining playback thread...");
+        play_thread_.join();
         ESP_LOGI(TAG, "Playback thread stopped");
-
     }
-
     
-
-    // 5. Đợi lyric thread
-
+    // 6. Dừng lyric thread
     if (lyric_thread_.joinable()) {
-
-        ESP_LOGI(TAG, "Waiting for lyric thread...");
-
         lyric_thread_.join();
-
-        ESP_LOGI(TAG, "Lyric thread stopped");
-
     }
-
     
-
-    // 6. Xóa audio buffer
-
+    // 7. Xóa sạch audio buffer
     ClearAudioBuffer();
-
     ESP_LOGI(TAG, "Audio buffer cleared");
 
     
@@ -1114,6 +1015,7 @@ std::string Esp32Music::GetDownloadResult() {
 
 
 bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::string& song_name, const std::string& artist_name, const std::string& lyric_url) {
+    std::lock_guard<std::mutex> lock(stream_start_mutex_);
     ESP_LOGI(TAG, "=== StartStreamingDirect: %s - %s ===", song_name.c_str(), audio_url.c_str());
     ForceCleanupCache();
     is_downloading_ = true;
@@ -1189,37 +1091,21 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     }
 
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-
-    cfg.stack_size = 8192;
-
+    cfg.stack_size = 12288;
     cfg.prio = 5;
-
     cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
-
     cfg.thread_name = "audio_dl";
-
     esp_pthread_set_cfg(&cfg);
-
     is_downloading_ = true;
-
     download_thread_ = std::thread(&Esp32Music::DownloadAudioStream, this, music_url);
-
     
-
     cfg = esp_pthread_get_default_config();
-
-    cfg.stack_size = 10240;
-
+    cfg.stack_size = 20480;
     cfg.prio = 5;
-
     cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
-
     cfg.thread_name = "audio_play";
-
     esp_pthread_set_cfg(&cfg);
-
     is_playing_ = true;
-
     play_thread_ = std::thread(&Esp32Music::PlayAudioStream, this);
 
     
@@ -1230,222 +1116,124 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
 
 
 
+void Esp32Music::UpdateVisualizerBands(const int16_t* pcm, size_t count) {
+    if (!pcm || count < 64) return;
+
+    size_t n = count > 256 ? 256 : count;
+
+    // 1. Phân tích năng lượng 3 miền âm thanh thực tế: Bass, Mid, Treble
+    int32_t bass_acc = 0;
+    int32_t mid_acc = 0;
+    int32_t treble_acc = 0;
+    int32_t total_rms_acc = 0;
+
+    int32_t prev = pcm[0];
+    for (size_t i = 1; i < n; ++i) {
+        int32_t val = (int32_t)pcm[i];
+        int32_t abs_val = std::abs(val);
+        total_rms_acc += abs_val;
+
+        // Âm cao (Treble): độ dốc biến thiên giữa các mẫu liền kề
+        int32_t diff = std::abs(val - prev);
+        treble_acc += diff;
+
+        // Âm trầm (Bass): chu kỳ thấp
+        if (i < n / 2) {
+            bass_acc += abs_val;
+        } else {
+            mid_acc += abs_val;
+        }
+        prev = val;
+    }
+
+    int32_t avg_bass = (bass_acc * 2) / (int32_t)n;
+    int32_t avg_mid = (mid_acc * 2) / (int32_t)n;
+    int32_t avg_treble = treble_acc / (int32_t)n;
+    int32_t avg_total = total_rms_acc / (int32_t)n;
+
+    // Chuẩn hóa năng lượng về thang 0 - 255 với AGC
+    int32_t norm_bass = (avg_bass * 255) / 5500;
+    if (norm_bass > 255) norm_bass = 255;
+
+    int32_t norm_mid = (avg_mid * 255) / 4200;
+    if (norm_mid > 255) norm_mid = 255;
+
+    int32_t norm_treble = (avg_treble * 255) / 2600; // Khuếch đại Treble để không bị yếu
+    if (norm_treble > 255) norm_treble = 255;
+
+    int32_t norm_beat = (avg_total * 255) / 4500;
+    if (norm_beat > 255) norm_beat = 255;
+
+    // Bảng đường cong cân bằng hình vòm studio (Arc EQ Profile) cho 16 cột
+    // Giúp các cột ở giữa và 2 bên có độ dốc hài hòa, không bao giờ bị lệch chót vót 1 bên
+    static const uint8_t kArcProfile[16] = {
+        185, 215, 245, 255,   // Cột 0-3: Sub-bass & Bass
+        245, 230, 220, 215,   // Cột 4-7: Low-Mid (giọng hát nam, nhạc cụ chính)
+        210, 225, 235, 245,   // Cột 8-11: High-Mid (giọng nữ, guitar)
+        230, 210, 190, 170    // Cột 12-15: Treble & Hi-hat (sắc nét)
+    };
+
+    // Phân tích vi mô 16 dải con trực tiếp
+    size_t step = n / 16;
+    if (step < 4) step = 4;
+
+    for (int b = 0; b < 16; ++b) {
+        size_t start = b * step;
+        int32_t sub_sum = 0;
+        int32_t sub_diff = 0;
+        for (size_t s = 0; s < step; ++s) {
+            size_t idx = start + s;
+            if (idx >= n) break;
+            sub_sum += std::abs((int32_t)pcm[idx]);
+            if (idx > 0) sub_diff += std::abs((int32_t)pcm[idx] - (int32_t)pcm[idx - 1]);
+        }
+        int32_t sub_amp = ((sub_sum / (int32_t)step) * 255) / 4200;
+        int32_t sub_high = ((sub_diff / (int32_t)step) * 255) / 2800;
+
+        int32_t band_energy = 0;
+        if (b < 4) {
+            // Bass: kết hợp năng lượng mẫu trầm cục bộ và nhịp trống bass
+            band_energy = (norm_bass * 5 + sub_amp * 3 + norm_beat * 2) / 10;
+        } else if (b < 10) {
+            // Mid: kết hợp giọng hát và nhịp nền
+            band_energy = (norm_mid * 5 + sub_amp * 3 + norm_beat * 2) / 10;
+        } else {
+            // Treble: âm sắc cao nhấp nháy sắc bén
+            band_energy = (norm_treble * 5 + sub_high * 3 + norm_beat * 2) / 10;
+        }
+
+        // Nhân với đường cong vòm chuẩn để tạo hình dáng visualizer cân đối tuyệt đẹp
+        int32_t final_val = (band_energy * (int32_t)kArcProfile[b]) / 230;
+        if (final_val > 255) final_val = 255;
+        if (final_val < 0) final_val = 0;
+
+        // Phản ứng nhịp bốc (Fast Attack): nhảy vọt tức thì khi có nhịp, hạ nhanh dứt khoát
+        if (final_val > visualizer_bands_[b]) {
+            visualizer_bands_[b] = (uint8_t)final_val;
+        } else {
+            visualizer_bands_[b] = (uint8_t)((visualizer_bands_[b] * 5 + final_val * 5) / 10);
+        }
+    }
+}
+
 bool Esp32Music::StopStreaming() {
+    std::lock_guard<std::mutex> lock(stream_start_mutex_);
+    for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
     auto disp = Board::GetInstance().GetDisplay();
     if (disp) {
         disp->UpdateMusicPlaybackState(false);
     }
 
-    ESP_LOGI(TAG, "Stopping streaming - initiating cache cleanup");
-
-    
-
+    ESP_LOGI(TAG, "Stopping streaming cleanly...");
     ResetSampleRate();
-
-    
-
-    if (!is_playing_ && !is_downloading_) {
-
-        ESP_LOGW(TAG, "No streaming in progress");
-
-        return true;
-
-    }
-
-    
-
-    is_downloading_ = false;
-
-    is_playing_ = false;
-
-    
-
-    auto& board = Board::GetInstance();
-
-    auto display = board.GetDisplay();
-
-    if (display) {
-
-        // display->SetMusicInfo("");
-
-    }
-
-    
-
-    {
-
-        std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-        buffer_cv_.notify_all();
-
-    }
-
-    
-
-    if (download_thread_.joinable()) {
-
-        download_thread_.join();
-
-        ESP_LOGI(TAG, "Download thread stopped");
-
-    }
-
-    
-
-    if (play_thread_.joinable()) {
-
-        is_playing_ = false;
-
-        {
-
-            std::lock_guard<std::mutex> lock(buffer_mutex_);
-
-            buffer_cv_.notify_all();
-
-        }
-
-        
-
-        bool thread_finished = false;
-
-        int wait_count = 0;
-
-        const int max_wait = 100;
-
-        
-
-        while (!thread_finished && wait_count < max_wait) {
-
-            vTaskDelay(pdMS_TO_TICKS(10));
-
-            wait_count++;
-
-            
-
-            if (!play_thread_.joinable()) {
-
-                thread_finished = true;
-
-                break;
-
-            }
-
-        }
-
-        
-
-        if (play_thread_.joinable()) {
-
-            if (wait_count >= max_wait) {
-
-                play_thread_.detach();
-
-            } else {
-
-                play_thread_.join();
-
-            }
-
-        }
-
-        ESP_LOGI(TAG, "Playback thread stopped");
-
-    }
-
-    
-
-    // ===== TỰ ĐỘNG XÓA CACHE KHI DỪNG THỦ CÔNG =====
-
-    ESP_LOGI(TAG, "Manual stop - Starting cache cleanup");
-
-    
-
-    // Xóa audio buffer
-
-    ClearAudioBuffer();
-
-    
-
-    // Giải phóng FFT data
-
-    if (final_pcm_data_fft != nullptr) {
-
-        heap_caps_free(final_pcm_data_fft);
-
-        final_pcm_data_fft = nullptr;
-
-    }
-
-    
-
-    // Reset MP3 decoder
-
-    CleanupMp3Decoder();
-
-    InitializeMp3Decoder();
-
-    
-
-    // Xóa thông tin bài hát
-
-    current_music_url_.clear();
-
-    current_lyric_url_.clear();
-
-    last_downloaded_data_.clear();
-
-    
-
-    // Xóa lyrics
-
-    {
-
-        std::lock_guard<std::mutex> lock(lyrics_mutex_);
-
-        lyrics_.clear();
-
-        lyrics_.shrink_to_fit();
-
-    }
-
-    
-
-    // Reset trạng thái
-
-    current_play_time_ms_ = 0;
-
-    last_frame_time_ms_ = 0;
-
-    total_frames_decoded_ = 0;
-
-    current_lyric_index_ = -1;
-
-    song_name_displayed_ = false;
-
-    
+    ForceCleanupCache();
 
     auto codec = Board::GetInstance().GetAudioCodec();
-
     if (codec && codec->output_enabled()) {
-
         codec->EnableOutput(false);
-
     }
-
-    ESP_LOGI(TAG, "Cache cleanup complete - Free heap: %d bytes", esp_get_free_heap_size());
-
-    
-
-    if (display && display_mode_ == DISPLAY_MODE_SPECTRUM) {
-
-        // display->stopFft();
-
-    }
-
-    
-
+    ESP_LOGI(TAG, "Stop streaming complete - Free heap: %d bytes", esp_get_free_heap_size());
     return true;
-
 }
 
 
@@ -1514,6 +1302,7 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
         }
         
         ESP_LOGI(TAG, "Audio streaming started - Status: %d (%s)", code, current_url.c_str());
+        current_http_ = http.get();
         break;
     }
 
@@ -1671,8 +1460,8 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
 
     
 
+    current_http_ = nullptr;
     heap_caps_free(dl_buffer);
-
     http->Close();
 
     is_downloading_ = false;
@@ -2100,6 +1889,7 @@ void Esp32Music::PlayAudioStream() {
 
                 
 
+                UpdateVisualizerBands(final_pcm_data, final_sample_count);
                 app.AddAudioData(std::move(packet));
 
                 total_played += pcm_size_bytes;
