@@ -15915,7 +15915,6 @@ void LcdDisplay::UpdateStandby4Clock(const struct tm* tm_now) {
         static const char* kDays[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
         lv_label_set_text(standby4_wday_lbl_, kDays[tm_now->tm_wday % 7]);
     }
-}
 
     SyncStandby4Weather();
 }
