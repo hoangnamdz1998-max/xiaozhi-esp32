@@ -15534,12 +15534,15 @@ void LcdDisplay::ShowStandby3() {
 // =========================================================================
 
 // =========================================================================
-// MÀN HÌNH CHỜ 4 (Standby 4): Đồng hồ cơ khí cao cấp CALIBER R028 AUTO
-// Vành thép phay xước, cọc số nổi 3D, ô lịch Day-Date, kim kiếm dạ quang,
-// kim giây đỏ quét mượt mà (Smooth Sweeping Second Hand - 25 FPS)
+// MÀN HÌNH CHỜ 4 (Standby 4): Mặt đồng hồ phong cách Neon Blue & 4 Status Cards
+// Viền phát sáng Neon Electric Blue, bộ số 1-12, kim kiếm dạ quang, kim giây quét mượt,
+// 4 góc tiện ích: Lịch Thứ/Ngày, Pin & WiFi, Thời tiết, Chuông báo & Giờ số.
 // =========================================================================
 
 static lv_point_precise_t s_standby4_ticks[60][2];
+static lv_point_precise_t s_standby4_wave1[5] = {{0, 186}, {60, 204}, {160, 218}, {260, 204}, {320, 186}};
+static lv_point_precise_t s_standby4_wave2[5] = {{0, 194}, {70, 210}, {160, 215}, {250, 210}, {320, 194}};
+static lv_point_precise_t s_standby4_wave3[3] = {{90, 222}, {160, 224}, {230, 222}};
 
 void LcdDisplay::CreateStandby4UI() {
     if (standby4_box_ != nullptr) return;
@@ -15556,63 +15559,175 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_clear_flag(standby4_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
 
-    // 1. Vành Bezel kim loại sáng bóng (3D Brushed Stainless Steel Bezel - 228x228)
-    // Tầng 1: Vành ngoài mạ chrome sáng (Outer Bright Polished Chrome Ring)
+    // 1. NỀN NGHỆ THUẬT: Các dải sóng ánh sáng xanh Neon lượn sóng phía dưới
+    lv_obj_t* w1 = lv_line_create(standby4_box_);
+    lv_line_set_points(w1, s_standby4_wave1, 5);
+    lv_obj_set_style_line_width(w1, 2, 0);
+    lv_obj_set_style_line_color(w1, lv_color_hex(0x1E3A8A), 0);
+    lv_obj_set_style_line_rounded(w1, true, 0);
+    lv_obj_clear_flag(w1, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* w2 = lv_line_create(standby4_box_);
+    lv_line_set_points(w2, s_standby4_wave2, 5);
+    lv_obj_set_style_line_width(w2, 2, 0);
+    lv_obj_set_style_line_color(w2, lv_color_hex(0x2563EB), 0);
+    lv_obj_set_style_line_rounded(w2, true, 0);
+    lv_obj_clear_flag(w2, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* w3 = lv_line_create(standby4_box_);
+    lv_line_set_points(w3, s_standby4_wave3, 3);
+    lv_obj_set_style_line_width(w3, 2, 0);
+    lv_obj_set_style_line_color(w3, lv_color_hex(0x60A5FA), 0);
+    lv_obj_set_style_line_rounded(w3, true, 0);
+    lv_obj_clear_flag(w3, LV_OBJ_FLAG_CLICKABLE);
+
+    // Thanh capsule phát sáng ở cạnh đáy giữa màn hình
+    lv_obj_t* bottom_bar = lv_obj_create(standby4_box_);
+    lv_obj_set_size(bottom_bar, 54, 4);
+    lv_obj_set_pos(bottom_bar, 133, 227);
+    lv_obj_set_style_radius(bottom_bar, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(bottom_bar, lv_color_hex(0x93C5FD), 0);
+    lv_obj_set_style_border_width(bottom_bar, 0, 0);
+    lv_obj_clear_flag(bottom_bar, LV_OBJ_FLAG_CLICKABLE);
+
+    // 2. CÁC TIỆN ÍCH 4 GÓC MÀN HÌNH (4 Corner Status Widgets)
+    // A. Góc trên trái: Card hiển thị Thứ / Ngày (VD: THỨ BA / 21/10)
+    lv_obj_t* date_card = lv_obj_create(standby4_box_);
+    lv_obj_set_size(date_card, 78, 54);
+    lv_obj_set_pos(date_card, 10, 12);
+    lv_obj_set_style_radius(date_card, 10, 0);
+    lv_obj_set_style_bg_color(date_card, lv_color_hex(0x0C192E), 0);
+    lv_obj_set_style_bg_opa(date_card, 230, 0);
+    lv_obj_set_style_border_color(date_card, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_width(date_card, 1, 0);
+    lv_obj_set_style_pad_all(date_card, 0, 0);
+    lv_obj_clear_flag(date_card, LV_OBJ_FLAG_SCROLLABLE);
+
+    standby4_wday_lbl_ = lv_label_create(date_card);
+    lv_label_set_text(standby4_wday_lbl_, "THỨ BA");
+    lv_obj_set_style_text_font(standby4_wday_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_wday_lbl_, lv_color_hex(0xCBD5E1), 0);
+    lv_obj_set_size(standby4_wday_lbl_, 78, 18);
+    lv_obj_set_style_text_align(standby4_wday_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(standby4_wday_lbl_, 0, 4);
+
+    lv_obj_t* cdiv = lv_obj_create(date_card);
+    lv_obj_set_size(cdiv, 64, 1);
+    lv_obj_set_pos(cdiv, 7, 23);
+    lv_obj_set_style_bg_color(cdiv, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_width(cdiv, 0, 0);
+    lv_obj_clear_flag(cdiv, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_date_day_lbl_ = lv_label_create(date_card);
+    lv_label_set_text(standby4_date_day_lbl_, "21/10");
+    lv_obj_set_style_text_font(standby4_date_day_lbl_, &font_noto_sans_custom_20_4, 0);
+    lv_obj_set_style_text_color(standby4_date_day_lbl_, lv_color_white(), 0);
+    lv_obj_set_size(standby4_date_day_lbl_, 78, 24);
+    lv_obj_set_style_text_align(standby4_date_day_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(standby4_date_day_lbl_, 0, 26);
+
+    // B. Góc trên phải: Biểu tượng WiFi + Viên pin đồ họa xanh lá + % Pin
+    lv_obj_t* wifi_icon = lv_label_create(standby4_box_);
+    lv_label_set_text(wifi_icon, MATERIAL_SYMBOLS_WIFI);
+    lv_obj_set_style_text_font(wifi_icon, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(wifi_icon, lv_color_hex(0x38BDF8), 0);
+    lv_obj_set_pos(wifi_icon, 230, 10);
+    lv_obj_clear_flag(wifi_icon, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* bat_body = lv_obj_create(standby4_box_);
+    lv_obj_set_size(bat_body, 24, 14);
+    lv_obj_set_pos(bat_body, 260, 18);
+    lv_obj_set_style_radius(bat_body, 2, 0);
+    lv_obj_set_style_bg_color(bat_body, lv_color_hex(0x060B14), 0);
+    lv_obj_set_style_border_color(bat_body, lv_color_white(), 0);
+    lv_obj_set_style_border_width(bat_body, 1, 0);
+    lv_obj_set_style_pad_all(bat_body, 0, 0);
+    lv_obj_clear_flag(bat_body, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(bat_body, LV_OBJ_FLAG_CLICKABLE);
+
+    lv_obj_t* bat_nib = lv_obj_create(standby4_box_);
+    lv_obj_set_size(bat_nib, 2, 6);
+    lv_obj_set_pos(bat_nib, 284, 22);
+    lv_obj_set_style_radius(bat_nib, 1, 0);
+    lv_obj_set_style_bg_color(bat_nib, lv_color_white(), 0);
+    lv_obj_set_style_border_width(bat_nib, 0, 0);
+    lv_obj_clear_flag(bat_nib, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_bat_arc_ = lv_obj_create(bat_body);
+    lv_obj_set_size(standby4_bat_arc_, 17, 10);
+    lv_obj_set_pos(standby4_bat_arc_, 1, 1);
+    lv_obj_set_style_radius(standby4_bat_arc_, 1, 0);
+    lv_obj_set_style_bg_color(standby4_bat_arc_, lv_color_hex(0x22C55E), 0);
+    lv_obj_set_style_border_width(standby4_bat_arc_, 0, 0);
+    lv_obj_clear_flag(standby4_bat_arc_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(standby4_bat_arc_, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_bat_lbl_ = lv_label_create(standby4_box_);
+    lv_label_set_text(standby4_bat_lbl_, "85%");
+    lv_obj_set_style_text_font(standby4_bat_lbl_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby4_bat_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_bat_lbl_, 289, 16);
+    lv_obj_clear_flag(standby4_bat_lbl_, LV_OBJ_FLAG_CLICKABLE);
+
+    // C. Góc dưới trái: Biểu tượng Thời tiết + Nhiệt độ (VD: 28°C)
+    standby4_weather_icon_ = lv_image_create(standby4_box_);
+    lv_image_set_src(standby4_weather_icon_, &weather_icon_sun_cloud_24_dsc);
+    lv_obj_set_pos(standby4_weather_icon_, 14, 185);
+    lv_obj_clear_flag(standby4_weather_icon_, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_weather_temp_ = lv_label_create(standby4_box_);
+    lv_label_set_text(standby4_weather_temp_, "28°C");
+    lv_obj_set_style_text_font(standby4_weather_temp_, &font_noto_sans_custom_20_4, 0);
+    lv_obj_set_style_text_color(standby4_weather_temp_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_weather_temp_, 46, 184);
+    lv_obj_clear_flag(standby4_weather_temp_, LV_OBJ_FLAG_CLICKABLE);
+
+    // D. Góc dưới phải: Biểu tượng Chuông báo + Giờ điện tử (VD: 07:00)
+    lv_obj_t* alarm_icon = lv_label_create(standby4_box_);
+    lv_label_set_text(alarm_icon, MATERIAL_SYMBOLS_ALARM);
+    lv_obj_set_style_text_font(alarm_icon, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(alarm_icon, lv_color_white(), 0);
+    lv_obj_set_pos(alarm_icon, 230, 180);
+    lv_obj_clear_flag(alarm_icon, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_digi_time_lbl_ = lv_label_create(standby4_box_);
+    lv_label_set_text(standby4_digi_time_lbl_, "07:00");
+    lv_obj_set_style_text_font(standby4_digi_time_lbl_, &font_noto_sans_custom_20_4, 0);
+    lv_obj_set_style_text_color(standby4_digi_time_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_digi_time_lbl_, 262, 184);
+    lv_obj_clear_flag(standby4_digi_time_lbl_, LV_OBJ_FLAG_CLICKABLE);
+
+    // 3. MẶT ĐỒNG HỒ TRUNG TÂM (Central Watch Face - 174x174)
+    // Vòng Bezel phát sáng Neon Blue rực rỡ
     standby4_dial_ = lv_obj_create(standby4_box_);
-    lv_obj_set_size(standby4_dial_, 228, 228);
+    lv_obj_set_size(standby4_dial_, 174, 174);
     lv_obj_center(standby4_dial_);
     lv_obj_set_style_radius(standby4_dial_, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(standby4_dial_, lv_color_hex(0xC0C8D2), 0);
-    lv_obj_set_style_border_color(standby4_dial_, lv_color_hex(0xF1F5F9), 0);
+    lv_obj_set_style_bg_color(standby4_dial_, lv_color_hex(0x060B14), 0);
+    lv_obj_set_style_border_color(standby4_dial_, lv_color_hex(0x3B82F6), 0);
     lv_obj_set_style_border_width(standby4_dial_, 3, 0);
     lv_obj_set_style_pad_all(standby4_dial_, 0, 0);
     lv_obj_clear_flag(standby4_dial_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Tầng 2: Thân vành thép phay xước vát góc (Brushed Steel Mid-Bezel - 220x220)
-    lv_obj_t* bezel_mid = lv_obj_create(standby4_dial_);
-    lv_obj_set_size(bezel_mid, 220, 220);
-    lv_obj_center(bezel_mid);
-    lv_obj_set_style_radius(bezel_mid, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(bezel_mid, lv_color_hex(0x64748B), 0);
-    lv_obj_set_style_border_color(bezel_mid, lv_color_hex(0xCBD5E1), 0);
-    lv_obj_set_style_border_width(bezel_mid, 4, 0);
-    lv_obj_set_style_pad_all(bezel_mid, 0, 0);
-    lv_obj_clear_flag(bezel_mid, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Tầng 3: Rãnh bóng tối kim loại tạo chiều sâu 3D (Inner Shadow Bevel - 210x210)
-    lv_obj_t* bezel_inner = lv_obj_create(bezel_mid);
-    lv_obj_set_size(bezel_inner, 210, 210);
-    lv_obj_center(bezel_inner);
-    lv_obj_set_style_radius(bezel_inner, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(bezel_inner, lv_color_hex(0x0A0E14), 0);
-    lv_obj_set_style_border_color(bezel_inner, lv_color_hex(0x1E293B), 0);
-    lv_obj_set_style_border_width(bezel_inner, 2, 0);
-    lv_obj_set_style_pad_all(bezel_inner, 0, 0);
-    lv_obj_clear_flag(bezel_inner, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Tầng 4: Mặt số đen mờ sang trọng (Deep Satin Black Dial Surface - 206x206)
-    lv_obj_t* dial_face = lv_obj_create(bezel_inner);
-    lv_obj_set_size(dial_face, 206, 206);
+    // Mặt số đen sâu sang trọng bên trong
+    lv_obj_t* dial_face = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(dial_face, 168, 168);
     lv_obj_center(dial_face);
     lv_obj_set_style_radius(dial_face, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(dial_face, lv_color_hex(0x0D1117), 0);
+    lv_obj_set_style_bg_color(dial_face, lv_color_hex(0x05070D), 0);
     lv_obj_set_style_border_width(dial_face, 0, 0);
     lv_obj_set_style_pad_all(dial_face, 0, 0);
     lv_obj_clear_flag(dial_face, LV_OBJ_FLAG_SCROLLABLE);
 
-    const float dcx = 103.0f;
-    const float dcy = 103.0f;
+    const float dcx = 84.0f;
+    const float dcy = 84.0f;
     const float deg2rad = 3.14159265358979323846f / 180.0f;
 
-    // 2. Vành chia 60 phút / giây Chapter Ring với các tia hướng tâm
+    // 4. Vành 60 vạch chia phút/giây Chapter Ring hướng tâm
     for (int m = 0; m < 60; ++m) {
-        if (m == 0 || m == 15 || m == 30 || m == 45) {
-            // Vị trí 12h, 3h, 6h, 9h dùng cọc kim loại dạ quang lớn
-            continue;
-        }
         float a = (m * 6.0f - 90.0f) * deg2rad;
-        float r1 = (m % 5 == 0) ? 89.0f : 93.0f;
-        float r2 = 98.0f;
+        float r1 = (m % 5 == 0) ? 71.0f : 75.0f;
+        float r2 = 79.0f;
         s_standby4_ticks[m][0].x = (lv_value_precise_t)roundf(dcx + r1 * cosf(a));
         s_standby4_ticks[m][0].y = (lv_value_precise_t)roundf(dcy + r1 * sinf(a));
         s_standby4_ticks[m][1].x = (lv_value_precise_t)roundf(dcx + r2 * cosf(a));
@@ -15621,45 +15736,14 @@ void LcdDisplay::CreateStandby4UI() {
         lv_obj_t* t_line = lv_line_create(dial_face);
         lv_line_set_points(t_line, s_standby4_ticks[m], 2);
         lv_obj_set_style_line_width(t_line, (m % 5 == 0) ? 2 : 1, 0);
-        lv_obj_set_style_line_color(t_line, (m % 5 == 0) ? lv_color_white() : lv_color_hex(0x94A3B8), 0);
+        lv_obj_set_style_line_color(t_line, (m % 5 == 0) ? lv_color_white() : lv_color_hex(0x64748B), 0);
         lv_obj_set_style_line_rounded(t_line, true, 0);
         lv_obj_clear_flag(t_line, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_clear_flag(t_line, LV_OBJ_FLAG_SCROLLABLE);
     }
 
-    // 3. Cọc số kim loại 3D nổi gắn dạ quang tại 12h, 6h, 9h, 3h
-    auto create_lumi_marker = [dial_face](int x, int y, int w, int h, int cw, int ch) {
-        lv_obj_t* m = lv_obj_create(dial_face);
-        lv_obj_set_size(m, w, h);
-        lv_obj_set_pos(m, x, y);
-        lv_obj_set_style_radius(m, 1, 0);
-        lv_obj_set_style_bg_color(m, lv_color_hex(0x64748B), 0);
-        lv_obj_set_style_border_color(m, lv_color_hex(0xCBD5E1), 0);
-        lv_obj_set_style_border_width(m, 1, 0);
-        lv_obj_set_style_pad_all(m, 0, 0);
-        lv_obj_clear_flag(m, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_clear_flag(m, LV_OBJ_FLAG_CLICKABLE);
-
-        lv_obj_t* core = lv_obj_create(m);
-        lv_obj_set_size(core, cw, ch);
-        lv_obj_center(core);
-        lv_obj_set_style_radius(core, 1, 0);
-        lv_obj_set_style_bg_color(core, lv_color_white(), 0);
-        lv_obj_set_style_border_width(core, 0, 0);
-        lv_obj_clear_flag(core, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_clear_flag(core, LV_OBJ_FLAG_CLICKABLE);
-    };
-    // 12h: Cọc chữ nhật đứng lớn
-    create_lumi_marker(99, 7, 8, 18, 4, 14);
-    // 6h: Cọc chữ nhật đứng lớn
-    create_lumi_marker(99, 181, 8, 18, 4, 14);
-    // 9h: Cọc chữ nhật ngang lớn
-    create_lumi_marker(7, 99, 18, 8, 14, 4);
-    // 3h: Cọc chữ nhật ngang cạnh ô lịch
-    create_lumi_marker(186, 100, 10, 6, 6, 2);
-
-    // 4. Các chữ số học trò cổ điển (Arabic Numerals: 1, 2, 4, 5, 7, 8, 10, 11)
-    auto create_dial_num = [dial_face](const char* txt, int cx_pos, int cy_pos) {
+    // 5. Toàn bộ 12 chữ số học trò sắc nét (Arabic Numerals: 1 -> 12)
+    auto create_dial_num = [dial_face](const char* txt, float cx_pos, float cy_pos) {
         lv_obj_t* lbl = lv_label_create(dial_face);
         lv_label_set_text(lbl, txt);
         lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_16_4, 0);
@@ -15667,85 +15751,33 @@ void LcdDisplay::CreateStandby4UI() {
         lv_obj_update_layout(lbl);
         int w = lv_obj_get_width(lbl);
         int h = lv_obj_get_height(lbl);
-        lv_obj_set_pos(lbl, cx_pos - w / 2, cy_pos - h / 2);
+        lv_obj_set_pos(lbl, (int32_t)roundf(cx_pos) - w / 2, (int32_t)roundf(cy_pos) - h / 2);
         lv_obj_clear_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
     };
-    create_dial_num("1", 140, 39);
-    create_dial_num("2", 167, 66);
-    create_dial_num("4", 167, 140);
-    create_dial_num("5", 140, 167);
-    create_dial_num("7", 66, 167);
-    create_dial_num("8", 39, 140);
-    create_dial_num("10", 39, 66);
-    create_dial_num("11", 66, 39);
 
-    // 5. Cửa sổ lịch Day-Date hướng 3h (Recessed Day-Date Window)
-    lv_obj_t* dd_box = lv_obj_create(dial_face);
-    lv_obj_set_size(dd_box, 54, 20);
-    lv_obj_set_pos(dd_box, 128, 93);
-    lv_obj_set_style_radius(dd_box, 2, 0);
-    lv_obj_set_style_bg_color(dd_box, lv_color_hex(0x05070A), 0);
-    lv_obj_set_style_border_color(dd_box, lv_color_hex(0x64748B), 0);
-    lv_obj_set_style_border_width(dd_box, 1, 0);
-    lv_obj_set_style_pad_all(dd_box, 0, 0);
-    lv_obj_clear_flag(dd_box, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(dd_box, LV_OBJ_FLAG_CLICKABLE);
+    for (int h = 1; h <= 12; ++h) {
+        float a = (h * 30.0f - 90.0f) * deg2rad;
+        float nx = dcx + 59.0f * cosf(a);
+        float ny = dcy + 59.0f * sinf(a);
+        char nbuf[8];
+        snprintf(nbuf, sizeof(nbuf), "%d", h);
+        create_dial_num(nbuf, nx, ny);
+    }
 
-    standby4_date_day_lbl_ = lv_label_create(dd_box);
-    lv_label_set_text(standby4_date_day_lbl_, "17");
-    lv_obj_set_style_text_font(standby4_date_day_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_date_day_lbl_, lv_color_white(), 0);
-    lv_obj_set_size(standby4_date_day_lbl_, 22, 18);
-    lv_obj_set_style_text_align(standby4_date_day_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(standby4_date_day_lbl_, 2, 1);
-
-    lv_obj_t* dd_div = lv_obj_create(dd_box);
-    lv_obj_set_size(dd_div, 1, 16);
-    lv_obj_set_pos(dd_div, 25, 2);
-    lv_obj_set_style_bg_color(dd_div, lv_color_hex(0x334155), 0);
-    lv_obj_set_style_border_width(dd_div, 0, 0);
-    lv_obj_clear_flag(dd_div, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(dd_div, LV_OBJ_FLAG_CLICKABLE);
-
-    standby4_wday_lbl_ = lv_label_create(dd_box);
-    lv_label_set_text(standby4_wday_lbl_, "TUE");
-    lv_obj_set_style_text_font(standby4_wday_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_wday_lbl_, lv_color_white(), 0);
-    lv_obj_set_size(standby4_wday_lbl_, 25, 18);
-    lv_obj_set_style_text_align(standby4_wday_lbl_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_pos(standby4_wday_lbl_, 27, 1);
-
-    // 6. Chữ in khắc trên mặt đồng hồ cơ (CALIBER R028 / AUTO)
-    lv_obj_t* cal_lbl = lv_label_create(dial_face);
-    lv_label_set_text(cal_lbl, "CALIBER R028");
-    lv_obj_set_style_text_font(cal_lbl, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(cal_lbl, lv_color_hex(0xE2E8F0), 0);
-    lv_obj_update_layout(cal_lbl);
-    lv_obj_set_pos(cal_lbl, 103 - lv_obj_get_width(cal_lbl) / 2, 140);
-    lv_obj_clear_flag(cal_lbl, LV_OBJ_FLAG_CLICKABLE);
-
-    lv_obj_t* auto_lbl = lv_label_create(dial_face);
-    lv_label_set_text(auto_lbl, "AUTO");
-    lv_obj_set_style_text_font(auto_lbl, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(auto_lbl, lv_color_hex(0x94A3B8), 0);
-    lv_obj_update_layout(auto_lbl);
-    lv_obj_set_pos(auto_lbl, 103 - lv_obj_get_width(auto_lbl) / 2, 166);
-    lv_obj_clear_flag(auto_lbl, LV_OBJ_FLAG_CLICKABLE);
-
-    // 7. BỘ KIM CƠ KHÍ SANG TRỌNG (Polished Steel Sword Hands & Red Second Needle)
-    // A1. Thân kim giờ (Thép trắng đánh bóng, rộng 6px, dài 48px)
+    // 6. BỘ KIM ĐỒNG HỒ KIỂU DÁNG SANG TRỌNG (Sword Hands & Red Needle)
+    // A1. Thân kim giờ (Thép trắng, rộng 5px, dài 38px)
     standby4_hour_hand_ = lv_line_create(dial_face);
-    lv_obj_set_size(standby4_hour_hand_, 206, 206);
+    lv_obj_set_size(standby4_hour_hand_, 168, 168);
     lv_obj_set_pos(standby4_hour_hand_, 0, 0);
-    lv_obj_set_style_line_width(standby4_hour_hand_, 6, 0);
+    lv_obj_set_style_line_width(standby4_hour_hand_, 5, 0);
     lv_obj_set_style_line_rounded(standby4_hour_hand_, true, 0);
-    lv_obj_set_style_line_color(standby4_hour_hand_, lv_color_hex(0xCBD5E1), 0);
+    lv_obj_set_style_line_color(standby4_hour_hand_, lv_color_hex(0xE2E8F0), 0);
     lv_obj_clear_flag(standby4_hour_hand_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(standby4_hour_hand_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // A2. Lõi dạ quang kim giờ (Trắng sáng, rộng 2px, dài 36px)
+    // A2. Lõi dạ quang kim giờ (Trắng sáng, rộng 2px, dài 30px)
     standby4_hour_core_ = lv_line_create(dial_face);
-    lv_obj_set_size(standby4_hour_core_, 206, 206);
+    lv_obj_set_size(standby4_hour_core_, 168, 168);
     lv_obj_set_pos(standby4_hour_core_, 0, 0);
     lv_obj_set_style_line_width(standby4_hour_core_, 2, 0);
     lv_obj_set_style_line_rounded(standby4_hour_core_, true, 0);
@@ -15753,19 +15785,19 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_clear_flag(standby4_hour_core_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(standby4_hour_core_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // B1. Thân kim phút (Thép trắng đánh bóng, rộng 5px, dài 74px)
+    // B1. Thân kim phút (Thép trắng, rộng 4px, dài 60px)
     standby4_min_hand_ = lv_line_create(dial_face);
-    lv_obj_set_size(standby4_min_hand_, 206, 206);
+    lv_obj_set_size(standby4_min_hand_, 168, 168);
     lv_obj_set_pos(standby4_min_hand_, 0, 0);
-    lv_obj_set_style_line_width(standby4_min_hand_, 5, 0);
+    lv_obj_set_style_line_width(standby4_min_hand_, 4, 0);
     lv_obj_set_style_line_rounded(standby4_min_hand_, true, 0);
     lv_obj_set_style_line_color(standby4_min_hand_, lv_color_hex(0xE2E8F0), 0);
     lv_obj_clear_flag(standby4_min_hand_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(standby4_min_hand_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // B2. Lõi dạ quang kim phút (Trắng sáng, rộng 2px, dài 62px)
+    // B2. Lõi dạ quang kim phút (Trắng sáng, rộng 2px, dài 50px)
     standby4_min_core_ = lv_line_create(dial_face);
-    lv_obj_set_size(standby4_min_core_, 206, 206);
+    lv_obj_set_size(standby4_min_core_, 168, 168);
     lv_obj_set_pos(standby4_min_core_, 0, 0);
     lv_obj_set_style_line_width(standby4_min_core_, 2, 0);
     lv_obj_set_style_line_rounded(standby4_min_core_, true, 0);
@@ -15773,9 +15805,9 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_clear_flag(standby4_min_core_, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(standby4_min_core_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // C1. Kim giây thể thao đỏ rực rỡ (Racing Red Needle - rộng 2px, dài 88px)
+    // C1. Kim giây thể thao đỏ rực rỡ (Racing Red Needle - rộng 2px, dài 70px)
     standby4_sec_hand_ = lv_line_create(dial_face);
-    lv_obj_set_size(standby4_sec_hand_, 206, 206);
+    lv_obj_set_size(standby4_sec_hand_, 168, 168);
     lv_obj_set_pos(standby4_sec_hand_, 0, 0);
     lv_obj_set_style_line_width(standby4_sec_hand_, 2, 0);
     lv_obj_set_style_line_rounded(standby4_sec_hand_, true, 0);
@@ -15785,8 +15817,8 @@ void LcdDisplay::CreateStandby4UI() {
 
     // C2. Đuôi đối trọng kim giây (Red Counterweight Dot)
     standby4_sec_dot_ = lv_obj_create(dial_face);
-    lv_obj_set_size(standby4_sec_dot_, 6, 6);
-    lv_obj_set_pos(standby4_sec_dot_, 100, 100);
+    lv_obj_set_size(standby4_sec_dot_, 5, 5);
+    lv_obj_set_pos(standby4_sec_dot_, 82, 82);
     lv_obj_set_style_radius(standby4_sec_dot_, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(standby4_sec_dot_, lv_color_hex(0xEF4444), 0);
     lv_obj_set_style_border_color(standby4_sec_dot_, lv_color_hex(0x991B1B), 0);
@@ -15794,14 +15826,14 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_clear_flag(standby4_sec_dot_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(standby4_sec_dot_, LV_OBJ_FLAG_CLICKABLE);
 
-    // D. Nắp chụp trục giữa bạc sáng bóng (Polished Chrome Pivot Pin Cap)
+    // D. Nắp chụp trục giữa: Vòng tròn đỏ viền trắng tâm ngọc (Pivot Cap)
     lv_obj_t* pin_outer = lv_obj_create(dial_face);
     lv_obj_set_size(pin_outer, 12, 12);
-    lv_obj_set_pos(pin_outer, 97, 97);
+    lv_obj_set_pos(pin_outer, 78, 78);
     lv_obj_set_style_radius(pin_outer, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(pin_outer, lv_color_hex(0xE2E8F0), 0);
-    lv_obj_set_style_border_color(pin_outer, lv_color_hex(0x94A3B8), 0);
-    lv_obj_set_style_border_width(pin_outer, 1, 0);
+    lv_obj_set_style_bg_color(pin_outer, lv_color_hex(0xEF4444), 0);
+    lv_obj_set_style_border_color(pin_outer, lv_color_white(), 0);
+    lv_obj_set_style_border_width(pin_outer, 2, 0);
     lv_obj_clear_flag(pin_outer, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(pin_outer, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_move_foreground(pin_outer);
@@ -15810,12 +15842,12 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_set_size(pin_inner, 4, 4);
     lv_obj_center(pin_inner);
     lv_obj_set_style_radius(pin_inner, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(pin_inner, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_bg_color(pin_inner, lv_color_white(), 0);
     lv_obj_set_style_border_width(pin_inner, 0, 0);
     lv_obj_clear_flag(pin_inner, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(pin_inner, LV_OBJ_FLAG_SCROLLABLE);
 
-    // 8. Timer quét 40ms (25 FPS) đồng bộ microsecond nguyên tử, chuyển động trôi êm ái
+    // 7. Timer quét 40ms (25 FPS) đồng bộ microsecond nguyên tử, kim giây chuyển động trôi êm ái
     standby4_sweep_timer_ = lv_timer_create([](lv_timer_t* t) {
         auto* self = static_cast<LcdDisplay*>(lv_timer_get_user_data(t));
         if (!self || self->screen_mode_ != kScreenStandby4 || !self->standby4_box_ ||
@@ -15848,74 +15880,105 @@ void LcdDisplay::UpdateStandby4HandsSmooth() {
     float min_float = (float)tm_now->tm_min + sec_float / 60.0f;
     float hour_float = (float)(tm_now->tm_hour % 12) + min_float / 60.0f;
 
-    const float cx = 103.0f;
-    const float cy = 103.0f;
+    const float cx = 84.0f;
+    const float cy = 84.0f;
     const float deg2rad = 3.14159265358979323846f / 180.0f;
 
-    // 1. Kim giờ (Chiều dài 48px, đuôi 10px)
+    // 1. Kim giờ (Chiều dài 38px, đuôi 8px)
     float hour_rad = (hour_float * 30.0f - 90.0f) * deg2rad;
-    standby4_hour_pts_[0].x = (lv_value_precise_t)roundf(cx - 10.0f * cosf(hour_rad));
-    standby4_hour_pts_[0].y = (lv_value_precise_t)roundf(cy - 10.0f * sinf(hour_rad));
-    standby4_hour_pts_[1].x = (lv_value_precise_t)roundf(cx + 48.0f * cosf(hour_rad));
-    standby4_hour_pts_[1].y = (lv_value_precise_t)roundf(cy + 48.0f * sinf(hour_rad));
+    standby4_hour_pts_[0].x = (lv_value_precise_t)roundf(cx - 8.0f * cosf(hour_rad));
+    standby4_hour_pts_[0].y = (lv_value_precise_t)roundf(cy - 8.0f * sinf(hour_rad));
+    standby4_hour_pts_[1].x = (lv_value_precise_t)roundf(cx + 38.0f * cosf(hour_rad));
+    standby4_hour_pts_[1].y = (lv_value_precise_t)roundf(cy + 38.0f * sinf(hour_rad));
     lv_line_set_points(standby4_hour_hand_, standby4_hour_pts_, 2);
 
-    // Lõi dạ quang kim giờ (36px, đuôi 4px)
+    // Lõi dạ quang kim giờ (30px, đuôi 3px)
     if (standby4_hour_core_ != nullptr) {
-        standby4_hour_core_pts_[0].x = (lv_value_precise_t)roundf(cx - 4.0f * cosf(hour_rad));
-        standby4_hour_core_pts_[0].y = (lv_value_precise_t)roundf(cy - 4.0f * sinf(hour_rad));
-        standby4_hour_core_pts_[1].x = (lv_value_precise_t)roundf(cx + 36.0f * cosf(hour_rad));
-        standby4_hour_core_pts_[1].y = (lv_value_precise_t)roundf(cy + 36.0f * sinf(hour_rad));
+        standby4_hour_core_pts_[0].x = (lv_value_precise_t)roundf(cx - 3.0f * cosf(hour_rad));
+        standby4_hour_core_pts_[0].y = (lv_value_precise_t)roundf(cy - 3.0f * sinf(hour_rad));
+        standby4_hour_core_pts_[1].x = (lv_value_precise_t)roundf(cx + 30.0f * cosf(hour_rad));
+        standby4_hour_core_pts_[1].y = (lv_value_precise_t)roundf(cy + 30.0f * sinf(hour_rad));
         lv_line_set_points(standby4_hour_core_, standby4_hour_core_pts_, 2);
     }
 
-    // 2. Kim phút (Chiều dài 74px, đuôi 14px)
+    // 2. Kim phút (Chiều dài 60px, đuôi 12px)
     float min_rad = (min_float * 6.0f - 90.0f) * deg2rad;
-    standby4_min_pts_[0].x = (lv_value_precise_t)roundf(cx - 14.0f * cosf(min_rad));
-    standby4_min_pts_[0].y = (lv_value_precise_t)roundf(cy - 14.0f * sinf(min_rad));
-    standby4_min_pts_[1].x = (lv_value_precise_t)roundf(cx + 74.0f * cosf(min_rad));
-    standby4_min_pts_[1].y = (lv_value_precise_t)roundf(cy + 74.0f * sinf(min_rad));
+    standby4_min_pts_[0].x = (lv_value_precise_t)roundf(cx - 12.0f * cosf(min_rad));
+    standby4_min_pts_[0].y = (lv_value_precise_t)roundf(cy - 12.0f * sinf(min_rad));
+    standby4_min_pts_[1].x = (lv_value_precise_t)roundf(cx + 60.0f * cosf(min_rad));
+    standby4_min_pts_[1].y = (lv_value_precise_t)roundf(cy + 60.0f * sinf(min_rad));
     lv_line_set_points(standby4_min_hand_, standby4_min_pts_, 2);
 
-    // Lõi dạ quang kim phút (62px, đuôi 6px)
+    // Lõi dạ quang kim phút (50px, đuôi 4px)
     if (standby4_min_core_ != nullptr) {
-        standby4_min_core_pts_[0].x = (lv_value_precise_t)roundf(cx - 6.0f * cosf(min_rad));
-        standby4_min_core_pts_[0].y = (lv_value_precise_t)roundf(cy - 6.0f * sinf(min_rad));
-        standby4_min_core_pts_[1].x = (lv_value_precise_t)roundf(cx + 62.0f * cosf(min_rad));
-        standby4_min_core_pts_[1].y = (lv_value_precise_t)roundf(cy + 62.0f * sinf(min_rad));
+        standby4_min_core_pts_[0].x = (lv_value_precise_t)roundf(cx - 4.0f * cosf(min_rad));
+        standby4_min_core_pts_[0].y = (lv_value_precise_t)roundf(cy - 4.0f * sinf(min_rad));
+        standby4_min_core_pts_[1].x = (lv_value_precise_t)roundf(cx + 50.0f * cosf(min_rad));
+        standby4_min_core_pts_[1].y = (lv_value_precise_t)roundf(cy + 50.0f * sinf(min_rad));
         lv_line_set_points(standby4_min_core_, standby4_min_core_pts_, 2);
     }
 
-    // 3. Kim giây đỏ thể thao quét mượt mà (Chiều dài 88px, đuôi 22px)
+    // 3. Kim giây đỏ thể thao quét mượt mà (Chiều dài 70px, đuôi 16px)
     float sec_rad = (sec_float * 6.0f - 90.0f) * deg2rad;
-    standby4_sec_pts_[0].x = (lv_value_precise_t)roundf(cx - 22.0f * cosf(sec_rad));
-    standby4_sec_pts_[0].y = (lv_value_precise_t)roundf(cy - 22.0f * sinf(sec_rad));
-    standby4_sec_pts_[1].x = (lv_value_precise_t)roundf(cx + 88.0f * cosf(sec_rad));
-    standby4_sec_pts_[1].y = (lv_value_precise_t)roundf(cy + 88.0f * sinf(sec_rad));
+    standby4_sec_pts_[0].x = (lv_value_precise_t)roundf(cx - 16.0f * cosf(sec_rad));
+    standby4_sec_pts_[0].y = (lv_value_precise_t)roundf(cy - 16.0f * sinf(sec_rad));
+    standby4_sec_pts_[1].x = (lv_value_precise_t)roundf(cx + 70.0f * cosf(sec_rad));
+    standby4_sec_pts_[1].y = (lv_value_precise_t)roundf(cy + 70.0f * sinf(sec_rad));
     lv_line_set_points(standby4_sec_hand_, standby4_sec_pts_, 2);
 
     // Cập nhật vị trí quả đối trọng đuôi kim giây
     if (standby4_sec_dot_ != nullptr) {
-        float dot_x = cx - 14.0f * cosf(sec_rad);
-        float dot_y = cy - 14.0f * sinf(sec_rad);
-        lv_obj_set_pos(standby4_sec_dot_, (int32_t)roundf(dot_x) - 3, (int32_t)roundf(dot_y) - 3);
+        float dot_x = cx - 11.0f * cosf(sec_rad);
+        float dot_y = cy - 11.0f * sinf(sec_rad);
+        lv_obj_set_pos(standby4_sec_dot_, (int32_t)roundf(dot_x) - 2, (int32_t)roundf(dot_y) - 2);
     }
 }
 
 void LcdDisplay::UpdateStandby4Clock(const struct tm* tm_now) {
     if (standby4_box_ == nullptr) return;
 
+    // 1. Thứ trong tuần (Tiếng Việt: THỨ BA, THỨ TƯ...)
+    if (standby4_wday_lbl_ != nullptr) {
+        static const char* kDaysVi[] = {"CHỦ NHẬT", "THỨ HAI", "THỨ BA", "THỨ TƯ", "THỨ NĂM", "THỨ SÁU", "THỨ BẢY"};
+        lv_label_set_text(standby4_wday_lbl_, kDaysVi[tm_now->tm_wday % 7]);
+    }
+
+    // 2. Ngày / Tháng (VD: 21/10)
     if (standby4_date_day_lbl_ != nullptr) {
         char dbuf[16];
-        snprintf(dbuf, sizeof(dbuf), "%d", tm_now->tm_mday);
+        snprintf(dbuf, sizeof(dbuf), "%02d/%02d", tm_now->tm_mday, tm_now->tm_mon + 1);
         lv_label_set_text(standby4_date_day_lbl_, dbuf);
     }
 
-    if (standby4_wday_lbl_ != nullptr) {
-        static const char* kDays[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
-        lv_label_set_text(standby4_wday_lbl_, kDays[tm_now->tm_wday % 7]);
+    // 3. Giờ điện tử góc dưới phải (VD: 07:00)
+    if (standby4_digi_time_lbl_ != nullptr) {
+        char tbuf[16];
+        snprintf(tbuf, sizeof(tbuf), "%02d:%02d", tm_now->tm_hour, tm_now->tm_min);
+        lv_label_set_text(standby4_digi_time_lbl_, tbuf);
     }
 
+    // 4. Mức pin & Đồ họa nạp viên pin
+    auto& board = Board::GetInstance();
+    int battery_level = 0;
+    bool charging = false, discharging = false;
+    if (!board.GetBatteryLevel(battery_level, charging, discharging)) {
+        battery_level = 85;
+    }
+    if (battery_level < 0) battery_level = 0;
+    if (battery_level > 100) battery_level = 100;
+
+    if (standby4_bat_lbl_ != nullptr) {
+        char bbuf[16];
+        snprintf(bbuf, sizeof(bbuf), "%d%%", battery_level);
+        lv_label_set_text(standby4_bat_lbl_, bbuf);
+    }
+    if (standby4_bat_arc_ != nullptr) {
+        int fill_w = (20 * battery_level) / 100;
+        if (fill_w < 2 && battery_level > 0) fill_w = 2;
+        lv_obj_set_width(standby4_bat_arc_, fill_w);
+    }
+
+    // 5. Cập nhật thời tiết
     SyncStandby4Weather();
 }
 
@@ -15930,15 +15993,19 @@ void LcdDisplay::SyncStandby4Weather() {
         const char* t = lv_label_get_text(standby_temp_);
         if (t && strlen(t) > 0) {
             lv_label_set_text(standby4_weather_temp_, t);
+        } else {
+            lv_label_set_text(standby4_weather_temp_, "28°C");
         }
+    } else {
+        lv_label_set_text(standby4_weather_temp_, "28°C");
     }
     if (standby4_weather_icon_ != nullptr) {
-        const lv_image_dsc_t* dsc = &weather_icon_cloud_24_dsc;
+        const lv_image_dsc_t* dsc = &weather_icon_sun_cloud_24_dsc;
         switch (info.icon_type) {
             case 0: dsc = &weather_icon_sun_24_dsc; break;
             case 1: dsc = &weather_icon_sun_cloud_24_dsc; break;
             case 2: dsc = &weather_icon_cloud_24_dsc; break;
-            default: dsc = &weather_icon_cloud_24_dsc; break;
+            default: dsc = &weather_icon_sun_cloud_24_dsc; break;
         }
         lv_image_set_src(standby4_weather_icon_, dsc);
     }
