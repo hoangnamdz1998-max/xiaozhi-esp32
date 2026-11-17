@@ -435,7 +435,12 @@ protected:
     lv_obj_t* music_next_btn_ = nullptr;
     lv_obj_t* music_visualizer_box_ = nullptr;
     static constexpr int kNumVisualizerBars = 16;
+    lv_obj_t* music_vis_cols_[16] = {nullptr};
     lv_obj_t* music_vis_bars_[16] = {nullptr};
+    lv_obj_t* music_vis_peaks_[16] = {nullptr};
+    lv_obj_t* music_progress_bar_ = nullptr;
+    lv_obj_t* music_time_lbl_ = nullptr;
+    lv_obj_t* music_total_time_lbl_ = nullptr;
     lv_timer_t* music_vis_timer_ = nullptr;
     std::string music_current_song_ = "Chưa phát nhạc";
     std::string music_current_artist_ = "Zing MP3 Online";
