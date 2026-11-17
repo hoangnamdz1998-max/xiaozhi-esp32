@@ -4362,6 +4362,10 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
             if (screen_mode_ == kScreenMenu && menu_box_ != nullptr) {
 
                 lv_obj_remove_flag(menu_box_, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_move_foreground(menu_box_);
+                if (top_bar_ != nullptr) lv_obj_add_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+                if (status_bar_ != nullptr) lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+                if (chat_box_ != nullptr) lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
 
             } else if (screen_mode_ == kScreenCalendar && calendar_box_ != nullptr) {
 
@@ -7610,7 +7614,7 @@ void LcdDisplay::CreateMenuUI() {
     lv_obj_set_style_pad_all(right_icons, 0, 0);
     lv_obj_set_flex_flow(right_icons, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(right_icons, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(right_icons, 6, 0);
+    lv_obj_set_style_pad_column(right_icons, 8, 0);
     lv_obj_clear_flag(right_icons, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(right_icons, LV_OBJ_FLAG_CLICKABLE);
 
@@ -7624,6 +7628,7 @@ void LcdDisplay::CreateMenuUI() {
     lv_label_set_text(menu_battery_pct_label_, "");
     lv_obj_set_style_text_font(menu_battery_pct_label_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(menu_battery_pct_label_, lv_color_white(), 0);
+    lv_obj_set_style_margin_right(menu_battery_pct_label_, 4, 0);
     lv_obj_clear_flag(menu_battery_pct_label_, LV_OBJ_FLAG_CLICKABLE);
 
     menu_battery_label_ = lv_label_create(right_icons);

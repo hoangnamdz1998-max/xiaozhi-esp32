@@ -200,6 +200,7 @@ private:
 
     bool audio_engine_initialized_ = false;
     bool voice_detected_ = false;
+    int silence_frame_count_ = 0;
 #if CONFIG_USE_DEVICE_AEC
     bool device_aec_enabled_ = true;
 #else

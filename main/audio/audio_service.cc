@@ -1,3 +1,4 @@
+#include <cmath>
 #include "audio_service.h"
 #include "boards/common/board.h"
 #include "boards/common/music.h"
@@ -87,6 +88,37 @@ void AudioService::Initialize(AudioCodec* codec) {
     audio_engine_ = std::make_unique<LiteAudioEngine>();
 #endif
     audio_engine_->OnOutput([this](std::vector<int16_t>&& data) {
+        if (!data.empty()) {
+            int64_t sum_sq = 0;
+            int16_t peak = 0;
+            for (int16_t s : data) {
+                int32_t val = s;
+                sum_sq += val * val;
+                int16_t abs_s = s < 0 ? -s : s;
+                if (abs_s > peak) peak = abs_s;
+            }
+            int rms = sqrt(sum_sq / data.size());
+            // Speech detection threshold (at 32dB input gain)
+            bool speech = (rms >= 600 || peak >= 2000);
+            if (speech) {
+                silence_frame_count_ = 0;
+                if (!voice_detected_) {
+                    voice_detected_ = true;
+                    if (callbacks_.on_vad_change) {
+                        callbacks_.on_vad_change(true);
+                    }
+                }
+            } else {
+                if (voice_detected_) {
+                    if (++silence_frame_count_ >= 5) { // ~300ms of quiet frames
+                        voice_detected_ = false;
+                        if (callbacks_.on_vad_change) {
+                            callbacks_.on_vad_change(false);
+                        }
+                    }
+                }
+            }
+        }
         PushTaskToEncodeQueue(kAudioTaskTypeEncodeToSendQueue, std::move(data));
     });
     audio_engine_->OnVadStateChange([this](bool speaking) {
@@ -727,6 +759,8 @@ void AudioService::EnableVoiceProcessing(bool enable) {
                 esp_ae_rate_cvt_reset(input_resampler_);
             }
         }
+        voice_detected_ = false;
+        silence_frame_count_ = 0;
         audio_engine_->EnableVoiceProcessing(true);
         xEventGroupSetBits(event_group_, AS_EVENT_AUDIO_PROCESSOR_RUNNING);
     } else {
@@ -849,11 +883,8 @@ void AudioService::CheckAndUpdateAudioPowerState() {
     }
     auto music = Board::GetInstance().GetMusic();
     bool music_active = (music != nullptr && (music->IsDownloading() || music->GetBufferSize() > 0));
-    if (output_elapsed > AUDIO_POWER_TIMEOUT_MS && codec_->output_enabled() && !music_active) {
-        // Keep TX clock when duplex RX is active; otherwise RX may stall on some boards.
-        if (!(codec_->duplex() && codec_->input_enabled())) {
-            codec_->EnableOutput(false);
-        }
+    if (output_elapsed > 1000 && codec_->output_enabled() && !music_active) {
+        codec_->EnableOutput(false);
     }
     if (!codec_->input_enabled() && !codec_->output_enabled()) {
         esp_timer_stop(audio_power_timer_);

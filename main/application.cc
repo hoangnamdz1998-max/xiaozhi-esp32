@@ -298,6 +298,8 @@ void Application::Run() {
                     if (now - last_speech_time_ >= 2000000) { // 2 seconds silence after speech
                         ESP_LOGI(TAG, "2 seconds silence detected after speech, stopping listening");
                         stop_listening_sent_ = true;
+                        Board::GetInstance().GetDisplay()->SetStatus("Đang suy nghĩ...");
+                        Board::GetInstance().GetDisplay()->SetEmotion("thinking");
                         if (protocol_) {
                             protocol_->SendStopListening();
                         }
@@ -339,6 +341,9 @@ void Application::Run() {
                 if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
                     user_has_spoken_ = true;
                     last_speech_time_ = now;
+                    Board::GetInstance().GetDisplay()->SetStatus("Đang nghe bạn nói...");
+                } else if (user_has_spoken_) {
+                    Board::GetInstance().GetDisplay()->SetStatus("Đang lắng nghe...");
                 }
             }
         }
@@ -366,6 +371,8 @@ void Application::Run() {
                     if (now - last_speech_time_ >= 2000000) {
                         ESP_LOGI(TAG, "2 seconds silence detected in clock tick, stopping listening");
                         stop_listening_sent_ = true;
+                        Board::GetInstance().GetDisplay()->SetStatus("Đang suy nghĩ...");
+                        Board::GetInstance().GetDisplay()->SetEmotion("thinking");
                         if (protocol_) {
                             protocol_->SendStopListening();
                         }
