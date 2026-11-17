@@ -921,7 +921,7 @@ private:
 
                     // Chỉ cho phép vuốt ngang ở Menu (chuyển trang) và Calendar (chuyển tháng)
 
-                    bool allow_horiz_swipe = (mode == LcdDisplay::kScreenStandby || mode == LcdDisplay::kScreenStandby2 || mode == LcdDisplay::kScreenStandby3 || mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
+                    bool allow_horiz_swipe = (mode == LcdDisplay::kScreenStandby || mode == LcdDisplay::kScreenStandby2 || mode == LcdDisplay::kScreenStandby3 || mode == LcdDisplay::kScreenStandby4 || mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
 
                     bool allow_vert_swipe = true;
 
@@ -1024,7 +1024,7 @@ private:
 
                 auto mode = self->display_ ? self->display_->GetScreenMode() : LcdDisplay::kScreenStandby;
 
-                bool allow_horiz_swipe = (mode == LcdDisplay::kScreenStandby || mode == LcdDisplay::kScreenStandby2 || mode == LcdDisplay::kScreenStandby3 || mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
+                bool allow_horiz_swipe = (mode == LcdDisplay::kScreenStandby || mode == LcdDisplay::kScreenStandby2 || mode == LcdDisplay::kScreenStandby3 || mode == LcdDisplay::kScreenStandby4 || mode == LcdDisplay::kScreenMenu || (mode == LcdDisplay::kScreenCalendar && start_screen_y > 50));
 
                 bool allow_vert_swipe = true;
 

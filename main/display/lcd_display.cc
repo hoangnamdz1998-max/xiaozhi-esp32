@@ -5433,6 +5433,7 @@ void LcdDisplay::OnSwipeLeft() {
     }
 
     if (screen_mode_ == kScreenStandby4) {
+        ShowStandby();
         return;
     }
 
@@ -5496,6 +5497,11 @@ void LcdDisplay::OnSwipeRight() {
 
     if (screen_mode_ == kScreenStandby2) {
         ShowStandby();
+        return;
+    }
+
+    if (screen_mode_ == kScreenStandby) {
+        ShowStandby4();
         return;
     }
 
