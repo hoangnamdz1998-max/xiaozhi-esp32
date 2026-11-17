@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <sys/time.h>
 
 #include <vector>
 
@@ -15539,7 +15540,7 @@ void LcdDisplay::CreateStandby4UI() {
     standby4_box_ = lv_obj_create(screen);
     lv_obj_set_size(standby4_box_, width_, height_);
     lv_obj_set_pos(standby4_box_, 0, 0);
-    lv_obj_set_style_bg_color(standby4_box_, lv_color_black(), 0);
+    lv_obj_set_style_bg_color(standby4_box_, lv_color_hex(0x0A0D12), 0);
     lv_obj_set_style_bg_opa(standby4_box_, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(standby4_box_, 0, 0);
     lv_obj_set_style_border_width(standby4_box_, 0, 0);
@@ -15547,231 +15548,381 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_clear_flag(standby4_box_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
 
-    // Watch Dial container (224 x 224 tròn thể thao chính giữa)
+    // 1. Heavy-duty Industrial Allen Screws ở 4 góc vỏ đồng hồ (Chassis Case Screws)
+    auto create_allen_bolt = [this](int x, int y) {
+        lv_obj_t* bolt = lv_obj_create(standby4_box_);
+        lv_obj_set_size(bolt, 10, 10);
+        lv_obj_set_pos(bolt, x, y);
+        lv_obj_set_style_radius(bolt, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(bolt, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_color(bolt, lv_color_hex(0x334155), 0);
+        lv_obj_set_style_border_width(bolt, 1, 0);
+        lv_obj_set_style_pad_all(bolt, 0, 0);
+        lv_obj_clear_flag(bolt, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(bolt, LV_OBJ_FLAG_CLICKABLE);
+
+        lv_obj_t* slot = lv_obj_create(bolt);
+        lv_obj_set_size(slot, 4, 4);
+        lv_obj_center(slot);
+        lv_obj_set_style_radius(slot, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(slot, lv_color_hex(0x64748B), 0);
+        lv_obj_set_style_border_width(slot, 0, 0);
+        lv_obj_clear_flag(slot, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(slot, LV_OBJ_FLAG_CLICKABLE);
+    };
+    create_allen_bolt(18, 16);
+    create_allen_bolt(292, 16);
+    create_allen_bolt(18, 214);
+    create_allen_bolt(292, 214);
+
+    // 2. Tactical Chronograph Pushers & Crown ở cạnh phải vỏ
+    // A. Nút bấm Chrono Start (2h) viền đỏ thể thao
+    lv_obj_t* p1 = lv_obj_create(standby4_box_);
+    lv_obj_set_size(p1, 9, 20);
+    lv_obj_set_pos(p1, 276, 56);
+    lv_obj_set_style_radius(p1, 3, 0);
+    lv_obj_set_style_bg_color(p1, lv_color_hex(0x334155), 0);
+    lv_obj_set_style_border_color(p1, lv_color_hex(0xEF4444), 0);
+    lv_obj_set_style_border_width(p1, 2, 0);
+    lv_obj_clear_flag(p1, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(p1, LV_OBJ_FLAG_CLICKABLE);
+
+    // B. Núm vặn chỉnh giờ Titanium Fluted Crown (3h)
+    lv_obj_t* crn = lv_obj_create(standby4_box_);
+    lv_obj_set_size(crn, 12, 26);
+    lv_obj_set_pos(crn, 277, 107);
+    lv_obj_set_style_radius(crn, 4, 0);
+    lv_obj_set_style_bg_color(crn, lv_color_hex(0x475569), 0);
+    lv_obj_set_style_border_color(crn, lv_color_hex(0x94A3B8), 0);
+    lv_obj_set_style_border_width(crn, 1, 0);
+    lv_obj_clear_flag(crn, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(crn, LV_OBJ_FLAG_CLICKABLE);
+
+    // C. Nút bấm Chrono Reset (4h) thép xám
+    lv_obj_t* p2 = lv_obj_create(standby4_box_);
+    lv_obj_set_size(p2, 9, 20);
+    lv_obj_set_pos(p2, 276, 164);
+    lv_obj_set_style_radius(p2, 3, 0);
+    lv_obj_set_style_bg_color(p2, lv_color_hex(0x334155), 0);
+    lv_obj_set_style_border_color(p2, lv_color_hex(0x64748B), 0);
+    lv_obj_set_style_border_width(p2, 1, 0);
+    lv_obj_clear_flag(p2, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(p2, LV_OBJ_FLAG_CLICKABLE);
+
+    // 3. Mặt đồng hồ tròn chính (Watch Dial - 228 x 228, tâm cx=114, cy=114)
     standby4_dial_ = lv_obj_create(standby4_box_);
-    lv_obj_set_size(standby4_dial_, 224, 224);
+    lv_obj_set_size(standby4_dial_, 228, 228);
     lv_obj_center(standby4_dial_);
     lv_obj_set_style_radius(standby4_dial_, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(standby4_dial_, lv_color_hex(0x0C1017), 0);
-    lv_obj_set_style_border_color(standby4_dial_, lv_color_hex(0x2A3441), 0);
+    lv_obj_set_style_border_color(standby4_dial_, lv_color_hex(0x263345), 0);
     lv_obj_set_style_border_width(standby4_dial_, 3, 0);
     lv_obj_set_style_pad_all(standby4_dial_, 0, 0);
     lv_obj_clear_flag(standby4_dial_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // 1. Cardinal Orange Markers (12h, 3h, 6h, 9h)
-    auto create_accent_bar = [this](int x, int y, int w, int h) {
-        lv_obj_t* bar = lv_obj_create(standby4_dial_);
-        lv_obj_set_size(bar, w, h);
-        lv_obj_set_pos(bar, x, y);
-        lv_obj_set_style_radius(bar, 2, 0);
-        lv_obj_set_style_bg_color(bar, lv_color_hex(0xFF4500), 0);
-        lv_obj_set_style_border_width(bar, 0, 0);
-        lv_obj_remove_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(bar, LV_OBJ_FLAG_CLICKABLE);
-    };
-    create_accent_bar(110, 5, 4, 10);    // 12h
-    create_accent_bar(209, 110, 10, 4);  // 3h
-    create_accent_bar(110, 209, 4, 10);  // 6h
-    create_accent_bar(5, 110, 10, 4);    // 9h
-
-    // 2. White tick dots around bezel (at hours 1, 2, 4, 5, 7, 8, 10, 11)
-    for (int h = 1; h <= 12; ++h) {
-        if (h % 3 == 0) continue;
-        float angle = (h * 30.0f - 90.0f) * (3.14159265f / 180.0f);
-        int dot_x = (int)roundf(112.0f + 102.0f * cosf(angle));
-        int dot_y = (int)roundf(112.0f + 102.0f * sinf(angle));
-        lv_obj_t* dot = lv_obj_create(standby4_dial_);
-        lv_obj_set_size(dot, 3, 3);
-        lv_obj_set_pos(dot, dot_x - 1, dot_y - 1);
-        lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(dot, lv_color_hex(0x94A3B8), 0);
-        lv_obj_set_style_border_width(dot, 0, 0);
-        lv_obj_remove_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(dot, LV_OBJ_FLAG_CLICKABLE);
+    // 4. 6 đinh ốc Bezel Rivets quanh vành đồng hồ (phong cách Hublot / AP Royal Oak)
+    for (int i = 0; i < 6; ++i) {
+        float a = (30.0f + i * 60.0f - 90.0f) * (3.14159265f / 180.0f);
+        int rx = (int)roundf(114.0f + 107.0f * cosf(a));
+        int ry = (int)roundf(114.0f + 107.0f * sinf(a));
+        lv_obj_t* rivet = lv_obj_create(standby4_dial_);
+        lv_obj_set_size(rivet, 5, 5);
+        lv_obj_set_pos(rivet, rx - 2, ry - 2);
+        lv_obj_set_style_radius(rivet, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(rivet, lv_color_hex(0x94A3B8), 0);
+        lv_obj_set_style_border_color(rivet, lv_color_hex(0x1E293B), 0);
+        lv_obj_set_style_border_width(rivet, 1, 0);
+        lv_obj_clear_flag(rivet, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(rivet, LV_OBJ_FLAG_CLICKABLE);
     }
 
-    // 3. Sports Bezel Arabic Numbers
+    // 5. Vành chia phút Chapter Ring (60 vạch chia chính xác)
+    for (int m = 0; m < 60; ++m) {
+        if (m % 5 == 0) continue; // Bỏ qua vị trí cọc giờ chính
+        float a = (m * 6.0f - 90.0f) * (3.14159265f / 180.0f);
+        int tx = (int)roundf(114.0f + 102.0f * cosf(a));
+        int ty = (int)roundf(114.0f + 102.0f * sinf(a));
+        lv_obj_t* tick = lv_obj_create(standby4_dial_);
+        lv_obj_set_size(tick, 2, 2);
+        lv_obj_set_pos(tick, tx - 1, ty - 1);
+        lv_obj_set_style_radius(tick, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(tick, lv_color_hex(0x475569), 0);
+        lv_obj_set_style_border_width(tick, 0, 0);
+        lv_obj_clear_flag(tick, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(tick, LV_OBJ_FLAG_CLICKABLE);
+    }
+
+    // 6. Cọc số kim loại 3D nổi gắn dạ quang (Applied 3D Markers)
+    auto create_marker = [this](int x, int y, int w, int h, uint32_t col, uint32_t bcol) {
+        lv_obj_t* m = lv_obj_create(standby4_dial_);
+        lv_obj_set_size(m, w, h);
+        lv_obj_set_pos(m, x, y);
+        lv_obj_set_style_radius(m, 1, 0);
+        lv_obj_set_style_bg_color(m, lv_color_hex(col), 0);
+        if (bcol != 0) {
+            lv_obj_set_style_border_color(m, lv_color_hex(bcol), 0);
+            lv_obj_set_style_border_width(m, 1, 0);
+        } else {
+            lv_obj_set_style_border_width(m, 0, 0);
+        }
+        lv_obj_clear_flag(m, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_clear_flag(m, LV_OBJ_FLAG_CLICKABLE);
+        return m;
+    };
+    // 12h: Cặp cọc đôi dạ quang nổi bật (Dual Luminous Bars)
+    create_marker(110, 7, 3, 12, 0xFF4500, 0xFFFFFF);
+    create_marker(115, 7, 3, 12, 0xFF4500, 0xFFFFFF);
+    // 3h: Cọc ngang
+    create_marker(210, 112, 12, 4, 0xFF4500, 0xFFFFFF);
+    // 6h: Cọc dọc
+    create_marker(112, 210, 4, 12, 0xFF4500, 0xFFFFFF);
+    // 9h: Cọc ngang
+    create_marker(6, 112, 12, 4, 0xFF4500, 0xFFFFFF);
+
+    // Các cọc giờ còn lại (1, 2, 4, 5, 7, 8, 10, 11h) đúc khối thép
+    for (int h = 1; h <= 12; ++h) {
+        if (h % 3 == 0) continue;
+        float a = (h * 30.0f - 90.0f) * (3.14159265f / 180.0f);
+        int mx = (int)roundf(114.0f + 98.0f * cosf(a));
+        int my = (int)roundf(114.0f + 98.0f * sinf(a));
+        create_marker(mx - 2, my - 2, 5, 5, 0xE2E8F0, 0x334155);
+    }
+
+    // 7. Chữ số hiển thị thể thao tinh tế trên vành
     auto create_dial_num = [this](const char* txt, int x, int y) {
         lv_obj_t* lbl = lv_label_create(standby4_dial_);
         lv_label_set_text(lbl, txt);
         lv_obj_set_style_text_font(lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(lbl, lv_color_white(), 0);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(0x64748B), 0);
         lv_obj_set_pos(lbl, x, y);
-        lv_obj_remove_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
     };
-    create_dial_num("12", 104, 16);
-    create_dial_num("2", 175, 46);
-    create_dial_num("4", 175, 160);
-    create_dial_num("6", 108, 188);
-    create_dial_num("8", 38, 160);
-    create_dial_num("10", 30, 46);
-    create_dial_num("9", 18, 103);
+    create_dial_num("12", 107, 21);
+    create_dial_num("2", 176, 44);
+    create_dial_num("4", 178, 172);
+    create_dial_num("6", 110, 195);
+    create_dial_num("8", 42, 172);
+    create_dial_num("10", 38, 44);
 
-    // 4. Orange Sports Arc (curved gauge like Huawei GT)
-    lv_obj_t* arc = lv_arc_create(standby4_dial_);
-    lv_obj_set_size(arc, 194, 194);
-    lv_obj_center(arc);
-    lv_arc_set_angles(arc, 290, 40);
-    lv_arc_set_bg_angles(arc, 290, 40);
-    lv_obj_remove_style(arc, nullptr, LV_PART_KNOB);
-    lv_obj_set_style_arc_color(arc, lv_color_hex(0xFF4500), LV_PART_INDICATOR);
-    lv_obj_set_style_arc_width(arc, 3, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_color(arc, lv_color_hex(0x232B36), LV_PART_MAIN);
-    lv_obj_set_style_arc_width(arc, 3, LV_PART_MAIN);
-    lv_obj_remove_flag(arc, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_remove_flag(arc, LV_OBJ_FLAG_SCROLLABLE);
-
-    // 5. SUB-DIALS (3 mặt phụ + 1 ô điện tử)
-    // A. Top Sub-dial (12h - Thời tiết)
+    // 8. CÁC MẶT ĐỒNG HỒ PHỤ CHRONOGRAPH (Sub-dials Compax)
+    // A. Mặt phụ 12h (Thời tiết & Nhiệt độ ngoài trời)
     lv_obj_t* top_sd = lv_obj_create(standby4_dial_);
-    lv_obj_set_size(top_sd, 46, 46);
-    lv_obj_set_pos(top_sd, 89, 36);
+    lv_obj_set_size(top_sd, 48, 48);
+    lv_obj_set_pos(top_sd, 90, 34);
     lv_obj_set_style_radius(top_sd, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(top_sd, lv_color_hex(0x141A23), 0);
-    lv_obj_set_style_border_color(top_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_style_bg_color(top_sd, lv_color_hex(0x080C14), 0);
+    lv_obj_set_style_border_color(top_sd, lv_color_hex(0x263345), 0);
     lv_obj_set_style_border_width(top_sd, 1, 0);
     lv_obj_set_style_pad_all(top_sd, 0, 0);
-    lv_obj_remove_flag(top_sd, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(top_sd, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(top_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(top_sd, LV_OBJ_FLAG_CLICKABLE);
 
     standby4_weather_icon_ = lv_image_create(top_sd);
     lv_image_set_src(standby4_weather_icon_, &weather_icon_cloud_24_dsc);
-    lv_obj_set_pos(standby4_weather_icon_, 11, 2);
+    lv_obj_set_pos(standby4_weather_icon_, 12, 2);
 
     standby4_weather_temp_ = lv_label_create(top_sd);
     lv_label_set_text(standby4_weather_temp_, "--°C");
     lv_obj_set_style_text_font(standby4_weather_temp_, &font_noto_sans_custom_14_1, 0);
     lv_obj_set_style_text_color(standby4_weather_temp_, lv_color_hex(0x38BDF8), 0);
-    lv_obj_set_pos(standby4_weather_temp_, 7, 26);
+    lv_obj_set_size(standby4_weather_temp_, 44, 18);
+    lv_obj_set_style_text_align(standby4_weather_temp_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(standby4_weather_temp_, 2, 26);
 
-    // B. Left Sub-dial (9h - Bước chân / Hoạt động)
+    // B. Mặt phụ 9h (Thước đo năng lượng dự trữ pin - Power Reserve Meter "PWR")
     lv_obj_t* left_sd = lv_obj_create(standby4_dial_);
-    lv_obj_set_size(left_sd, 46, 46);
-    lv_obj_set_pos(left_sd, 37, 89);
+    lv_obj_set_size(left_sd, 48, 48);
+    lv_obj_set_pos(left_sd, 22, 90);
     lv_obj_set_style_radius(left_sd, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(left_sd, lv_color_hex(0x141A23), 0);
-    lv_obj_set_style_border_color(left_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_style_bg_color(left_sd, lv_color_hex(0x080C14), 0);
+    lv_obj_set_style_border_color(left_sd, lv_color_hex(0x263345), 0);
     lv_obj_set_style_border_width(left_sd, 1, 0);
     lv_obj_set_style_pad_all(left_sd, 0, 0);
-    lv_obj_remove_flag(left_sd, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(left_sd, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(left_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(left_sd, LV_OBJ_FLAG_CLICKABLE);
 
-    lv_obj_t* stp_title = lv_label_create(left_sd);
-    lv_label_set_text(stp_title, "STP");
-    lv_obj_set_style_text_font(stp_title, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(stp_title, lv_color_hex(0xFF9800), 0);
-    lv_obj_set_pos(stp_title, 11, 3);
+    standby4_bat_arc_ = lv_arc_create(left_sd);
+    lv_obj_set_size(standby4_bat_arc_, 44, 44);
+    lv_obj_center(standby4_bat_arc_);
+    lv_arc_set_angles(standby4_bat_arc_, 135, 405);
+    lv_arc_set_bg_angles(standby4_bat_arc_, 135, 405);
+    lv_arc_set_range(standby4_bat_arc_, 0, 100);
+    lv_arc_set_value(standby4_bat_arc_, 100);
+    lv_obj_remove_style(standby4_bat_arc_, nullptr, LV_PART_KNOB);
+    lv_obj_set_style_arc_color(standby4_bat_arc_, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(standby4_bat_arc_, 2, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(standby4_bat_arc_, lv_color_hex(0x1E293B), LV_PART_MAIN);
+    lv_obj_set_style_arc_width(standby4_bat_arc_, 2, LV_PART_MAIN);
+    lv_obj_clear_flag(standby4_bat_arc_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(standby4_bat_arc_, LV_OBJ_FLAG_SCROLLABLE);
 
-    standby4_steps_lbl_ = lv_label_create(left_sd);
-    lv_label_set_text(standby4_steps_lbl_, "2726");
-    lv_obj_set_style_text_font(standby4_steps_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_steps_lbl_, lv_color_white(), 0);
-    lv_obj_set_pos(standby4_steps_lbl_, 8, 24);
+    lv_obj_t* pwr_title = lv_label_create(left_sd);
+    lv_label_set_text(pwr_title, "PWR");
+    lv_obj_set_style_text_font(pwr_title, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(pwr_title, lv_color_hex(0xF59E0B), 0);
+    lv_obj_set_size(pwr_title, 44, 16);
+    lv_obj_set_style_text_align(pwr_title, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(pwr_title, 2, 6);
 
-    // C. Bottom Sub-dial (6h - Nhịp tim Heart Rate)
+    standby4_bat_lbl_ = lv_label_create(left_sd);
+    lv_label_set_text(standby4_bat_lbl_, "100%");
+    lv_obj_set_style_text_font(standby4_bat_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_bat_lbl_, lv_color_white(), 0);
+    lv_obj_set_size(standby4_bat_lbl_, 44, 16);
+    lv_obj_set_style_text_align(standby4_bat_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(standby4_bat_lbl_, 2, 24);
+
+    // C. Mặt phụ 6h (Đồng hồ điện tử chiến thuật xanh neon + bộ đếm giây)
     lv_obj_t* bot_sd = lv_obj_create(standby4_dial_);
-    lv_obj_set_size(bot_sd, 46, 46);
-    lv_obj_set_pos(bot_sd, 89, 142);
-    lv_obj_set_style_radius(bot_sd, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(bot_sd, lv_color_hex(0x141A23), 0);
-    lv_obj_set_style_border_color(bot_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_size(bot_sd, 80, 32);
+    lv_obj_set_pos(bot_sd, 74, 148);
+    lv_obj_set_style_radius(bot_sd, 5, 0);
+    lv_obj_set_style_bg_color(bot_sd, lv_color_hex(0x080C14), 0);
+    lv_obj_set_style_border_color(bot_sd, lv_color_hex(0x263345), 0);
     lv_obj_set_style_border_width(bot_sd, 1, 0);
     lv_obj_set_style_pad_all(bot_sd, 0, 0);
-    lv_obj_remove_flag(bot_sd, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(bot_sd, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(bot_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(bot_sd, LV_OBJ_FLAG_CLICKABLE);
 
-    lv_obj_t* hr_icon = lv_label_create(bot_sd);
-    lv_label_set_text(hr_icon, "BPM");
-    lv_obj_set_style_text_font(hr_icon, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(hr_icon, lv_color_hex(0xFF334B), 0);
-    lv_obj_set_pos(hr_icon, 9, 3);
+    standby4_digi_time_lbl_ = lv_label_create(bot_sd);
+    lv_label_set_text(standby4_digi_time_lbl_, "12:00");
+    lv_obj_set_style_text_font(standby4_digi_time_lbl_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby4_digi_time_lbl_, lv_color_hex(0x22C55E), 0);
+    lv_obj_set_pos(standby4_digi_time_lbl_, 6, 6);
 
-    standby4_bpm_lbl_ = lv_label_create(bot_sd);
-    lv_label_set_text(standby4_bpm_lbl_, "76");
-    lv_obj_set_style_text_font(standby4_bpm_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_bpm_lbl_, lv_color_white(), 0);
-    lv_obj_set_pos(standby4_bpm_lbl_, 15, 24);
+    standby4_digi_sec_lbl_ = lv_label_create(bot_sd);
+    lv_label_set_text(standby4_digi_sec_lbl_, ":00");
+    lv_obj_set_style_text_font(standby4_digi_sec_lbl_, &font_noto_sans_custom_14_1, 0);
+    lv_obj_set_style_text_color(standby4_digi_sec_lbl_, lv_color_hex(0x38BDF8), 0);
+    lv_obj_set_pos(standby4_digi_sec_lbl_, 52, 7);
 
-    // D. Right Sub-area (3h - Ô thông tin điện tử)
+    // D. Cửa sổ lịch ngày 3h (Chronograph Date Aperture)
     lv_obj_t* right_sd = lv_obj_create(standby4_dial_);
-    lv_obj_set_size(right_sd, 54, 50);
-    lv_obj_set_pos(right_sd, 137, 87);
-    lv_obj_set_style_radius(right_sd, 6, 0);
-    lv_obj_set_style_bg_color(right_sd, lv_color_hex(0x141A23), 0);
-    lv_obj_set_style_border_color(right_sd, lv_color_hex(0x26303E), 0);
+    lv_obj_set_size(right_sd, 48, 40);
+    lv_obj_set_pos(right_sd, 158, 94);
+    lv_obj_set_style_radius(right_sd, 4, 0);
+    lv_obj_set_style_bg_color(right_sd, lv_color_hex(0x080C14), 0);
+    lv_obj_set_style_border_color(right_sd, lv_color_hex(0x263345), 0);
     lv_obj_set_style_border_width(right_sd, 1, 0);
     lv_obj_set_style_pad_all(right_sd, 0, 0);
-    lv_obj_remove_flag(right_sd, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_remove_flag(right_sd, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(right_sd, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(right_sd, LV_OBJ_FLAG_CLICKABLE);
 
     standby4_wday_lbl_ = lv_label_create(right_sd);
     lv_label_set_text(standby4_wday_lbl_, "TUE");
     lv_obj_set_style_text_font(standby4_wday_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_wday_lbl_, lv_color_hex(0x94A3B8), 0);
-    lv_obj_set_pos(standby4_wday_lbl_, 13, 1);
+    lv_obj_set_style_text_color(standby4_wday_lbl_, lv_color_hex(0xFF5722), 0);
+    lv_obj_set_size(standby4_wday_lbl_, 44, 16);
+    lv_obj_set_style_text_align(standby4_wday_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(standby4_wday_lbl_, 2, 2);
 
-    standby4_digi_time_lbl_ = lv_label_create(right_sd);
-    lv_label_set_text(standby4_digi_time_lbl_, "17:24");
-    lv_obj_set_style_text_font(standby4_digi_time_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_digi_time_lbl_, lv_color_white(), 0);
-    lv_obj_set_pos(standby4_digi_time_lbl_, 8, 16);
+    standby4_date_day_lbl_ = lv_label_create(right_sd);
+    lv_label_set_text(standby4_date_day_lbl_, "17");
+    lv_obj_set_style_text_font(standby4_date_day_lbl_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby4_date_day_lbl_, lv_color_white(), 0);
+    lv_obj_set_size(standby4_date_day_lbl_, 44, 18);
+    lv_obj_set_style_text_align(standby4_date_day_lbl_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(standby4_date_day_lbl_, 2, 18);
 
-    standby4_date_bat_lbl_ = lv_label_create(right_sd);
-    lv_label_set_text(standby4_date_bat_lbl_, "11-17");
-    lv_obj_set_style_text_font(standby4_date_bat_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(standby4_date_bat_lbl_, lv_color_hex(0xFF4500), 0);
-    lv_obj_set_pos(standby4_date_bat_lbl_, 8, 32);
-
-    // 6. MECHANICAL HANDS (3 Kim)
-    // A. Hour Hand (Kim giờ - Trắng thể thao, rộng 5px)
+    // 9. BỘ KIM CƠ KHÍ 3D DẠ QUANG (3D Mechanical Luminous Hands)
+    // A1. Thân kim giờ (Thép trắng bạc thể thao, rộng 6px)
     standby4_hour_hand_ = lv_line_create(standby4_dial_);
-    lv_obj_set_size(standby4_hour_hand_, 224, 224);
+    lv_obj_set_size(standby4_hour_hand_, 228, 228);
     lv_obj_set_pos(standby4_hour_hand_, 0, 0);
-    lv_obj_set_style_line_width(standby4_hour_hand_, 5, 0);
+    lv_obj_set_style_line_width(standby4_hour_hand_, 6, 0);
     lv_obj_set_style_line_rounded(standby4_hour_hand_, true, 0);
-    lv_obj_set_style_line_color(standby4_hour_hand_, lv_color_white(), 0);
-    lv_obj_remove_flag(standby4_hour_hand_, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_remove_flag(standby4_hour_hand_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_line_color(standby4_hour_hand_, lv_color_hex(0xF8FAFC), 0);
+    lv_obj_clear_flag(standby4_hour_hand_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(standby4_hour_hand_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // B. Minute Hand (Kim phút - Cam thể thao rực rỡ, rộng 4px)
+    // A2. Lõi dạ quang kim giờ (Cam neon phát sáng, rộng 2px)
+    standby4_hour_core_ = lv_line_create(standby4_dial_);
+    lv_obj_set_size(standby4_hour_core_, 228, 228);
+    lv_obj_set_pos(standby4_hour_core_, 0, 0);
+    lv_obj_set_style_line_width(standby4_hour_core_, 2, 0);
+    lv_obj_set_style_line_rounded(standby4_hour_core_, true, 0);
+    lv_obj_set_style_line_color(standby4_hour_core_, lv_color_hex(0xFF4500), 0);
+    lv_obj_clear_flag(standby4_hour_core_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(standby4_hour_core_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // B1. Thân kim phút (Thép trắng bạc thể thao, rộng 5px)
     standby4_min_hand_ = lv_line_create(standby4_dial_);
-    lv_obj_set_size(standby4_min_hand_, 224, 224);
+    lv_obj_set_size(standby4_min_hand_, 228, 228);
     lv_obj_set_pos(standby4_min_hand_, 0, 0);
-    lv_obj_set_style_line_width(standby4_min_hand_, 4, 0);
+    lv_obj_set_style_line_width(standby4_min_hand_, 5, 0);
     lv_obj_set_style_line_rounded(standby4_min_hand_, true, 0);
-    lv_obj_set_style_line_color(standby4_min_hand_, lv_color_hex(0xFF4500), 0);
-    lv_obj_remove_flag(standby4_min_hand_, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_remove_flag(standby4_min_hand_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_line_color(standby4_min_hand_, lv_color_white(), 0);
+    lv_obj_clear_flag(standby4_min_hand_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(standby4_min_hand_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // C. Second Hand (Kim giây xoay đều liên tục! - Đỏ cam, rộng 2px)
+    // B2. Lõi dạ quang kim phút (Cam neon phát sáng, rộng 2px)
+    standby4_min_core_ = lv_line_create(standby4_dial_);
+    lv_obj_set_size(standby4_min_core_, 228, 228);
+    lv_obj_set_pos(standby4_min_core_, 0, 0);
+    lv_obj_set_style_line_width(standby4_min_core_, 2, 0);
+    lv_obj_set_style_line_rounded(standby4_min_core_, true, 0);
+    lv_obj_set_style_line_color(standby4_min_core_, lv_color_hex(0xFF4500), 0);
+    lv_obj_clear_flag(standby4_min_core_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(standby4_min_core_, LV_OBJ_FLAG_SCROLLABLE);
+
+    // C1. Kim giây Chronograph quét mượt liên tục (Đỏ thể thao Racing Red, rộng 2px)
     standby4_sec_hand_ = lv_line_create(standby4_dial_);
-    lv_obj_set_size(standby4_sec_hand_, 224, 224);
+    lv_obj_set_size(standby4_sec_hand_, 228, 228);
     lv_obj_set_pos(standby4_sec_hand_, 0, 0);
     lv_obj_set_style_line_width(standby4_sec_hand_, 2, 0);
     lv_obj_set_style_line_rounded(standby4_sec_hand_, true, 0);
     lv_obj_set_style_line_color(standby4_sec_hand_, lv_color_hex(0xFF1E00), 0);
-    lv_obj_remove_flag(standby4_sec_hand_, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_remove_flag(standby4_sec_hand_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(standby4_sec_hand_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(standby4_sec_hand_, LV_OBJ_FLAG_SCROLLABLE);
 
-    // D. Center Pivot Cap (Nắp trục giữa kim)
-    lv_obj_t* pin = lv_obj_create(standby4_dial_);
-    lv_obj_set_size(pin, 12, 12);
-    lv_obj_set_pos(pin, 106, 106);
-    lv_obj_set_style_radius(pin, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(pin, lv_color_hex(0xFF4500), 0);
-    lv_obj_set_style_border_color(pin, lv_color_white(), 0);
-    lv_obj_set_style_border_width(pin, 2, 0);
-    lv_obj_remove_flag(pin, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_remove_flag(pin, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_move_foreground(pin);
+    // C2. Quả đối trọng đuôi kim giây (Counterweight Disc)
+    standby4_sec_dot_ = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(standby4_sec_dot_, 7, 7);
+    lv_obj_set_pos(standby4_sec_dot_, 111, 111);
+    lv_obj_set_style_radius(standby4_sec_dot_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(standby4_sec_dot_, lv_color_hex(0xFF1E00), 0);
+    lv_obj_set_style_border_color(standby4_sec_dot_, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_width(standby4_sec_dot_, 1, 0);
+    lv_obj_clear_flag(standby4_sec_dot_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(standby4_sec_dot_, LV_OBJ_FLAG_CLICKABLE);
 
-    // 7. Timer quét 30ms (33.3 FPS) cho kim giây xoay mượt mà không nấc
+    // D. Nắp trục giữa đa tầng (Multi-tier Metallic Pivot Pin)
+    lv_obj_t* pin_outer = lv_obj_create(standby4_dial_);
+    lv_obj_set_size(pin_outer, 14, 14);
+    lv_obj_set_pos(pin_outer, 107, 107);
+    lv_obj_set_style_radius(pin_outer, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(pin_outer, lv_color_hex(0x1E293B), 0);
+    lv_obj_set_style_border_color(pin_outer, lv_color_hex(0x475569), 0);
+    lv_obj_set_style_border_width(pin_outer, 1, 0);
+    lv_obj_clear_flag(pin_outer, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(pin_outer, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_move_foreground(pin_outer);
+
+    lv_obj_t* pin_mid = lv_obj_create(pin_outer);
+    lv_obj_set_size(pin_mid, 8, 8);
+    lv_obj_center(pin_mid);
+    lv_obj_set_style_radius(pin_mid, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(pin_mid, lv_color_hex(0xFF1E00), 0);
+    lv_obj_set_style_border_width(pin_mid, 0, 0);
+    lv_obj_clear_flag(pin_mid, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(pin_mid, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* pin_inner = lv_obj_create(pin_mid);
+    lv_obj_set_size(pin_inner, 4, 4);
+    lv_obj_center(pin_inner);
+    lv_obj_set_style_radius(pin_inner, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(pin_inner, lv_color_white(), 0);
+    lv_obj_set_style_border_width(pin_inner, 0, 0);
+    lv_obj_clear_flag(pin_inner, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(pin_inner, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 10. Timer quét 40ms (25 FPS) đồng bộ microsecond tuyệt đối, không rung giật
     standby4_sweep_timer_ = lv_timer_create([](lv_timer_t* t) {
         auto* self = static_cast<LcdDisplay*>(lv_timer_get_user_data(t));
         if (!self || self->screen_mode_ != kScreenStandby4 || !self->standby4_box_ ||
             lv_obj_has_flag(self->standby4_box_, LV_OBJ_FLAG_HIDDEN)) return;
         self->UpdateStandby4HandsSmooth();
-    }, 30, this);
+    }, 40, this);
 
     LayoutStandby4Widgets(height_ > width_);
     UpdateStandby4HandsSmooth();
@@ -15788,43 +15939,75 @@ void LcdDisplay::LayoutStandby4Widgets(bool is_portrait) {
 void LcdDisplay::UpdateStandby4HandsSmooth() {
     if (standby4_dial_ == nullptr || standby4_sec_hand_ == nullptr) return;
 
-    int64_t now_us = esp_timer_get_time();
-    time_t now_s = time(nullptr);
-    struct tm* tm_now = localtime(&now_s);
+    // Sử dụng gettimeofday để đồng bộ tuyệt đối giây và microsecond trong cùng 1 lệnh nguyên tử
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    struct tm* tm_now = localtime(&tv.tv_sec);
     if (tm_now == nullptr) return;
 
-    float ms = (float)((now_us / 1000) % 1000);
-    float sec_float = (float)tm_now->tm_sec + ms / 1000.0f;
+    float sec_float = (float)tm_now->tm_sec + (float)tv.tv_usec / 1000000.0f;
     float min_float = (float)tm_now->tm_min + sec_float / 60.0f;
     float hour_float = (float)(tm_now->tm_hour % 12) + min_float / 60.0f;
 
-    const float cx = 112.0f;
-    const float cy = 112.0f;
-    const float deg2rad = 3.14159265f / 180.0f;
+    const float cx = 114.0f;
+    const float cy = 114.0f;
+    const float deg2rad = 3.14159265358979323846f / 180.0f;
 
-    // 1. Hour Hand (length: 44px, tail: 8px)
+    // 1. Kim giờ (Chiều dài 48px, đuôi 10px)
     float hour_rad = (hour_float * 30.0f - 90.0f) * deg2rad;
-    standby4_hour_pts_[0].x = (lv_value_precise_t)roundf(cx - 8.0f * cosf(hour_rad));
-    standby4_hour_pts_[0].y = (lv_value_precise_t)roundf(cy - 8.0f * sinf(hour_rad));
-    standby4_hour_pts_[1].x = (lv_value_precise_t)roundf(cx + 44.0f * cosf(hour_rad));
-    standby4_hour_pts_[1].y = (lv_value_precise_t)roundf(cy + 44.0f * sinf(hour_rad));
+    standby4_hour_pts_[0].x = (lv_value_precise_t)roundf(cx - 10.0f * cosf(hour_rad));
+    standby4_hour_pts_[0].y = (lv_value_precise_t)roundf(cy - 10.0f * sinf(hour_rad));
+    standby4_hour_pts_[1].x = (lv_value_precise_t)roundf(cx + 48.0f * cosf(hour_rad));
+    standby4_hour_pts_[1].y = (lv_value_precise_t)roundf(cy + 48.0f * sinf(hour_rad));
     lv_line_set_points(standby4_hour_hand_, standby4_hour_pts_, 2);
 
-    // 2. Minute Hand (length: 68px, tail: 12px)
+    // Lõi dạ quang kim giờ (38px, đuôi 4px)
+    if (standby4_hour_core_ != nullptr) {
+        standby4_hour_core_pts_[0].x = (lv_value_precise_t)roundf(cx - 4.0f * cosf(hour_rad));
+        standby4_hour_core_pts_[0].y = (lv_value_precise_t)roundf(cy - 4.0f * sinf(hour_rad));
+        standby4_hour_core_pts_[1].x = (lv_value_precise_t)roundf(cx + 38.0f * cosf(hour_rad));
+        standby4_hour_core_pts_[1].y = (lv_value_precise_t)roundf(cy + 38.0f * sinf(hour_rad));
+        lv_line_set_points(standby4_hour_core_, standby4_hour_core_pts_, 2);
+    }
+
+    // 2. Kim phút (Chiều dài 76px, đuôi 14px)
     float min_rad = (min_float * 6.0f - 90.0f) * deg2rad;
-    standby4_min_pts_[0].x = (lv_value_precise_t)roundf(cx - 12.0f * cosf(min_rad));
-    standby4_min_pts_[0].y = (lv_value_precise_t)roundf(cy - 12.0f * sinf(min_rad));
-    standby4_min_pts_[1].x = (lv_value_precise_t)roundf(cx + 68.0f * cosf(min_rad));
-    standby4_min_pts_[1].y = (lv_value_precise_t)roundf(cy + 68.0f * sinf(min_rad));
+    standby4_min_pts_[0].x = (lv_value_precise_t)roundf(cx - 14.0f * cosf(min_rad));
+    standby4_min_pts_[0].y = (lv_value_precise_t)roundf(cy - 14.0f * sinf(min_rad));
+    standby4_min_pts_[1].x = (lv_value_precise_t)roundf(cx + 76.0f * cosf(min_rad));
+    standby4_min_pts_[1].y = (lv_value_precise_t)roundf(cy + 76.0f * sinf(min_rad));
     lv_line_set_points(standby4_min_hand_, standby4_min_pts_, 2);
 
-    // 3. Second Hand (Smooth Sweeping, length: 86px, tail: 18px)
+    // Lõi dạ quang kim phút (64px, đuôi 6px)
+    if (standby4_min_core_ != nullptr) {
+        standby4_min_core_pts_[0].x = (lv_value_precise_t)roundf(cx - 6.0f * cosf(min_rad));
+        standby4_min_core_pts_[0].y = (lv_value_precise_t)roundf(cy - 6.0f * sinf(min_rad));
+        standby4_min_core_pts_[1].x = (lv_value_precise_t)roundf(cx + 64.0f * cosf(min_rad));
+        standby4_min_core_pts_[1].y = (lv_value_precise_t)roundf(cy + 64.0f * sinf(min_rad));
+        lv_line_set_points(standby4_min_core_, standby4_min_core_pts_, 2);
+    }
+
+    // 3. Kim giây Chronograph quét mượt (Chiều dài 92px, đuôi 20px)
     float sec_rad = (sec_float * 6.0f - 90.0f) * deg2rad;
-    standby4_sec_pts_[0].x = (lv_value_precise_t)roundf(cx - 18.0f * cosf(sec_rad));
-    standby4_sec_pts_[0].y = (lv_value_precise_t)roundf(cy - 18.0f * sinf(sec_rad));
-    standby4_sec_pts_[1].x = (lv_value_precise_t)roundf(cx + 86.0f * cosf(sec_rad));
-    standby4_sec_pts_[1].y = (lv_value_precise_t)roundf(cy + 86.0f * sinf(sec_rad));
+    standby4_sec_pts_[0].x = (lv_value_precise_t)roundf(cx - 20.0f * cosf(sec_rad));
+    standby4_sec_pts_[0].y = (lv_value_precise_t)roundf(cy - 20.0f * sinf(sec_rad));
+    standby4_sec_pts_[1].x = (lv_value_precise_t)roundf(cx + 92.0f * cosf(sec_rad));
+    standby4_sec_pts_[1].y = (lv_value_precise_t)roundf(cy + 92.0f * sinf(sec_rad));
     lv_line_set_points(standby4_sec_hand_, standby4_sec_pts_, 2);
+
+    // Cập nhật vị trí quả đối trọng đuôi kim giây xoay quỹ đạo
+    if (standby4_sec_dot_ != nullptr) {
+        float dot_x = cx - 14.0f * cosf(sec_rad);
+        float dot_y = cy - 14.0f * sinf(sec_rad);
+        lv_obj_set_pos(standby4_sec_dot_, (int32_t)roundf(dot_x) - 3, (int32_t)roundf(dot_y) - 3);
+    }
+
+    // Cập nhật số giây điện tử ở mặt phụ 6h
+    if (standby4_digi_sec_lbl_ != nullptr) {
+        char sbuf[8];
+        snprintf(sbuf, sizeof(sbuf), ":%02d", tm_now->tm_sec);
+        lv_label_set_text(standby4_digi_sec_lbl_, sbuf);
+    }
 }
 
 void LcdDisplay::UpdateStandby4Clock(const struct tm* tm_now) {
@@ -15841,13 +16024,30 @@ void LcdDisplay::UpdateStandby4Clock(const struct tm* tm_now) {
         lv_label_set_text(standby4_wday_lbl_, kDays[tm_now->tm_wday % 7]);
     }
 
-    if (standby4_date_bat_lbl_ != nullptr) {
-        int bat = 100;
-        bool charging = false, discharging = false;
-        Board::GetInstance().GetBatteryLevel(bat, charging, discharging);
-        char dbuf[32];
-        snprintf(dbuf, sizeof(dbuf), "%02d-%02d %d%%", tm_now->tm_mon + 1, tm_now->tm_mday, bat);
-        lv_label_set_text(standby4_date_bat_lbl_, dbuf);
+    if (standby4_date_day_lbl_ != nullptr) {
+        char dbuf[16];
+        snprintf(dbuf, sizeof(dbuf), "%02d", tm_now->tm_mday);
+        lv_label_set_text(standby4_date_day_lbl_, dbuf);
+    }
+
+    // Cập nhật thước đo năng lượng pin mặt phụ 9h
+    int bat = 100;
+    bool charging = false, discharging = false;
+    Board::GetInstance().GetBatteryLevel(bat, charging, discharging);
+
+    if (standby4_bat_lbl_ != nullptr) {
+        char bbuf[16];
+        snprintf(bbuf, sizeof(bbuf), "%d%%", bat);
+        lv_label_set_text(standby4_bat_lbl_, bbuf);
+    }
+
+    if (standby4_bat_arc_ != nullptr) {
+        lv_arc_set_value(standby4_bat_arc_, bat);
+        if (bat <= 20) {
+            lv_obj_set_style_arc_color(standby4_bat_arc_, lv_color_hex(0xEF4444), LV_PART_INDICATOR);
+        } else {
+            lv_obj_set_style_arc_color(standby4_bat_arc_, lv_color_hex(0x10B981), LV_PART_INDICATOR);
+        }
     }
 
     SyncStandby4Weather();

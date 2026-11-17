@@ -514,18 +514,24 @@ protected:
     lv_obj_t* standby4_box_ = nullptr;
     lv_obj_t* standby4_dial_ = nullptr;
     lv_obj_t* standby4_hour_hand_ = nullptr;
+    lv_obj_t* standby4_hour_core_ = nullptr;
     lv_obj_t* standby4_min_hand_ = nullptr;
+    lv_obj_t* standby4_min_core_ = nullptr;
     lv_obj_t* standby4_sec_hand_ = nullptr;
+    lv_obj_t* standby4_sec_dot_ = nullptr;
     lv_point_precise_t standby4_hour_pts_[2] = {{0, 0}, {0, 0}};
+    lv_point_precise_t standby4_hour_core_pts_[2] = {{0, 0}, {0, 0}};
     lv_point_precise_t standby4_min_pts_[2] = {{0, 0}, {0, 0}};
+    lv_point_precise_t standby4_min_core_pts_[2] = {{0, 0}, {0, 0}};
     lv_point_precise_t standby4_sec_pts_[2] = {{0, 0}, {0, 0}};
     lv_obj_t* standby4_weather_icon_ = nullptr;
     lv_obj_t* standby4_weather_temp_ = nullptr;
-    lv_obj_t* standby4_steps_lbl_ = nullptr;
-    lv_obj_t* standby4_bpm_lbl_ = nullptr;
+    lv_obj_t* standby4_bat_arc_ = nullptr;
+    lv_obj_t* standby4_bat_lbl_ = nullptr;
     lv_obj_t* standby4_wday_lbl_ = nullptr;
     lv_obj_t* standby4_digi_time_lbl_ = nullptr;
-    lv_obj_t* standby4_date_bat_lbl_ = nullptr;
+    lv_obj_t* standby4_digi_sec_lbl_ = nullptr;
+    lv_obj_t* standby4_date_day_lbl_ = nullptr;
     lv_timer_t* standby4_sweep_timer_ = nullptr;
 
     void CreateStandby4UI();
