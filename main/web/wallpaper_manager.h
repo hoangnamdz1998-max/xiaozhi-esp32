@@ -10,6 +10,7 @@ struct WallpaperItem {
     int index;          // 0 = Hệ thống, 1 = Ảnh 1, 2 = Ảnh 2, ...
     std::string name;   // "Ảnh hệ thống (Mặc định)", "Ảnh 1", "Ảnh 2", ...
     bool is_system;
+    bool is_video = false;
 };
 
 class WallpaperManager {

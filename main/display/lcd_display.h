@@ -29,6 +29,8 @@ protected:
     lv_obj_t* emoji_label_ = nullptr;
     lv_obj_t* emoji_image_ = nullptr;
     std::unique_ptr<LvglGif> gif_controller_ = nullptr;
+    std::unique_ptr<LvglGif> standby2_gif_controller_ = nullptr;
+    uint8_t* standby2_gif_buf_ = nullptr;
     lv_obj_t* emoji_box_ = nullptr;
     lv_obj_t* chat_message_label_ = nullptr;
     lv_obj_t* chat_box_ = nullptr;

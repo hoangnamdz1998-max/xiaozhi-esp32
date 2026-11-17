@@ -4225,6 +4225,7 @@ void LcdDisplay::OnStateChanged(DeviceState state) {
         // 2. Hide ALL standby / menu / settings boxes / apps / overlays
         if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
         if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_gif_controller_) standby2_gif_controller_->Pause();
         if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
         if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
         if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
@@ -5740,6 +5741,7 @@ void LcdDisplay::ShowStandby() {
     previous_screen_mode_ = kScreenStandby;
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_gif_controller_) standby2_gif_controller_->Pause();
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
@@ -5875,6 +5877,7 @@ void LcdDisplay::ShowMenu() {
     }
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_gif_controller_) standby2_gif_controller_->Pause();
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
@@ -6039,6 +6042,7 @@ void LcdDisplay::ShowQuickSettings() {
     screen_mode_ = kScreenQuickSettings;
 
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_gif_controller_) standby2_gif_controller_->Pause();
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
@@ -15053,26 +15057,62 @@ void LcdDisplay::LayoutStandby2Widgets(bool is_portrait) {
             heap_caps_free(standby2_bg_buf_);
             standby2_bg_buf_ = nullptr;
         }
+        if (standby2_gif_controller_) {
+            standby2_gif_controller_->Stop();
+            standby2_gif_controller_.reset();
+        }
+        if (standby2_gif_buf_ != nullptr) {
+            heap_caps_free(standby2_gif_buf_);
+            standby2_gif_buf_ = nullptr;
+        }
         const uint8_t* img_data = nullptr;
         size_t img_len = 0;
         bool is_alloc = false;
         if (WallpaperManager::GetInstance().GetWallpaperJpeg(cur_wp_idx, is_portrait, &img_data, &img_len, &is_alloc) && img_data != nullptr) {
-            size_t out_len = 0, img_w = 0, img_h = 0, stride = 0;
-            if (jpeg_to_image(img_data, img_len, &standby2_bg_buf_, &out_len, &img_w, &img_h, &stride) == ESP_OK && standby2_bg_buf_ != nullptr) {
-                standby2_bg_dsc_.header.magic = LV_IMAGE_HEADER_MAGIC;
-                standby2_bg_dsc_.header.cf = LV_COLOR_FORMAT_RGB565;
-                standby2_bg_dsc_.header.flags = 0;
-                standby2_bg_dsc_.header.w = (uint32_t)img_w;
-                standby2_bg_dsc_.header.h = (uint32_t)img_h;
-                standby2_bg_dsc_.header.stride = (uint32_t)stride;
-                standby2_bg_dsc_.data_size = out_len;
-                standby2_bg_dsc_.data = standby2_bg_buf_;
-                if (standby2_bg_image_) {
-                    lv_image_set_src(standby2_bg_image_, &standby2_bg_dsc_);
+            if (img_len >= 3 && img_data[0] == 'G' && img_data[1] == 'I' && img_data[2] == 'F') {
+                // Video / GIF hoạt ảnh nền
+                if (is_alloc) {
+                    standby2_gif_buf_ = const_cast<uint8_t*>(img_data);
+                } else {
+                    standby2_gif_buf_ = (uint8_t*)heap_caps_malloc(img_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+                    if (standby2_gif_buf_) memcpy(standby2_gif_buf_, img_data, img_len);
                 }
-            }
-            if (is_alloc) {
-                heap_caps_free((void*)img_data);
+                lv_img_dsc_t gif_dsc;
+                memset(&gif_dsc, 0, sizeof(gif_dsc));
+                gif_dsc.data = standby2_gif_buf_;
+                gif_dsc.data_size = img_len;
+
+                standby2_gif_controller_ = std::make_unique<LvglGif>(&gif_dsc);
+                if (standby2_gif_controller_->IsLoaded()) {
+                    standby2_gif_controller_->SetFrameCallback([this]() {
+                        if (standby2_bg_image_ && standby2_gif_controller_ && screen_mode_ == kScreenStandby2) {
+                            lv_image_set_src(standby2_bg_image_, standby2_gif_controller_->image_dsc());
+                        }
+                    });
+                    if (standby2_bg_image_) {
+                        lv_image_set_src(standby2_bg_image_, standby2_gif_controller_->image_dsc());
+                    }
+                    standby2_gif_controller_->Start();
+                }
+            } else {
+                // Ảnh tĩnh JPEG
+                size_t out_len = 0, img_w = 0, img_h = 0, stride = 0;
+                if (jpeg_to_image(img_data, img_len, &standby2_bg_buf_, &out_len, &img_w, &img_h, &stride) == ESP_OK && standby2_bg_buf_ != nullptr) {
+                    standby2_bg_dsc_.header.magic = LV_IMAGE_HEADER_MAGIC;
+                    standby2_bg_dsc_.header.cf = LV_COLOR_FORMAT_RGB565;
+                    standby2_bg_dsc_.header.flags = 0;
+                    standby2_bg_dsc_.header.w = (uint32_t)img_w;
+                    standby2_bg_dsc_.header.h = (uint32_t)img_h;
+                    standby2_bg_dsc_.header.stride = (uint32_t)stride;
+                    standby2_bg_dsc_.data_size = out_len;
+                    standby2_bg_dsc_.data = standby2_bg_buf_;
+                    if (standby2_bg_image_) {
+                        lv_image_set_src(standby2_bg_image_, &standby2_bg_dsc_);
+                    }
+                }
+                if (is_alloc) {
+                    heap_caps_free((void*)img_data);
+                }
             }
         }
     }
@@ -15469,6 +15509,9 @@ void LcdDisplay::ShowStandby2() {
     if (standby2_box_ != nullptr) {
         lv_obj_remove_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
         lv_obj_move_foreground(standby2_box_);
+        if (standby2_gif_controller_) {
+            standby2_gif_controller_->Resume();
+        }
         UpdateStandbyStatusBar();
         SyncStandby2Weather();
         SetStandbyTextColor(standby_text_color_);
@@ -15489,6 +15532,7 @@ void LcdDisplay::ShowStandby3() {
 
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_gif_controller_) standby2_gif_controller_->Pause();
     if (standby4_box_ != nullptr) lv_obj_add_flag(standby4_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby4_sweep_timer_ != nullptr) lv_timer_pause(standby4_sweep_timer_);
     if (menu_box_ != nullptr) {
@@ -16123,6 +16167,7 @@ void LcdDisplay::ShowStandby4() {
 
     if (standby_box_ != nullptr) lv_obj_add_flag(standby_box_, LV_OBJ_FLAG_HIDDEN);
     if (standby2_box_ != nullptr) lv_obj_add_flag(standby2_box_, LV_OBJ_FLAG_HIDDEN);
+    if (standby2_gif_controller_) standby2_gif_controller_->Pause();
     if (standby3_box_ != nullptr) lv_obj_add_flag(standby3_box_, LV_OBJ_FLAG_HIDDEN);
     if (menu_box_ != nullptr) {
         lv_anim_delete(menu_box_, nullptr);
@@ -16579,7 +16624,14 @@ void LcdDisplay::UpdateWallpaperSettingsUI() {
                 bool is_alloc = false;
                 bool decoded = false;
 
-                if (WallpaperManager::GetInstance().GetWallpaperJpeg(item.index, is_p, &img_data, &img_len, &is_alloc) && img_data != nullptr) {
+                if (item.is_video) {
+                    lv_obj_t* icon_lbl = lv_label_create(select_area);
+                    lv_label_set_text(icon_lbl, "🎬 VIDEO");
+                    lv_obj_set_style_text_font(icon_lbl, &font_noto_sans_custom_14_1, 0);
+                    lv_obj_set_style_text_color(icon_lbl, lv_color_hex(0x38bdf8), 0);
+                    lv_obj_align(icon_lbl, LV_ALIGN_CENTER, 0, 0);
+                    decoded = true;
+                } else if (WallpaperManager::GetInstance().GetWallpaperJpeg(item.index, is_p, &img_data, &img_len, &is_alloc) && img_data != nullptr) {
                     uint8_t* out_buf = nullptr;
                     size_t out_len = 0, tw = 0, th = 0, stride = 0;
                     if (jpeg_to_image_fit(img_data, img_len, 72, 96, &out_buf, &out_len, &tw, &th, &stride) == ESP_OK && out_buf != nullptr) {
