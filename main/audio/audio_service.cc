@@ -882,7 +882,7 @@ void AudioService::CheckAndUpdateAudioPowerState() {
         xEventGroupSetBits(event_group_, AS_EVENT_AUDIO_INPUT_STOP_REQUEST);
     }
     auto music = Board::GetInstance().GetMusic();
-    bool music_active = (music != nullptr && (music->IsDownloading() || music->GetBufferSize() > 0));
+    bool music_active = (music != nullptr && (music->IsPlaying() || music->IsDownloading() || music->GetBufferSize() > 0));
     if (output_elapsed > 1000 && codec_->output_enabled() && !music_active) {
         codec_->EnableOutput(false);
     }

@@ -863,7 +863,7 @@ void Esp32Music::ForceCleanupCache() {
 
 
 bool Esp32Music::Download(const std::string& song_name, const std::string& artist_name) {
-
+    is_downloading_ = true;
 	ESP_LOGI(TAG, "=== NEW SONG REQUEST: Cleaning up old cache first ==="); //mới thêm
 
     ForceCleanupCache(); //mới thêm
@@ -931,25 +931,17 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
     
 
     if (!http->Open("GET", full_url)) {
-
         ESP_LOGE(TAG, "Failed to connect");
-
+        is_downloading_ = false;
         return false;
-
     }
-
     
-
     auto status_code = http->GetStatusCode();
-
     if (!status_code || *status_code != 200) {
-
         ESP_LOGE(TAG, "HTTP failed: %d", status_code ? *status_code : -1);
-
         http->Close();
-
+        is_downloading_ = false;
         return false;
-
     }
 
     
@@ -1028,8 +1020,8 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
                 }
                 auto disp = Board::GetInstance().GetDisplay();
                 if (disp) {
-                    disp->ShowMusicScreen(final_title, final_artist);
                     disp->UpdateMusicPlaybackState(true, final_title, final_artist);
+                    disp->SwitchToMusicPlayer();
                 }
 
                 song_name_displayed_ = false;
@@ -1099,19 +1091,13 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
             } else {
 
                 ESP_LOGE(TAG, "No audio URL found");
-
                 cJSON_Delete(response_json);
-
+                is_downloading_ = false;
                 return false;
-
             }
-
         }
-
     }
-
-    
-
+    is_downloading_ = false;
     return false;
 
 }

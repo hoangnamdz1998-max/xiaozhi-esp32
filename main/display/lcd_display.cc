@@ -14038,7 +14038,7 @@ void LcdDisplay::CreateMusicScreenUI() {
     for (int i = 0; i < 10; ++i) {
         lv_obj_t* item_btn = lv_button_create(music_chart_list_);
         lv_obj_set_width(item_btn, lv_pct(100));
-        lv_obj_set_height(item_btn, 42);
+        lv_obj_set_height(item_btn, 52);
         lv_obj_set_style_bg_color(item_btn, lv_color_hex(0x151e2e), 0);
         lv_obj_set_style_bg_opa(item_btn, LV_OPA_COVER, 0);
         lv_obj_set_style_border_color(item_btn, lv_color_hex(0x1e293b), 0);
@@ -14059,27 +14059,27 @@ void LcdDisplay::CreateMusicScreenUI() {
         else lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x94a3b8), 0);
         lv_obj_align(rank_lbl, LV_ALIGN_LEFT_MID, 6, 0);
 
-        // Song Title
+        // Song Title (ở nửa trên của card)
         lv_obj_t* title_lbl = lv_label_create(item_btn);
         music_chart_item_titles_[i] = title_lbl;
         const char* init_title = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].title.c_str() : kZingTopSongsDefault[i].title.c_str();
         lv_label_set_text(title_lbl, init_title);
-        lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_14_1, 0);
+        lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_16_4, 0);
         lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
         lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(title_lbl, 140);
-        lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 40, -8);
+        lv_obj_set_width(title_lbl, 150);
+        lv_obj_align(title_lbl, LV_ALIGN_TOP_LEFT, 40, 5);
 
-        // Artist
+        // Artist (ở nửa dưới của card, cách biệt rõ ràng không đè chữ)
         lv_obj_t* artist_lbl = lv_label_create(item_btn);
         music_chart_item_artists_[i] = artist_lbl;
         const char* init_artist = (i < (int)music_chart_songs_.size()) ? music_chart_songs_[i].artist.c_str() : kZingTopSongsDefault[i].artist.c_str();
         lv_label_set_text(artist_lbl, init_artist);
         lv_obj_set_style_text_font(artist_lbl, &font_noto_sans_custom_14_1, 0);
-        lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x64748b), 0);
+        lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x94a3b8), 0);
         lv_label_set_long_mode(artist_lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(artist_lbl, 140);
-        lv_obj_align(artist_lbl, LV_ALIGN_LEFT_MID, 40, 8);
+        lv_obj_set_width(artist_lbl, 150);
+        lv_obj_align(artist_lbl, LV_ALIGN_BOTTOM_LEFT, 40, -5);
 
         // Play icon
         lv_obj_t* icon_lbl = lv_label_create(item_btn);
@@ -14611,11 +14611,18 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
     if (!artist_name.empty()) music_current_artist_ = artist_name;
 
     CreateMusicScreenUI();
-    // Mặc định luôn mở trang Danh sách bài hát full màn hình
-    SwitchToMusicChart();
+    if (!song_name.empty()) {
+        music_current_song_ = song_name;
+        if (!artist_name.empty()) music_current_artist_ = artist_name;
+        music_is_playing_ = true;
+        SwitchToMusicPlayer();
+    } else {
+        // Mở từ Menu: mở trang danh sách bài hát (Chart view)
+        SwitchToMusicChart();
+        FetchRealtimeChart();
+    }
     LayoutMusicWidgets(height_ > width_);
     UpdateMusicUI();
-    FetchRealtimeChart();
 
     if (music_box_) {
         lv_obj_remove_flag(music_box_, LV_OBJ_FLAG_HIDDEN);

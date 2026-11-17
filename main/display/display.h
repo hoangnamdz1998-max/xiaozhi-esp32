@@ -87,6 +87,8 @@ public:
     virtual void ReloadWallpaper() {}
     virtual void ShowMusicScreen(const std::string& song_name = "", const std::string& artist_name = "") {}
     virtual void UpdateMusicPlaybackState(bool is_playing, const std::string& song_name = "", const std::string& artist_name = "") {}
+    virtual void SwitchToMusicChart() {}
+    virtual void SwitchToMusicPlayer() {}
     virtual void UpdateWeatherFull(const WeatherInfo& info) { (void)info; }
     virtual void UpdateWeather(float temp, int humidity, const char* condition, int icon_type) {
         (void)temp;

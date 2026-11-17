@@ -101,6 +101,7 @@ public:
     virtual bool StopStreaming() override;  // 停止流式播放
     virtual size_t GetBufferSize() const override { return buffer_size_; }
     virtual bool IsDownloading() const override { return is_downloading_; }
+    virtual bool IsPlaying() const override { return is_playing_; }
     virtual int16_t* GetAudioData() override { return final_pcm_data_fft; }
     
     // 显示模式控制方法
