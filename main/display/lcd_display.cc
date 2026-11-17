@@ -14059,6 +14059,8 @@ void LcdDisplay::CreateMusicScreenUI() {
         else lv_obj_set_style_text_color(rank_lbl, lv_color_hex(0x94a3b8), 0);
         lv_obj_align(rank_lbl, LV_ALIGN_LEFT_MID, 6, 0);
 
+        int title_w = width_ > height_ ? 210 : 155;
+
         // Song Title (ở nửa trên của card)
         lv_obj_t* title_lbl = lv_label_create(item_btn);
         music_chart_item_titles_[i] = title_lbl;
@@ -14067,8 +14069,10 @@ void LcdDisplay::CreateMusicScreenUI() {
         lv_obj_set_style_text_font(title_lbl, &font_noto_sans_custom_16_4, 0);
         lv_obj_set_style_text_color(title_lbl, lv_color_white(), 0);
         lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(title_lbl, 150);
+        lv_obj_set_width(title_lbl, title_w);
+        lv_obj_set_height(title_lbl, 18);
         lv_obj_align(title_lbl, LV_ALIGN_TOP_LEFT, 40, 5);
+        lv_obj_clear_flag(title_lbl, LV_OBJ_FLAG_CLICKABLE);
 
         // Artist (ở nửa dưới của card, cách biệt rõ ràng không đè chữ)
         lv_obj_t* artist_lbl = lv_label_create(item_btn);
@@ -14078,8 +14082,10 @@ void LcdDisplay::CreateMusicScreenUI() {
         lv_obj_set_style_text_font(artist_lbl, &font_noto_sans_custom_14_1, 0);
         lv_obj_set_style_text_color(artist_lbl, lv_color_hex(0x94a3b8), 0);
         lv_label_set_long_mode(artist_lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(artist_lbl, 150);
+        lv_obj_set_width(artist_lbl, title_w);
+        lv_obj_set_height(artist_lbl, 16);
         lv_obj_align(artist_lbl, LV_ALIGN_BOTTOM_LEFT, 40, -5);
+        lv_obj_clear_flag(artist_lbl, LV_OBJ_FLAG_CLICKABLE);
 
         // Play icon
         lv_obj_t* icon_lbl = lv_label_create(item_btn);
@@ -14087,8 +14093,11 @@ void LcdDisplay::CreateMusicScreenUI() {
         lv_obj_set_style_text_font(icon_lbl, &font_noto_sans_custom_16_4, 0);
         lv_obj_set_style_text_color(icon_lbl, lv_color_hex(0x38bdf8), 0);
         lv_obj_align(icon_lbl, LV_ALIGN_RIGHT_MID, -6, 0);
+        lv_obj_clear_flag(icon_lbl, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(rank_lbl, LV_OBJ_FLAG_CLICKABLE);
 
         lv_obj_set_user_data(item_btn, (void*)(intptr_t)i);
+        lv_obj_add_flag(item_btn, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(item_btn, [](lv_event_t* e) {
             auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
             int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_current_target_obj(e));
@@ -14293,12 +14302,17 @@ void LcdDisplay::CreateMusicScreenUI() {
 }
 
 void LcdDisplay::SwitchToMusicChart() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
     music_sub_view_ = kMusicViewChart;
     if (music_chart_view_) lv_obj_clear_flag(music_chart_view_, LV_OBJ_FLAG_HIDDEN);
     if (music_player_view_) lv_obj_add_flag(music_player_view_, LV_OBJ_FLAG_HIDDEN);
+    UpdateMusicUI();
 }
 
 void LcdDisplay::SwitchToMusicPlayer() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
     music_sub_view_ = kMusicViewPlayer;
     if (music_player_view_) lv_obj_clear_flag(music_player_view_, LV_OBJ_FLAG_HIDDEN);
     if (music_chart_view_) lv_obj_add_flag(music_chart_view_, LV_OBJ_FLAG_HIDDEN);
@@ -14308,6 +14322,12 @@ void LcdDisplay::SwitchToMusicPlayer() {
 void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
     if (!music_box_) return;
     lv_obj_set_size(music_box_, width_, height_);
+
+    int title_w = width_ > height_ ? 210 : 155;
+    for (int i = 0; i < 10; ++i) {
+        if (music_chart_item_titles_[i]) lv_obj_set_width(music_chart_item_titles_[i], title_w);
+        if (music_chart_item_artists_[i]) lv_obj_set_width(music_chart_item_artists_[i], title_w);
+    }
 
     // 1. Layout Chart View
     if (music_chart_view_) {
@@ -14514,7 +14534,7 @@ void LcdDisplay::PlayChartSong(int index) {
     auto music = Board::GetInstance().GetMusic();
     if (music) {
         esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-        cfg.stack_size = 8192;
+        cfg.stack_size = 12288;
         cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
         cfg.thread_name = "play_chart";
         esp_pthread_set_cfg(&cfg);

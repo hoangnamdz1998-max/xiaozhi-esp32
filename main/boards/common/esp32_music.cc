@@ -863,10 +863,11 @@ void Esp32Music::ForceCleanupCache() {
 
 
 bool Esp32Music::Download(const std::string& song_name, const std::string& artist_name) {
-    is_downloading_ = true;
-	ESP_LOGI(TAG, "=== NEW SONG REQUEST: Cleaning up old cache first ==="); //mới thêm
+	ESP_LOGI(TAG, "=== NEW SONG REQUEST: Cleaning up old cache first ===");
 
-    ForceCleanupCache(); //mới thêm
+    ForceCleanupCache();
+
+    is_downloading_ = true;
 
     ESP_LOGI(TAG, "Xiaozhi Open Source Music - Vietnamese Support");
 
@@ -1765,7 +1766,8 @@ void Esp32Music::PlayAudioStream() {
 
     uint8_t* read_ptr = mp3_input_buffer;
 
-    bool id3_processed = false;
+    size_t id3_bytes_to_skip = 0;
+    bool id3_header_checked = false;
 
     std::vector<int16_t> mono_buffer;
 
@@ -1903,28 +1905,38 @@ void Esp32Music::PlayAudioStream() {
 
                 
 
-                if (!id3_processed && bytes_left >= 10) {
-
-                    size_t id3_skip = SkipId3Tag(read_ptr, bytes_left);
-
-                    if (id3_skip > 0) {
-
-                        read_ptr += id3_skip;
-
-                        bytes_left -= id3_skip;
-
+                if (id3_bytes_to_skip > 0) {
+                    size_t skip_now = std::min(id3_bytes_to_skip, (size_t)bytes_left);
+                    read_ptr += skip_now;
+                    bytes_left -= skip_now;
+                    id3_bytes_to_skip -= skip_now;
+                    ESP_LOGI(TAG, "ID3 tag skipping: skipped %u bytes, %u remaining", 
+                             (unsigned int)skip_now, (unsigned int)id3_bytes_to_skip);
+                } else if (!id3_header_checked && bytes_left >= 10) {
+                    if (memcmp(read_ptr, "ID3", 3) == 0) {
+                        uint32_t tag_size = ((uint32_t)(read_ptr[6] & 0x7F) << 21) |
+                                            ((uint32_t)(read_ptr[7] & 0x7F) << 14) |
+                                            ((uint32_t)(read_ptr[8] & 0x7F) << 7)  |
+                                            ((uint32_t)(read_ptr[9] & 0x7F));
+                        id3_bytes_to_skip = 10 + tag_size;
+                        if (read_ptr[5] & 0x10) {
+                            id3_bytes_to_skip += 10;
+                        }
+                        ESP_LOGI(TAG, "Detected ID3v2 tag: %u bytes to skip", (unsigned int)id3_bytes_to_skip);
+                        size_t skip_now = std::min(id3_bytes_to_skip, (size_t)bytes_left);
+                        read_ptr += skip_now;
+                        bytes_left -= skip_now;
+                        id3_bytes_to_skip -= skip_now;
                     }
-
-                    id3_processed = true;
-
+                    id3_header_checked = true;
                 }
 
-                
-
                 heap_caps_free(chunk.data);
-
             }
+        }
 
+        if (id3_bytes_to_skip > 0 || bytes_left == 0) {
+            continue;
         }
 
         
