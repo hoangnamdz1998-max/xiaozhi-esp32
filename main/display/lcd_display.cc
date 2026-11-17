@@ -15633,17 +15633,24 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_set_style_text_align(standby4_date_day_lbl_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_pos(standby4_date_day_lbl_, 0, 25);
 
-    // B. Góc trên phải: Biểu tượng WiFi + Viên pin đồ họa xanh lá + % Pin (xếp ngay sau quả pin)
+    // B. Góc trên phải: Biểu tượng WiFi trắng (xích sang trái) + % Pin + Viên pin đồ họa xanh lá
     lv_obj_t* wifi_icon = lv_label_create(standby4_box_);
     lv_label_set_text(wifi_icon, MATERIAL_SYMBOLS_WIFI);
     lv_obj_set_style_text_font(wifi_icon, &font_material_symbols_30_4, 0);
-    lv_obj_set_style_text_color(wifi_icon, lv_color_hex(0x38BDF8), 0);
-    lv_obj_set_pos(wifi_icon, 226, 10);
+    lv_obj_set_style_text_color(wifi_icon, lv_color_white(), 0);
+    lv_obj_set_pos(wifi_icon, 216, 10);
     lv_obj_clear_flag(wifi_icon, LV_OBJ_FLAG_CLICKABLE);
+
+    standby4_bat_lbl_ = lv_label_create(standby4_box_);
+    lv_label_set_text(standby4_bat_lbl_, "85%");
+    lv_obj_set_style_text_font(standby4_bat_lbl_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(standby4_bat_lbl_, lv_color_white(), 0);
+    lv_obj_set_pos(standby4_bat_lbl_, 248, 16);
+    lv_obj_clear_flag(standby4_bat_lbl_, LV_OBJ_FLAG_CLICKABLE);
 
     lv_obj_t* bat_body = lv_obj_create(standby4_box_);
     lv_obj_set_size(bat_body, 22, 13);
-    lv_obj_set_pos(bat_body, 256, 18);
+    lv_obj_set_pos(bat_body, 286, 18);
     lv_obj_set_style_radius(bat_body, 2, 0);
     lv_obj_set_style_bg_color(bat_body, lv_color_hex(0x060B14), 0);
     lv_obj_set_style_border_color(bat_body, lv_color_white(), 0);
@@ -15654,7 +15661,7 @@ void LcdDisplay::CreateStandby4UI() {
 
     lv_obj_t* bat_nib = lv_obj_create(standby4_box_);
     lv_obj_set_size(bat_nib, 2, 5);
-    lv_obj_set_pos(bat_nib, 278, 22);
+    lv_obj_set_pos(bat_nib, 308, 22);
     lv_obj_set_style_radius(bat_nib, 1, 0);
     lv_obj_set_style_bg_color(bat_nib, lv_color_white(), 0);
     lv_obj_set_style_border_width(bat_nib, 0, 0);
@@ -15668,13 +15675,6 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_set_style_border_width(standby4_bat_arc_, 0, 0);
     lv_obj_clear_flag(standby4_bat_arc_, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(standby4_bat_arc_, LV_OBJ_FLAG_CLICKABLE);
-
-    standby4_bat_lbl_ = lv_label_create(standby4_box_);
-    lv_label_set_text(standby4_bat_lbl_, "85%");
-    lv_obj_set_style_text_font(standby4_bat_lbl_, &font_noto_sans_custom_16_4, 0);
-    lv_obj_set_style_text_color(standby4_bat_lbl_, lv_color_white(), 0);
-    lv_obj_set_pos(standby4_bat_lbl_, 284, 16);
-    lv_obj_clear_flag(standby4_bat_lbl_, LV_OBJ_FLAG_CLICKABLE);
 
     // C. Góc dưới trái: Biểu tượng Thời tiết + Nhiệt độ (VD: 28°C)
     standby4_weather_icon_ = lv_image_create(standby4_box_);
@@ -15856,24 +15856,7 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_set_style_text_align(s_standby4_dial_wday, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_pos(s_standby4_dial_wday, 22, 1);
 
-    // 8. Chữ in khắc trên mặt đồng hồ cơ (CALIBER R028 / AUTO)
-    lv_obj_t* cal_lbl = lv_label_create(dial_face);
-    lv_label_set_text(cal_lbl, "CALIBER R028");
-    lv_obj_set_style_text_font(cal_lbl, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(cal_lbl, lv_color_hex(0xE2E8F0), 0);
-    lv_obj_update_layout(cal_lbl);
-    lv_obj_set_pos(cal_lbl, (int32_t)roundf(dcx) - lv_obj_get_width(cal_lbl) / 2, 112);
-    lv_obj_clear_flag(cal_lbl, LV_OBJ_FLAG_CLICKABLE);
-
-    lv_obj_t* auto_lbl = lv_label_create(dial_face);
-    lv_label_set_text(auto_lbl, "AUTO");
-    lv_obj_set_style_text_font(auto_lbl, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(auto_lbl, lv_color_hex(0x94A3B8), 0);
-    lv_obj_update_layout(auto_lbl);
-    lv_obj_set_pos(auto_lbl, (int32_t)roundf(dcx) - lv_obj_get_width(auto_lbl) / 2, 134);
-    lv_obj_clear_flag(auto_lbl, LV_OBJ_FLAG_CLICKABLE);
-
-    // 9. BỘ KIM CƠ KHÍ SANG TRỌNG (Polished Steel Sword Hands & Red Second Needle)
+    // 8. BỘ KIM CƠ KHÍ SANG TRỌNG (Polished Steel Sword Hands & Red Second Needle)
     // A1. Thân kim giờ (Thép trắng đánh bóng, rộng 5px, dài 38px)
     standby4_hour_hand_ = lv_line_create(dial_face);
     lv_obj_set_size(standby4_hour_hand_, 166, 166);
