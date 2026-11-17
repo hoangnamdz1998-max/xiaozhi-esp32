@@ -1505,7 +1505,7 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
         is_downloading_ = false;
         return;
     }
-    const size_t chunk_size = 4096;
+    const size_t chunk_size = 16384;
 
     uint8_t* dl_buffer = (uint8_t*)heap_caps_malloc(chunk_size, MALLOC_CAP_SPIRAM);
     if (!dl_buffer) {

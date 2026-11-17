@@ -14527,7 +14527,7 @@ void LcdDisplay::PlayChartSong(int index) {
     std::string s_artist = (index < (int)music_chart_songs_.size()) ? music_chart_songs_[index].artist : kZingTopSongsDefault[index].artist;
 
     music_current_song_ = s_title;
-    music_current_artist_ = s_artist;
+    music_current_artist_ = "Đang tải bài hát...";
     music_is_playing_ = true;
     UpdateMusicUI();
 
