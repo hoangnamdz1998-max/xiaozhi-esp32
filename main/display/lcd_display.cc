@@ -15600,15 +15600,13 @@ void LcdDisplay::CreateStandby4UI() {
     lv_obj_clear_flag(bottom_bar, LV_OBJ_FLAG_CLICKABLE);
 
     // 2. CÁC TIỆN ÍCH 4 GÓC MÀN HÌNH (4 Corner Status Widgets)
-    // A. Góc trên trái: Card hiển thị Thứ / Ngày (VD: THỨ BA / 21/10)
+    // A. Góc trên trái: Thứ / Ngày (VD: THỨ BA / 21/10) - Đã bỏ ô viền mờ bao quanh
     lv_obj_t* date_card = lv_obj_create(standby4_box_);
     lv_obj_set_size(date_card, 74, 52);
     lv_obj_set_pos(date_card, 10, 12);
-    lv_obj_set_style_radius(date_card, 10, 0);
-    lv_obj_set_style_bg_color(date_card, lv_color_hex(0x0C192E), 0);
-    lv_obj_set_style_bg_opa(date_card, 230, 0);
-    lv_obj_set_style_border_color(date_card, lv_color_hex(0x1E293B), 0);
-    lv_obj_set_style_border_width(date_card, 1, 0);
+    lv_obj_set_style_radius(date_card, 0, 0);
+    lv_obj_set_style_bg_opa(date_card, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(date_card, 0, 0);
     lv_obj_set_style_pad_all(date_card, 0, 0);
     lv_obj_clear_flag(date_card, LV_OBJ_FLAG_SCROLLABLE);
 
