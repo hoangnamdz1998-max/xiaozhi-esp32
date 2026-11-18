@@ -18,6 +18,7 @@
 
 #include <driver/gpio.h>
 #include <esp_log.h>
+#include <esp_sntp.h>
 #include <arpa/inet.h>
 #include <cJSON.h>
 #include <algorithm>
@@ -428,6 +429,19 @@ void Application::Run() {
 
 void Application::HandleNetworkConnectedEvent() {
     ESP_LOGI(TAG, "Network connected");
+
+    // Configure timezone (Vietnam UTC+7) and start SNTP time sync
+    setenv("TZ", "ICT-7", 1);
+    tzset();
+    if (!esp_sntp_enabled()) {
+        esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+        esp_sntp_setservername(0, "pool.ntp.org");
+        esp_sntp_setservername(1, "time.google.com");
+        esp_sntp_setservername(2, "time.windows.com");
+        esp_sntp_init();
+        ESP_LOGI(TAG, "SNTP time synchronization started (ICT-7)");
+    }
+
     auto state = GetDeviceState();
 
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
@@ -623,9 +637,9 @@ void Application::StartBackgroundOtaCheck() {
             return;
         }
 
-        if (bg_ota.HasNewVersion()) {
-            ESP_LOGI(TAG, "New firmware version available: %s, upgrading in background...",
-                     bg_ota.GetFirmwareVersion().c_str());
+        if (bg_ota.HasNewVersion() && bg_ota.GetCurrentVersion() != bg_ota.GetFirmwareVersion()) {
+            ESP_LOGI(TAG, "New firmware version available: %s (current: %s), upgrading in background...",
+                     bg_ota.GetFirmwareVersion().c_str(), bg_ota.GetCurrentVersion().c_str());
 
             // Chờ nếu thiết bị đang bận nói hoặc nghe
             while (app->GetDeviceState() == kDeviceStateSpeaking ||
@@ -639,6 +653,10 @@ void Application::StartBackgroundOtaCheck() {
         } else {
             ESP_LOGI(TAG, "Device is on latest version (%s). Running normally.",
                      bg_ota.GetCurrentVersion().c_str());
+            if (bg_ota.HasServerTime()) {
+                auto display = Board::GetInstance().GetDisplay();
+                if (display) display->UpdateStatusBar(true);
+            }
         }
 
         vTaskDelete(NULL);

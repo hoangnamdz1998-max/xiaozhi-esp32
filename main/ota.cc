@@ -267,10 +267,12 @@ NetworkResult<> Ota::CheckVersion() {
             } else {
                 ESP_LOGI(TAG, "Current is the latest version");
             }
-            // If the force flag is set to 1, the given version is forced to be installed
+            // If the force flag is set to 1, force install only if not already running this version
             cJSON *force = cJSON_GetObjectItem(firmware, "force");
-            if (cJSON_IsNumber(force) && force->valueint == 1) {
+            if (cJSON_IsNumber(force) && force->valueint == 1 && current_version_ != firmware_version_) {
                 has_new_version_ = true;
+                ESP_LOGI(TAG, "Force upgrade requested for new version: %s (current: %s)",
+                         firmware_version_.c_str(), current_version_.c_str());
             }
         }
     } else {
