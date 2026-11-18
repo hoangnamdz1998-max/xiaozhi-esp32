@@ -109,32 +109,16 @@ std::string WallpaperManager::GetFilePath(int idx, bool is_portrait) {
 std::vector<WallpaperItem> WallpaperManager::GetWallpaperList() {
     std::vector<WallpaperItem> list;
     // 4 ảnh hệ thống
-    list.push_back({1, "Ảnh 1", true, false});
-    list.push_back({2, "Ảnh 2", true, false});
-    list.push_back({3, "Ảnh 3", true, false});
-    list.push_back({4, "Ảnh 4", true, false});
+    list.push_back({1, "Ảnh 1", true});
+    list.push_back({2, "Ảnh 2", true});
+    list.push_back({3, "Ảnh 3", true});
+    list.push_back({4, "Ảnh 4", true});
 
     int user_counter = 1;
     for (int idx : custom_indices_) {
         if (idx >= 5) {
-            bool is_vid = false;
-            std::string p = GetFilePath(idx, false);
-            FILE* fp = fopen(p.c_str(), "rb");
-            if (!fp) {
-                p = GetFilePath(idx, true);
-                fp = fopen(p.c_str(), "rb");
-            }
-            if (fp) {
-                uint8_t hdr[4] = {0};
-                if (fread(hdr, 1, 4, fp) >= 3) {
-                    if (hdr[0] == 'G' && hdr[1] == 'I' && hdr[2] == 'F') {
-                        is_vid = true;
-                    }
-                }
-                fclose(fp);
-            }
-            std::string name = (is_vid ? "Video " : "Ảnh ") + std::to_string(user_counter++);
-            list.push_back({idx, name, false, is_vid});
+            std::string name = "Ảnh " + std::to_string(user_counter++);
+            list.push_back({idx, name, false});
         }
     }
     return list;
@@ -223,7 +207,7 @@ bool WallpaperManager::GetWallpaperJpeg(int idx, bool is_portrait, const uint8_t
     size_t sz = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    if (sz == 0 || sz > 1024 * 1024 * 2) { // Giới hạn 2MB (hỗ trợ cả ảnh động GIF / video clip ngắn)
+    if (sz == 0 || sz > 1024 * 512) { // Giới hạn 512KB
         fclose(f);
         return GetWallpaperJpeg(1, is_portrait, out_data, out_len, is_allocated);
     }
