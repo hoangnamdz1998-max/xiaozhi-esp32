@@ -56,8 +56,16 @@ Ota::~Ota() {
 std::string Ota::GetCheckVersionUrl() {
     Settings settings("wifi", false);
     std::string url = settings.GetString("ota_url");
+    if (url == "none" || url == "disabled") {
+        return "";
+    }
     if (url.empty()) {
-        url = "https://ndztech.vercel.app/api/ota";
+#ifdef CONFIG_OTA_URL
+        url = CONFIG_OTA_URL;
+#endif
+        if (url.empty()) {
+            url = "https://ndztech.vercel.app/api/ota";
+        }
     }
     return url;
 }
