@@ -233,9 +233,11 @@ NetworkResult<> Ota::CheckVersion() {
             struct timeval tv;
             double ts = timestamp->valuedouble;
             
-            // 如果有时区偏移，计算本地时间
-            if (cJSON_IsNumber(timezone_offset)) {
-                ts += (timezone_offset->valueint * 60 * 1000); // 转换分钟为毫秒
+            // If TZ environment variable is set (e.g. ICT-7), localtime() will apply timezone.
+            // Only add timezone_offset directly to UTC if TZ is not set.
+            const char* tz = getenv("TZ");
+            if (cJSON_IsNumber(timezone_offset) && (tz == nullptr || tz[0] == '\0')) {
+                ts += (timezone_offset->valueint * 60 * 1000);
             }
             
             tv.tv_sec = (time_t)(ts / 1000);  // 转换毫秒为秒
