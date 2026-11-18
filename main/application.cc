@@ -522,14 +522,17 @@ void Application::ActivationTask() {
     // Check for new assets version
     CheckAssetsVersion();
 
-    // Check for new firmware version
-    CheckNewVersion();
+    // Mark current firmware as valid
+    ota_->MarkCurrentVersionValid();
 
-    // Initialize the protocol
+    // Initialize the protocol immediately so device is ready
     InitializeProtocol();
 
-    // Signal completion to main loop
+    // Signal completion to main loop immediately -> enters Standby/Idle without waiting
     xEventGroupSetBits(event_group_, MAIN_EVENT_ACTIVATION_DONE);
+
+    // Check for new firmware version completely in background
+    StartBackgroundOtaCheck();
 }
 
 void Application::CheckAssetsVersion() {
@@ -600,92 +603,46 @@ void Application::CheckAssetsVersion() {
 }
 
 void Application::CheckNewVersion() {
-    const int MAX_RETRY = 10;
-    int retry_count = 0;
-    int retry_delay = 10;  // Initial retry delay in seconds
+    StartBackgroundOtaCheck();
+}
 
-    auto& board = Board::GetInstance();
-    while (true) {
-        auto display = board.GetDisplay();
-        display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
+void Application::StartBackgroundOtaCheck() {
+    xTaskCreate([](void* arg) {
+        auto* app = static_cast<Application*>(arg);
 
-        auto check = ota_->CheckVersion();
+        // Chờ 3 giây để giao diện màn hình chính và mạng ổn định
+        vTaskDelay(pdMS_TO_TICKS(3000));
+
+        ESP_LOGI(TAG, "Starting background OTA version check...");
+        Ota bg_ota;
+        auto check = bg_ota.CheckVersion();
         if (!check) {
-            retry_count++;
-            if (retry_count >= MAX_RETRY) {
-                ESP_LOGE(TAG, "Too many retries, exit version check");
-                return;
-            }
+            ESP_LOGW(TAG, "Background OTA check failed or offline (ignored): %s",
+                     check.error().ToString().c_str());
+            vTaskDelete(NULL);
+            return;
+        }
 
-            const auto& err = check.error();
-            char error_message[160];
-            int error_message_length =
-                snprintf(error_message, sizeof(error_message), "%s", err.ToString().c_str());
-            if (error_message_length < 0 ||
-                error_message_length >= static_cast<int>(sizeof(error_message))) {
-                snprintf(error_message, sizeof(error_message), "%s", err.Message());
-            }
+        if (bg_ota.HasNewVersion()) {
+            ESP_LOGI(TAG, "New firmware version available: %s, upgrading in background...",
+                     bg_ota.GetFirmwareVersion().c_str());
 
-            char buffer[320];
-            int alert_message_length =
-                snprintf(buffer, sizeof(buffer), Lang::Strings::CHECK_NEW_VERSION_FAILED,
-                         retry_delay, error_message);
-            if (alert_message_length < 0 ||
-                alert_message_length >= static_cast<int>(sizeof(buffer))) {
-                snprintf(buffer, sizeof(buffer), "%s", err.Message());
-            }
-            Alert(Lang::Strings::ERROR, buffer, "cloud_off", Lang::Sounds::OGG_EXCLAMATION);
-
-            ESP_LOGW(TAG, "Check new version failed, retry in %d seconds (%d/%d)", retry_delay,
-                     retry_count, MAX_RETRY);
-            for (int i = 0; i < retry_delay; i++) {
+            // Chờ nếu thiết bị đang bận nói hoặc nghe
+            while (app->GetDeviceState() == kDeviceStateSpeaking ||
+                   app->GetDeviceState() == kDeviceStateListening) {
                 vTaskDelay(pdMS_TO_TICKS(1000));
-                if (GetDeviceState() == kDeviceStateIdle) {
-                    break;
-                }
             }
-            retry_delay *= 2;  // Double the retry delay
-            continue;
-        }
-        retry_count = 0;
-        retry_delay = 10;  // Reset retry delay
 
-        if (ota_->HasNewVersion()) {
-            if (UpgradeFirmware(ota_->GetFirmwareUrl(), ota_->GetFirmwareVersion())) {
-                return;  // This line will never be reached after reboot
-            }
-            // If upgrade failed, continue to normal operation
+            std::string url = bg_ota.GetFirmwareUrl();
+            std::string ver = bg_ota.GetFirmwareVersion();
+            app->UpgradeFirmware(url, ver);
+        } else {
+            ESP_LOGI(TAG, "Device is on latest version (%s). Running normally.",
+                     bg_ota.GetCurrentVersion().c_str());
         }
 
-        // No new version, mark the current version as valid
-        ota_->MarkCurrentVersionValid();
-        if (!ota_->HasActivationCode() && !ota_->HasActivationChallenge()) {
-            // Exit the loop if done checking new version
-            break;
-        }
-
-        display->SetStatus(Lang::Strings::ACTIVATION);
-        // Activation code is shown to the user and waiting for the user to input
-        if (ota_->HasActivationCode()) {
-            ShowActivationCode(ota_->GetActivationCode(), ota_->GetActivationMessage());
-        }
-
-        // This will block the loop until the activation is done or timeout
-        for (int i = 0; i < 10; ++i) {
-            ESP_LOGI(TAG, "Activating... %d/%d", i + 1, 10);
-            esp_err_t err = ota_->Activate();
-            if (err == ESP_OK) {
-                break;
-            } else if (err == ESP_ERR_TIMEOUT) {
-                vTaskDelay(pdMS_TO_TICKS(3000));
-            } else {
-                vTaskDelay(pdMS_TO_TICKS(10000));
-            }
-            if (GetDeviceState() == kDeviceStateIdle) {
-                break;
-            }
-        }
-    }
+        vTaskDelete(NULL);
+    }, "ota_bg_check", 8192, this, 1, NULL);
 }
 
 void Application::InitializeProtocol() {
