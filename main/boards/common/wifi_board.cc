@@ -20,6 +20,7 @@
 #ifdef CONFIG_USE_ESP_BLUFI_WIFI_PROVISIONING
 #include "blufi.h"
 #endif
+#include "web/wallpaper_server.h"
 
 static const char *TAG = "WifiBoard";
 
@@ -235,13 +236,13 @@ void WifiBoard::StartWifiConfigMode() {
 
     wifi_manager.StartConfigAp();
 
-    // Show config prompt after a short delay
-    Application::GetInstance().Schedule([&wifi_manager]() {
-        std::string hint = Lang::Strings::CONNECT_TO_HOTSPOT;
-        hint += wifi_manager.GetApSsid();
-        hint += Lang::Strings::ACCESS_VIA_BROWSER;
-        hint += wifi_manager.GetApWebUrl();
+    std::string hint = Lang::Strings::CONNECT_TO_HOTSPOT;
+    hint += wifi_manager.GetApSsid();
+    hint += Lang::Strings::ACCESS_VIA_BROWSER;
+    hint += wifi_manager.GetApWebUrl();
 
+    // Show config prompt after a short delay
+    Application::GetInstance().Schedule([hint = std::move(hint)]() {
         Application::GetInstance().Alert(Lang::Strings::WIFI_CONFIG_MODE, hint.c_str(), "gear", Lang::Sounds::OGG_WIFICONFIG);
     });
 #elif CONFIG_USE_ESP_BLUFI_WIFI_PROVISIONING
@@ -255,18 +256,22 @@ void WifiBoard::EnterWifiConfigMode() {
     ESP_LOGI(TAG, "EnterWifiConfigMode called");
     GetDisplay()->ShowNotification(Lang::Strings::ENTERING_WIFI_CONFIG_MODE);
 
+    // Stop wallpaper server so port 80 is released immediately for SoftAP config web server
+    WallpaperServer::GetInstance().Stop();
+
     auto& app = Application::GetInstance();
     auto state = app.GetDeviceState();
 
     if (state == kDeviceStateSpeaking || state == kDeviceStateNotifying ||
-        state == kDeviceStateListening || state == kDeviceStateIdle) {
+        state == kDeviceStateListening || state == kDeviceStateIdle ||
+        state == kDeviceStateConnecting || state == kDeviceStateActivating) {
         // Reset protocol (close audio channel, reset protocol)
         Application::GetInstance().ResetProtocol();
 
         xTaskCreate([](void* arg) {
             auto* board = static_cast<WifiBoard*>(arg);
 
-            // Wait for 1 second to allow speaking to finish gracefully
+            // Wait for 1 second to allow speaking to finish gracefully and sockets to release
             vTaskDelay(pdMS_TO_TICKS(1000));
 
             // Stop any ongoing connection attempt
@@ -280,12 +285,12 @@ void WifiBoard::EnterWifiConfigMode() {
             board->StartWifiConfigMode();
 
             vTaskDelete(NULL);
-        }, "wifi_cfg_delay", 4096, this, 2, NULL);
+        }, "wifi_cfg_delay", 8192, this, 2, NULL);
         return;
     }
 
     if (state != kDeviceStateStarting) {
-        ESP_LOGE(TAG, "EnterWifiConfigMode called but device state is not starting or speaking, device state: %d", state);
+        ESP_LOGE(TAG, "EnterWifiConfigMode called but device state is unexpected: %d", state);
         return;
     }
 

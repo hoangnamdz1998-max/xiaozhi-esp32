@@ -465,8 +465,13 @@ void Application::HandleNetworkDisconnectedEvent() {
     if (state == kDeviceStateConnecting || state == kDeviceStateListening ||
         state == kDeviceStateSpeaking) {
         ESP_LOGI(TAG, "Closing audio channel due to network disconnection");
-        protocol_->CloseAudioChannel();
+        if (protocol_) {
+            protocol_->CloseAudioChannel();
+        }
     }
+
+    // Stop wallpaper server when network disconnected
+    WallpaperServer::GetInstance().Stop();
 
     // Update the status bar immediately to show the network state
     auto display = Board::GetInstance().GetDisplay();
@@ -1579,6 +1584,7 @@ void Application::SetAecMode(AecMode mode) {
 void Application::PlaySound(const std::string_view& sound) { audio_service_.PlaySound(sound); }
 
 void Application::ResetProtocol() {
+    WallpaperServer::GetInstance().Stop();
     Schedule([this]() {
         if (GetDeviceState() == kDeviceStateNotifying) {
             StopNotification();
