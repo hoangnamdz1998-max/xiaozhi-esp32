@@ -57,7 +57,7 @@ std::string Ota::GetCheckVersionUrl() {
     Settings settings("wifi", false);
     std::string url = settings.GetString("ota_url");
     if (url.empty()) {
-        url = CONFIG_OTA_URL;
+        url = "https://raw.githubusercontent.com/hoangnamdz1998-max/xiaozhi-esp32/main/ota_version.json";
     }
     return url;
 }
@@ -101,22 +101,46 @@ NetworkResult<> Ota::CheckVersion() {
     auto http = SetupHttp();
 
     std::string data = board.GetSystemInfoJson();
-    std::string method = data.length() > 0 ? "POST" : "GET";
-    http->SetContent(std::move(data));
+    std::string current_url = url;
+    int redirect_count = 0;
+    while (redirect_count < 5) {
+        std::string method = "POST";
+        if (current_url.find("raw.githubusercontent.com") != std::string::npos ||
+            current_url.find("github.com") != std::string::npos ||
+            (current_url.length() >= 5 && current_url.rfind(".json") == current_url.length() - 5)) {
+            method = "GET";
+        } else {
+            method = data.length() > 0 ? "POST" : "GET";
+            http->SetContent(std::string(data));
+        }
 
-    if (auto opened = http->Open(method, url); !opened) {
-        ESP_LOGE(TAG, "Failed to open HTTP connection: %s", opened.error().ToString().c_str());
-        return opened;
-    }
+        if (auto opened = http->Open(method, current_url); !opened) {
+            ESP_LOGE(TAG, "Failed to open HTTP connection: %s", opened.error().ToString().c_str());
+            return opened;
+        }
 
-    auto status_code = http->GetStatusCode();
-    if (!status_code) {
-        ESP_LOGE(TAG, "Failed to read HTTP status: %s", status_code.error().ToString().c_str());
-        return std::unexpected(status_code.error());
-    }
-    if (*status_code != 200) {
-        ESP_LOGE(TAG, "Failed to check version, status code: %d", *status_code);
-        return std::unexpected(NetworkError::HttpFailed(*status_code));
+        auto status_code = http->GetStatusCode();
+        if (!status_code) {
+            ESP_LOGE(TAG, "Failed to read HTTP status: %s", status_code.error().ToString().c_str());
+            return std::unexpected(status_code.error());
+        }
+
+        if (*status_code == 301 || *status_code == 302 || *status_code == 307 || *status_code == 308) {
+            std::string location = http->GetResponseHeader("Location");
+            if (location.empty()) location = http->GetResponseHeader("location");
+            if (!location.empty()) {
+                http->Close();
+                current_url = location;
+                redirect_count++;
+                continue;
+            }
+        }
+
+        if (*status_code != 200) {
+            ESP_LOGE(TAG, "Failed to check version, status code: %d", *status_code);
+            return std::unexpected(NetworkError::HttpFailed(*status_code));
+        }
+        break;
     }
 
     data = http->ReadAll();
@@ -292,19 +316,41 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
 
     auto network = Board::GetInstance().GetNetwork();
     auto http = network->CreateHttp(0);
-    if (auto opened = http->Open("GET", firmware_url); !opened) {
-        ESP_LOGE(TAG, "Failed to open HTTP connection: %s", opened.error().ToString().c_str());
-        return false;
-    }
+    http->SetTimeout(10000);
 
-    auto status_code = http->GetStatusCode();
-    if (!status_code) {
-        ESP_LOGE(TAG, "Failed to read HTTP status: %s", status_code.error().ToString().c_str());
-        return false;
-    }
-    if (*status_code != 200) {
-        ESP_LOGE(TAG, "Failed to get firmware, status code: %d", *status_code);
-        return false;
+    std::string current_url = firmware_url;
+    int redirect_count = 0;
+    while (redirect_count < 5) {
+        if (auto opened = http->Open("GET", current_url); !opened) {
+            ESP_LOGE(TAG, "Failed to open HTTP connection: %s", opened.error().ToString().c_str());
+            return false;
+        }
+
+        auto status_code = http->GetStatusCode();
+        if (!status_code) {
+            ESP_LOGE(TAG, "Failed to read HTTP status: %s", status_code.error().ToString().c_str());
+            return false;
+        }
+
+        if (*status_code == 301 || *status_code == 302 || *status_code == 307 || *status_code == 308) {
+            std::string location = http->GetResponseHeader("Location");
+            if (location.empty()) location = http->GetResponseHeader("location");
+            if (location.empty()) {
+                ESP_LOGE(TAG, "Redirect without Location header");
+                return false;
+            }
+            ESP_LOGI(TAG, "Redirecting (%d) to: %s", *status_code, location.c_str());
+            http->Close();
+            current_url = location;
+            redirect_count++;
+            continue;
+        }
+
+        if (*status_code != 200) {
+            ESP_LOGE(TAG, "Failed to get firmware, status code: %d", *status_code);
+            return false;
+        }
+        break;
     }
 
     size_t content_length = http->GetBodyLength();

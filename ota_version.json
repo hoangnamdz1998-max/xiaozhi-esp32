@@ -1,0 +1,7 @@
+{
+  "firmware": {
+    "version": "2.5.3",
+    "url": "https://github.com/hoangnamdz1998-max/xiaozhi-esp32/releases/download/v2.5.3/xiaozhi.bin",
+    "force": 0
+  }
+}
