@@ -16295,11 +16295,21 @@ void LcdDisplay::UpdateStandby4Clock(const struct tm* tm_now) {
         char bbuf[16];
         snprintf(bbuf, sizeof(bbuf), "%d%%", battery_level);
         lv_label_set_text(standby4_bat_lbl_, bbuf);
+        if (charging) {
+            lv_obj_set_style_text_color(standby4_bat_lbl_, lv_color_hex(0xFACC15), 0);
+        } else {
+            lv_obj_set_style_text_color(standby4_bat_lbl_, lv_color_white(), 0);
+        }
     }
     if (standby4_bat_arc_ != nullptr) {
         int fill_w = (16 * battery_level) / 100;
         if (fill_w < 2 && battery_level > 0) fill_w = 2;
         lv_obj_set_width(standby4_bat_arc_, fill_w);
+        if (charging) {
+            lv_obj_set_style_bg_color(standby4_bat_arc_, lv_color_hex(0xFACC15), 0);
+        } else {
+            lv_obj_set_style_bg_color(standby4_bat_arc_, lv_color_hex(0x22C55E), 0);
+        }
     }
 
     // 6. Cập nhật thời tiết

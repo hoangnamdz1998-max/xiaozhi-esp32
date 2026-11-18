@@ -733,41 +733,17 @@ private:
             return true;
         }
 
-        // 2. Củ sạc tường / Pin sạc dự phòng (chuẩn USB BC 1.2 DCP nối tắt D+ và D- qua trở < 200 ohm):
-        // Dùng phương pháp Active Probe:
-        // Bước 2.1: Kéo GPIO 20 (D+) lên mức 1 (High 3.3V), GPIO 19 (D-) là Input Pulldown.
-        gpio_set_direction(GPIO_NUM_20, GPIO_MODE_OUTPUT);
-        gpio_set_level(GPIO_NUM_20, 1);
+        // 2. Củ sạc tường / Pin sạc dự phòng (chuẩn DCP / Adapter sạc):
+        // Củ sạc sẽ nối tắt hoặc kéo áp chân D- (GPIO 19) qua cầu phân áp với D+ (GPIO 20).
+        // Nhờ trở pull-up 1.5k nội tại của ESP32-S3 trên D+, khi cắm sạc D- (GPIO 19) sẽ ở mức 1 (High).
+        // Khi rút dây sạc ra, trở pull-down nội tại kéo GPIO 19 về 0 ngay lập tức.
         gpio_set_direction(GPIO_NUM_19, GPIO_MODE_INPUT);
         gpio_set_pull_mode(GPIO_NUM_19, GPIO_PULLDOWN_ONLY);
-        esp_rom_delay_us(20);
-        int level_high = gpio_get_level(GPIO_NUM_19);
-
-        // Bước 2.2: Kéo GPIO 20 (D+) xuống mức 0 (Low 0V), GPIO 19 (D-) là Input Pullup.
-        gpio_set_level(GPIO_NUM_20, 0);
-        gpio_set_pull_mode(GPIO_NUM_19, GPIO_PULLUP_ONLY);
-        esp_rom_delay_us(20);
-        int level_low = gpio_get_level(GPIO_NUM_19);
-
-        // Trả lại trạng thái thả nổi an toàn cho GPIO
-        gpio_set_direction(GPIO_NUM_20, GPIO_MODE_INPUT);
-        gpio_set_pull_mode(GPIO_NUM_20, GPIO_FLOATING);
-        gpio_set_pull_mode(GPIO_NUM_19, GPIO_FLOATING);
-
-        // Nếu level_high == 1 VÀ level_low == 0 => D+ và D- đang nối liền nhau qua củ sạc!
-        if (level_high == 1 && level_low == 0) {
-            return true;
-        }
-
-        // Bước 2.3: Kiểm tra củ sạc chuẩn Apple / Samsung (phân áp điện trở 2.0V - 2.8V trên D+ hoặc D-)
-        gpio_set_pull_mode(GPIO_NUM_19, GPIO_PULLDOWN_ONLY);
-        gpio_set_pull_mode(GPIO_NUM_20, GPIO_PULLDOWN_ONLY);
-        esp_rom_delay_us(20);
-        bool biased = (gpio_get_level(GPIO_NUM_19) == 1 || gpio_get_level(GPIO_NUM_20) == 1);
-        gpio_set_pull_mode(GPIO_NUM_19, GPIO_FLOATING);
-        gpio_set_pull_mode(GPIO_NUM_20, GPIO_FLOATING);
-        if (biased) {
-            return true;
+        if (gpio_get_level(GPIO_NUM_19) == 1) {
+            esp_rom_delay_us(50);
+            if (gpio_get_level(GPIO_NUM_19) == 1) {
+                return true;
+            }
         }
 
         return false;
@@ -775,9 +751,7 @@ private:
 
     void InitializeBatteryMonitor() {
         gpio_set_direction(GPIO_NUM_19, GPIO_MODE_INPUT);
-        gpio_set_pull_mode(GPIO_NUM_19, GPIO_FLOATING);
-        gpio_set_direction(GPIO_NUM_20, GPIO_MODE_INPUT);
-        gpio_set_pull_mode(GPIO_NUM_20, GPIO_FLOATING);
+        gpio_set_pull_mode(GPIO_NUM_19, GPIO_PULLDOWN_ONLY);
         adc_battery_monitor_ = new AdcBatteryMonitor(ADC_UNIT_1, ADC_CHANNEL_8, 200000, 200000, GPIO_NUM_NC);
         adc_battery_monitor_->SetChargingDetectCallback([this]() -> bool {
             return IsDeviceCharging();
