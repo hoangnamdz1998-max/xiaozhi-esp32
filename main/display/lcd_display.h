@@ -160,6 +160,8 @@ protected:
     lv_obj_t* qs_brightness_label_ = nullptr;
     lv_obj_t* qs_volume_slider_ = nullptr;
     lv_obj_t* qs_volume_label_ = nullptr;
+    lv_obj_t* qs_mic_slider_ = nullptr;
+    lv_obj_t* qs_mic_label_ = nullptr;
     lv_obj_t* qs_color_card_ = nullptr;
     lv_obj_t* qs_color_dots_[10] = {nullptr};
     lv_obj_t* qs_sliders_card_ = nullptr;

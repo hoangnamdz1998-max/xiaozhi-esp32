@@ -90,6 +90,11 @@ void Application::Initialize() {
 
     // Setup the audio service
     auto codec = board.GetAudioCodec();
+    if (codec != nullptr) {
+        Settings audio_settings("audio");
+        int saved_mic = audio_settings.GetInt("mic_gain", 76);
+        codec->SetInputGain((saved_mic * 42.0f) / 100.0f);
+    }
     audio_service_.Initialize(codec);
     audio_service_.Start();
     ESP_LOGI(TAG, "After board/audio init");

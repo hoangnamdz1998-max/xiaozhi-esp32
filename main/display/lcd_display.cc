@@ -6132,6 +6132,26 @@ void LcdDisplay::ShowQuickSettings() {
 
     }
 
+    if (qs_mic_slider_ != nullptr) {
+        Settings audio_settings("audio");
+        int m = audio_settings.GetInt("mic_gain", 76);
+        if (Board::GetInstance().GetAudioCodec() != nullptr) {
+            float g = Board::GetInstance().GetAudioCodec()->input_gain();
+            if (g > 0.0f) m = (int)roundf((g * 100.0f) / 42.0f);
+        }
+        if (m < 0) {
+            m = 0;
+        } else if (m > 100) {
+            m = 100;
+        }
+        lv_slider_set_value(qs_mic_slider_, m, LV_ANIM_OFF);
+        if (qs_mic_label_ != nullptr) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%d%%", m);
+            lv_label_set_text(qs_mic_label_, buf);
+        }
+    }
+
 
 
     UpdateColorDotsSelection();
@@ -7921,6 +7941,56 @@ void LcdDisplay::CreateQuickSettingsUI() {
         }
     }, LV_EVENT_VALUE_CHANGED, this);
 
+    // Mic sensitivity row - icon & slider
+    lv_obj_t* m_icon = lv_label_create(qs_sliders_card_);
+    lv_label_set_text(m_icon, MATERIAL_SYMBOLS_MIC);
+    lv_obj_set_style_text_font(m_icon, &font_material_symbols_30_4, 0);
+    lv_obj_set_style_text_color(m_icon, lv_color_white(), 0);
+    lv_obj_set_user_data(m_icon, (void*)(intptr_t)104);
+
+    qs_mic_slider_ = lv_slider_create(qs_sliders_card_);
+    lv_slider_set_range(qs_mic_slider_, 0, 100);
+    Settings audio_settings("audio");
+    int m_val = audio_settings.GetInt("mic_gain", 76);
+    if (Board::GetInstance().GetAudioCodec()) {
+        float g = Board::GetInstance().GetAudioCodec()->input_gain();
+        if (g > 0.0f) m_val = (int)roundf((g * 100.0f) / 42.0f);
+    }
+    if (m_val < 0) {
+        m_val = 0;
+    } else if (m_val > 100) {
+        m_val = 100;
+    }
+    lv_slider_set_value(qs_mic_slider_, m_val, LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(qs_mic_slider_, lv_color_hex(0x334155), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(qs_mic_slider_, lv_color_white(), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(qs_mic_slider_, lv_color_white(), LV_PART_KNOB);
+    lv_obj_set_style_radius(qs_mic_slider_, 4, LV_PART_INDICATOR);
+    lv_obj_set_style_radius(qs_mic_slider_, 4, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(qs_mic_slider_, 4, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(qs_mic_slider_, 6);
+
+    qs_mic_label_ = lv_label_create(qs_sliders_card_);
+    char m_buf[16];
+    snprintf(m_buf, sizeof(m_buf), "%d%%", m_val);
+    lv_label_set_text(qs_mic_label_, m_buf);
+    lv_obj_set_style_text_font(qs_mic_label_, &font_noto_sans_custom_16_4, 0);
+    lv_obj_set_style_text_color(qs_mic_label_, lv_color_white(), 0);
+
+    lv_obj_add_event_cb(qs_mic_slider_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        int val = lv_slider_get_value(self->qs_mic_slider_);
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%d%%", val);
+        lv_label_set_text(self->qs_mic_label_, buf);
+        float gain_db = (val * 42.0f) / 100.0f;
+        if (Board::GetInstance().GetAudioCodec()) {
+            Board::GetInstance().GetAudioCodec()->SetInputGain(gain_db);
+        }
+        Settings settings("audio", true);
+        settings.SetInt("mic_gain", val);
+    }, LV_EVENT_VALUE_CHANGED, this);
+
     // Color Palette Card (trong qs_content_box_)
     qs_color_card_ = lv_obj_create(qs_content_box_);
     lv_obj_set_style_bg_color(qs_color_card_, lv_color_hex(0x151e2e), 0);
@@ -8151,6 +8221,7 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
 
     lv_obj_t* b_icon = nullptr;
     lv_obj_t* v_icon = nullptr;
+    lv_obj_t* m_icon = nullptr;
     if (qs_sliders_card_ != nullptr) {
         uint32_t cnt = lv_obj_get_child_count(qs_sliders_card_);
         for (uint32_t i = 0; i < cnt; ++i) {
@@ -8158,6 +8229,7 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             int tag = (int)(intptr_t)lv_obj_get_user_data(c);
             if (tag == 101) b_icon = c;
             else if (tag == 102) v_icon = c;
+            else if (tag == 104) m_icon = c;
         }
     }
 
@@ -8186,9 +8258,9 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_size(qs_content_box_, 240, 282);
         }
 
-        // 1. Thanh kéo âm thanh & độ sáng (thanh mảnh cao 8px, card rộng 230px)
+        // 1. Thanh kéo độ sáng, âm lượng & micro (thanh mảnh cao 8px, card rộng 230px, cao 106px)
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 230, 74);
+            lv_obj_set_size(qs_sliders_card_, 230, 106);
             lv_obj_set_pos(qs_sliders_card_, 5, 4);
         }
         if (b_icon) lv_obj_set_pos(b_icon, 8, 4);
@@ -8198,17 +8270,24 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
         if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 176, 7);
 
-        if (v_icon) lv_obj_set_pos(v_icon, 8, 40);
+        if (v_icon) lv_obj_set_pos(v_icon, 8, 38);
         if (qs_volume_slider_) {
             lv_obj_set_size(qs_volume_slider_, 120, 8);
-            lv_obj_set_pos(qs_volume_slider_, 38, 48);
+            lv_obj_set_pos(qs_volume_slider_, 38, 46);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 176, 43);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 176, 41);
+
+        if (m_icon) lv_obj_set_pos(m_icon, 8, 72);
+        if (qs_mic_slider_) {
+            lv_obj_set_size(qs_mic_slider_, 120, 8);
+            lv_obj_set_pos(qs_mic_slider_, 38, 80);
+        }
+        if (qs_mic_label_) lv_obj_set_pos(qs_mic_label_, 176, 75);
 
         // 2. Bảng chọn màu chữ: rộng 230px, cao 74px
         if (qs_color_card_) {
             lv_obj_set_size(qs_color_card_, 230, 74);
-            lv_obj_set_pos(qs_color_card_, 5, 84);
+            lv_obj_set_pos(qs_color_card_, 5, 116);
         }
         if (col_title) lv_obj_set_pos(col_title, 10, 3);
         if (qs_color_card_) {
@@ -8228,31 +8307,31 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
 
         // 3. Các nút chức năng (mở rộng ô to ra: rộng 112px, cao 36px để chữ không bị sát viền)
-        // Hàng 1 (y = 164): Trợ lý AI và Ảnh Bìa
+        // Hàng 1 (y = 196): Trợ lý AI và Ảnh Bìa
         if (qs_ai_btn_) {
             lv_obj_set_size(qs_ai_btn_, 112, 36);
-            lv_obj_set_pos(qs_ai_btn_, 5, 164);
+            lv_obj_set_pos(qs_ai_btn_, 5, 196);
         }
         if (qs_wallpaper_btn_) {
             lv_obj_clear_flag(qs_wallpaper_btn_, LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_size(qs_wallpaper_btn_, 112, 36);
-            lv_obj_set_pos(qs_wallpaper_btn_, 123, 164);
+            lv_obj_set_pos(qs_wallpaper_btn_, 123, 196);
         }
 
-        // Hàng 2 (y = 206): Xoay màn hình và Cấu hình WiFi (ô rộng 112px thoải mái chữ)
+        // Hàng 2 (y = 238): Xoay màn hình và Cấu hình WiFi (ô rộng 112px thoải mái chữ)
         if (qs_rotate_btn_) {
             lv_obj_set_size(qs_rotate_btn_, 112, 36);
-            lv_obj_set_pos(qs_rotate_btn_, 5, 206);
+            lv_obj_set_pos(qs_rotate_btn_, 5, 238);
         }
         if (qs_wifi_btn_) {
             lv_obj_set_size(qs_wifi_btn_, 112, 36);
-            lv_obj_set_pos(qs_wifi_btn_, 123, 206);
+            lv_obj_set_pos(qs_wifi_btn_, 123, 238);
         }
 
-        // Hàng 2.5 (y = 248): Mini Music Player (nằm trên nút Khởi động lại)
+        // Hàng 2.5 (y = 280): Mini Music Player (nằm trên nút Khởi động lại)
         if (qs_music_card_) {
             lv_obj_set_size(qs_music_card_, 230, 68);
-            lv_obj_set_pos(qs_music_card_, 5, 248);
+            lv_obj_set_pos(qs_music_card_, 5, 280);
             if (qs_music_icon_) lv_obj_set_pos(qs_music_icon_, 6, 6);
             if (qs_music_title_) {
                 lv_obj_set_pos(qs_music_title_, 34, 8);
@@ -8272,16 +8351,16 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             }
         }
 
-        // Hàng 3 (y = 324): Khởi động lại (nằm dưới Mini Player)
+        // Hàng 3 (y = 356): Khởi động lại (nằm dưới Mini Player)
         if (qs_restart_btn_) {
             lv_obj_set_size(qs_restart_btn_, 230, 44);
-            lv_obj_set_pos(qs_restart_btn_, 5, 324);
+            lv_obj_set_pos(qs_restart_btn_, 5, 356);
         }
 
-        // Hàng 4 (y = 376): Thẻ thông tin hệ thống
+        // Hàng 4 (y = 408): Thẻ thông tin hệ thống
         if (qs_info_card_) {
             lv_obj_set_size(qs_info_card_, 230, 134);
-            lv_obj_set_pos(qs_info_card_, 5, 376);
+            lv_obj_set_pos(qs_info_card_, 5, 408);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
         if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 38);
@@ -8302,9 +8381,9 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_size(qs_content_box_, 320, 204);
         }
 
-        // 1. Thanh kéo âm thanh & độ sáng
+        // 1. Thanh kéo độ sáng, âm lượng & micro (card rộng 304px, cao 96px)
         if (qs_sliders_card_) {
-            lv_obj_set_size(qs_sliders_card_, 304, 66);
+            lv_obj_set_size(qs_sliders_card_, 304, 96);
             lv_obj_set_pos(qs_sliders_card_, 8, 4);
         }
         if (b_icon) lv_obj_set_pos(b_icon, 8, 4);
@@ -8314,17 +8393,24 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
         if (qs_brightness_label_) lv_obj_set_pos(qs_brightness_label_, 254, 6);
 
-        if (v_icon) lv_obj_set_pos(v_icon, 8, 36);
+        if (v_icon) lv_obj_set_pos(v_icon, 8, 34);
         if (qs_volume_slider_) {
             lv_obj_set_size(qs_volume_slider_, 200, 8);
-            lv_obj_set_pos(qs_volume_slider_, 36, 42);
+            lv_obj_set_pos(qs_volume_slider_, 36, 40);
         }
-        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 254, 38);
+        if (qs_volume_label_) lv_obj_set_pos(qs_volume_label_, 254, 36);
 
-        // 2. Bảng chọn màu chữ - Tách riêng chữ ở trên (y=4) và 10 chấm màu ở dưới (y=28), KHÔNG BỊ CHE!
+        if (m_icon) lv_obj_set_pos(m_icon, 8, 64);
+        if (qs_mic_slider_) {
+            lv_obj_set_size(qs_mic_slider_, 200, 8);
+            lv_obj_set_pos(qs_mic_slider_, 36, 70);
+        }
+        if (qs_mic_label_) lv_obj_set_pos(qs_mic_label_, 254, 66);
+
+        // 2. Bảng chọn màu chữ - Tách riêng chữ ở trên (y=4) và 10 chấm màu ở dưới (y=28)
         if (qs_color_card_) {
             lv_obj_set_size(qs_color_card_, 304, 54);
-            lv_obj_set_pos(qs_color_card_, 8, 76);
+            lv_obj_set_pos(qs_color_card_, 8, 106);
         }
         if (col_title) lv_obj_set_pos(col_title, 10, 4);
         if (qs_color_card_) {
@@ -8342,31 +8428,31 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
         }
 
         // 3. MÀN HÌNH NGANG: 1 HÀNG 2 Ô (148 x 34)
-        // Hàng 1 (y = 136): Trợ lý AI và Ảnh Bìa
+        // Hàng 1 (y = 166): Trợ lý AI và Ảnh Bìa
         if (qs_ai_btn_) {
             lv_obj_set_size(qs_ai_btn_, 148, 34);
-            lv_obj_set_pos(qs_ai_btn_, 8, 136);
+            lv_obj_set_pos(qs_ai_btn_, 8, 166);
         }
         if (qs_wallpaper_btn_) {
             lv_obj_clear_flag(qs_wallpaper_btn_, LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_size(qs_wallpaper_btn_, 148, 34);
-            lv_obj_set_pos(qs_wallpaper_btn_, 164, 136);
+            lv_obj_set_pos(qs_wallpaper_btn_, 164, 166);
         }
 
-        // Hàng 2 (y = 176): Xoay màn hình và Cấu hình WiFi
+        // Hàng 2 (y = 206): Xoay màn hình và Cấu hình WiFi
         if (qs_rotate_btn_) {
             lv_obj_set_size(qs_rotate_btn_, 148, 34);
-            lv_obj_set_pos(qs_rotate_btn_, 8, 176);
+            lv_obj_set_pos(qs_rotate_btn_, 8, 206);
         }
         if (qs_wifi_btn_) {
             lv_obj_set_size(qs_wifi_btn_, 148, 34);
-            lv_obj_set_pos(qs_wifi_btn_, 164, 176);
+            lv_obj_set_pos(qs_wifi_btn_, 164, 206);
         }
 
-        // Hàng 2.5 (y = 216): Mini Music Player (nằm trên nút Khởi động lại)
+        // Hàng 2.5 (y = 246): Mini Music Player (nằm trên nút Khởi động lại)
         if (qs_music_card_) {
             lv_obj_set_size(qs_music_card_, 304, 64);
-            lv_obj_set_pos(qs_music_card_, 8, 216);
+            lv_obj_set_pos(qs_music_card_, 8, 246);
             if (qs_music_icon_) lv_obj_set_pos(qs_music_icon_, 8, 6);
             if (qs_music_title_) {
                 lv_obj_set_pos(qs_music_title_, 38, 8);
@@ -8386,16 +8472,16 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             }
         }
 
-        // Hàng 3 (y = 288): Khởi động lại (to rõ 20pt)
+        // Hàng 3 (y = 318): Khởi động lại (to rõ 20pt)
         if (qs_restart_btn_) {
             lv_obj_set_size(qs_restart_btn_, 304, 42);
-            lv_obj_set_pos(qs_restart_btn_, 8, 288);
+            lv_obj_set_pos(qs_restart_btn_, 8, 318);
         }
 
-        // Hàng 4 (y = 338): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
+        // Hàng 4 (y = 368): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
         if (qs_info_card_) {
             lv_obj_set_size(qs_info_card_, 304, 134);
-            lv_obj_set_pos(qs_info_card_, 8, 338);
+            lv_obj_set_pos(qs_info_card_, 8, 368);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
         if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 38);
