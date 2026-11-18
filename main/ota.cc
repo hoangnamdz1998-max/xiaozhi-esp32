@@ -57,7 +57,7 @@ std::string Ota::GetCheckVersionUrl() {
     Settings settings("wifi", false);
     std::string url = settings.GetString("ota_url");
     if (url.empty()) {
-        url = "https://raw.githubusercontent.com/hoangnamdz1998-max/xiaozhi-esp32/main/ota_version.json";
+        url = "https://ndztech.vercel.app/api/ota";
     }
     return url;
 }
