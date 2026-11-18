@@ -6615,6 +6615,8 @@ void LcdDisplay::ShowExchangeRates() {
 
     }
 
+    FetchExchangeRates();
+
 }
 
 
@@ -12783,13 +12785,8 @@ void LcdDisplay::CreateExchangeRatesUI() {
     lv_obj_align(ref_lbl, LV_ALIGN_CENTER, 0, 0);
 
     lv_obj_add_event_cb(rates_refresh_btn_, [](lv_event_t* e) {
-
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-
-        self->UpdateExchangeRatesUI();
-
-        self->ShowNotification("Đã làm mới dữ liệu tỉ giá!", 1200);
-
+        self->FetchExchangeRates();
     }, LV_EVENT_CLICKED, this);
 
 
@@ -12979,63 +12976,209 @@ void LcdDisplay::LayoutExchangeRatesWidgets(bool is_portrait) {
 
 
 void LcdDisplay::UpdateExchangeRatesUI() {
-
     if (rates_box_ == nullptr) return;
 
-    time_t raw_time = time(nullptr);
-
-    struct tm* t = localtime(&raw_time);
-
-    if (t && rates_time_label_) {
-
-        char buf[64];
-
-        snprintf(buf, sizeof(buf), "Cập nhật trực tiếp: %02d:%02d:%02d", t->tm_hour, t->tm_min, t->tm_sec);
-
-        lv_label_set_text(rates_time_label_, buf);
-
+    if (rates_time_label_) {
+        lv_label_set_text(rates_time_label_, rate_data_.update_time.c_str());
     }
 
-
-
     // 1. Vàng SJC (triệu đồng / lượng)
-
-    if (rate_cards_[0].val1_lbl) lv_label_set_text(rate_cards_[0].val1_lbl, "Mua: 138.0 tr");
-
-    if (rate_cards_[0].val2_lbl) lv_label_set_text(rate_cards_[0].val2_lbl, "Bán: 141.0 tr");
-
-    if (rate_cards_[0].trend_lbl) lv_label_set_text(rate_cards_[0].trend_lbl, "+0.5% (Tăng)");
-
-
+    if (rate_cards_[0].val1_lbl) lv_label_set_text(rate_cards_[0].val1_lbl, rate_data_.gold_buy.c_str());
+    if (rate_cards_[0].val2_lbl) lv_label_set_text(rate_cards_[0].val2_lbl, rate_data_.gold_sell.c_str());
+    if (rate_cards_[0].trend_lbl) lv_label_set_text(rate_cards_[0].trend_lbl, rate_data_.gold_sub.c_str());
 
     // 2. USD Vietcombank (VND / USD)
-
-    if (rate_cards_[1].val1_lbl) lv_label_set_text(rate_cards_[1].val1_lbl, "Mua: 25.400");
-
-    if (rate_cards_[1].val2_lbl) lv_label_set_text(rate_cards_[1].val2_lbl, "Bán: 25.780");
-
-    if (rate_cards_[1].trend_lbl) lv_label_set_text(rate_cards_[1].trend_lbl, "+20 (Tăng)");
-
-
+    if (rate_cards_[1].val1_lbl) lv_label_set_text(rate_cards_[1].val1_lbl, rate_data_.usd_buy.c_str());
+    if (rate_cards_[1].val2_lbl) lv_label_set_text(rate_cards_[1].val2_lbl, rate_data_.usd_sell.c_str());
+    if (rate_cards_[1].trend_lbl) lv_label_set_text(rate_cards_[1].trend_lbl, rate_data_.usd_sub.c_str());
 
     // 3. Crypto (USD)
-
-    if (rate_cards_[2].val1_lbl) lv_label_set_text(rate_cards_[2].val1_lbl, "BTC: $75,800");
-
-    if (rate_cards_[2].val2_lbl) lv_label_set_text(rate_cards_[2].val2_lbl, "ETH: $2,240");
-
-    if (rate_cards_[2].trend_lbl) lv_label_set_text(rate_cards_[2].trend_lbl, "+1.2% (Tăng)");
-
-
+    if (rate_cards_[2].val1_lbl) lv_label_set_text(rate_cards_[2].val1_lbl, rate_data_.crypto_btc.c_str());
+    if (rate_cards_[2].val2_lbl) lv_label_set_text(rate_cards_[2].val2_lbl, rate_data_.crypto_eth.c_str());
+    if (rate_cards_[2].trend_lbl) lv_label_set_text(rate_cards_[2].trend_lbl, rate_data_.crypto_sub.c_str());
 
     // 4. Xăng dầu (VND / lít)
+    if (rate_cards_[3].val1_lbl) lv_label_set_text(rate_cards_[3].val1_lbl, rate_data_.gas_ron95.c_str());
+    if (rate_cards_[3].val2_lbl) lv_label_set_text(rate_cards_[3].val2_lbl, rate_data_.gas_e5.c_str());
+    if (rate_cards_[3].trend_lbl) lv_label_set_text(rate_cards_[3].trend_lbl, rate_data_.gas_do.c_str());
+}
 
-    if (rate_cards_[3].val1_lbl) lv_label_set_text(rate_cards_[3].val1_lbl, "RON95: 21.15k");
+void LcdDisplay::FetchExchangeRates() {
+    if (is_fetching_rates_.exchange(true)) {
+        return;
+    }
 
-    if (rate_cards_[3].val2_lbl) lv_label_set_text(rate_cards_[3].val2_lbl, "E5: 20.08k");
+    if (rates_time_label_ != nullptr) {
+        lv_label_set_text(rates_time_label_, "Đang cập nhật trực tuyến...");
+    }
 
-    if (rate_cards_[3].trend_lbl) lv_label_set_text(rate_cards_[3].trend_lbl, "DO: 18.95k");
+    esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+    cfg.stack_size = 8192;
+    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    cfg.thread_name = "fetch_rates";
+    esp_pthread_set_cfg(&cfg);
 
+    std::thread([this]() {
+        auto network = Board::GetInstance().GetNetwork();
+        if (!network) {
+            is_fetching_rates_ = false;
+            return;
+        }
+
+        bool updated_any = false;
+
+        // 1. Fetch Crypto from Binance (BTC, ETH)
+        {
+            auto http = network->CreateHttp(0);
+            if (http) {
+                http->SetTimeout(5000);
+                http->SetHeader("User-Agent", "ESP32-Xiaozhi/1.0");
+                http->SetHeader("Accept", "application/json");
+                std::string url = "https://api.binance.com/api/v3/ticker/price?symbols=[%22BTCUSDT%22,%22ETHUSDT%22]";
+                if (http->Open("GET", url)) {
+                    auto sc = http->GetStatusCode();
+                    if (sc && *sc == 200) {
+                        std::string body = http->ReadAll();
+                        http->Close();
+                        if (!body.empty()) {
+                            cJSON* root = cJSON_Parse(body.c_str());
+                            if (root && cJSON_IsArray(root)) {
+                                int sz = cJSON_GetArraySize(root);
+                                for (int i = 0; i < sz; ++i) {
+                                    cJSON* item = cJSON_GetArrayItem(root, i);
+                                    cJSON* sym = cJSON_GetObjectItem(item, "symbol");
+                                    cJSON* pr = cJSON_GetObjectItem(item, "price");
+                                    if (sym && sym->valuestring && pr && pr->valuestring) {
+                                        double val = atof(pr->valuestring);
+                                        char buf[32];
+                                        if (strcmp(sym->valuestring, "BTCUSDT") == 0) {
+                                            snprintf(buf, sizeof(buf), "BTC: $%.0f", val);
+                                            rate_data_.crypto_btc = buf;
+                                            updated_any = true;
+                                        } else if (strcmp(sym->valuestring, "ETHUSDT") == 0) {
+                                            snprintf(buf, sizeof(buf), "ETH: $%.0f", val);
+                                            rate_data_.crypto_eth = buf;
+                                            updated_any = true;
+                                        }
+                                    }
+                                }
+                                cJSON_Delete(root);
+                            }
+                        }
+                    } else {
+                        http->Close();
+                    }
+                }
+            }
+        }
+
+        // 2. Fetch USD/VND exchange rate
+        {
+            auto http = network->CreateHttp(0);
+            if (http) {
+                http->SetTimeout(5000);
+                http->SetHeader("User-Agent", "ESP32-Xiaozhi/1.0");
+                http->SetHeader("Accept", "application/json");
+                std::string url = "https://open.er-api.com/v6/latest/USD";
+                if (http->Open("GET", url)) {
+                    auto sc = http->GetStatusCode();
+                    if (sc && *sc == 200) {
+                        std::string body = http->ReadAll();
+                        http->Close();
+                        if (!body.empty()) {
+                            cJSON* root = cJSON_Parse(body.c_str());
+                            if (root) {
+                                cJSON* rates = cJSON_GetObjectItem(root, "rates");
+                                if (rates) {
+                                    cJSON* vnd = cJSON_GetObjectItem(rates, "VND");
+                                    if (vnd && (vnd->valuedouble > 0 || vnd->valueint > 0)) {
+                                        double r = vnd->valuedouble > 0 ? vnd->valuedouble : (double)vnd->valueint;
+                                        int r_int = (int)round(r);
+                                        char buf[32];
+                                        snprintf(buf, sizeof(buf), "Mua: %d.%03d", (r_int - 150) / 1000, (r_int - 150) % 1000);
+                                        rate_data_.usd_buy = buf;
+                                        snprintf(buf, sizeof(buf), "Bán: %d.%03d", (r_int + 150) / 1000, (r_int + 150) % 1000);
+                                        rate_data_.usd_sell = buf;
+                                        snprintf(buf, sizeof(buf), "Tỉ giá: %d.%03d", r_int / 1000, r_int % 1000);
+                                        rate_data_.usd_sub = buf;
+                                        updated_any = true;
+                                    }
+                                }
+                                cJSON_Delete(root);
+                            }
+                        }
+                    } else {
+                        http->Close();
+                    }
+                }
+            }
+        }
+
+        // 3. Fetch Gold (SJC 9999) from vang.today
+        {
+            auto http = network->CreateHttp(0);
+            if (http) {
+                http->SetTimeout(5000);
+                http->SetHeader("User-Agent", "ESP32-Xiaozhi/1.0");
+                http->SetHeader("Accept", "application/json");
+                std::string url = "https://www.vang.today/api/prices";
+                if (http->Open("GET", url)) {
+                    auto sc = http->GetStatusCode();
+                    if (sc && *sc == 200) {
+                        std::string body = http->ReadAll();
+                        http->Close();
+                        if (!body.empty()) {
+                            cJSON* root = cJSON_Parse(body.c_str());
+                            if (root) {
+                                cJSON* prices = cJSON_GetObjectItem(root, "prices");
+                                if (prices) {
+                                    cJSON* sjc = cJSON_GetObjectItem(prices, "SJL1L10");
+                                    if (!sjc) sjc = cJSON_GetObjectItem(prices, "VNGSJC");
+                                    if (!sjc) sjc = cJSON_GetObjectItem(prices, "SJ9999");
+                                    if (sjc) {
+                                        cJSON* b = cJSON_GetObjectItem(sjc, "buy");
+                                        cJSON* s = cJSON_GetObjectItem(sjc, "sell");
+                                        if (b && s) {
+                                            double buy_val = b->valuedouble > 0 ? b->valuedouble : (double)b->valueint;
+                                            double sell_val = s->valuedouble > 0 ? s->valuedouble : (double)s->valueint;
+                                            char buf[32];
+                                            snprintf(buf, sizeof(buf), "Mua: %.1f tr", buy_val / 1000000.0);
+                                            rate_data_.gold_buy = buf;
+                                            snprintf(buf, sizeof(buf), "Bán: %.1f tr", sell_val / 1000000.0);
+                                            rate_data_.gold_sell = buf;
+                                            rate_data_.gold_sub = "SJC 9999";
+                                            updated_any = true;
+                                        }
+                                    }
+                                }
+                                cJSON_Delete(root);
+                            }
+                        }
+                    } else {
+                        http->Close();
+                    }
+                }
+            }
+        }
+
+        // 4. Update UI safely
+        {
+            DisplayLockGuard lock(this);
+            time_t raw_time = time(nullptr);
+            struct tm* t = localtime(&raw_time);
+            if (t) {
+                char buf[64];
+                snprintf(buf, sizeof(buf), "Cập nhật lúc: %02d:%02d:%02d", t->tm_hour, t->tm_min, t->tm_sec);
+                rate_data_.update_time = buf;
+            }
+            UpdateExchangeRatesUI();
+            if (updated_any) {
+                ShowNotification("Đã cập nhật tỉ giá trực tiếp!", 1500);
+            }
+        }
+
+        is_fetching_rates_ = false;
+    }).detach();
 }
 
 

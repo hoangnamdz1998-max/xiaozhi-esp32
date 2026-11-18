@@ -363,6 +363,25 @@ protected:
     };
     RateCardWidget rate_cards_[4];
 
+    struct RateData {
+        std::string gold_buy = "Mua: 134.2 tr";
+        std::string gold_sell = "Bán: 137.2 tr";
+        std::string gold_sub = "SJC 9999";
+        std::string usd_buy = "Mua: 25.490";
+        std::string usd_sell = "Bán: 25.880";
+        std::string usd_sub = "Vietcombank";
+        std::string crypto_btc = "BTC: $64,460";
+        std::string crypto_eth = "ETH: $1,803";
+        std::string crypto_sub = "Binance Spot";
+        std::string gas_ron95 = "RON95: 19.84k";
+        std::string gas_e5 = "E5: 19.39k";
+        std::string gas_do = "DO: 18.90k";
+        std::string update_time = "Cập nhật lúc: --:--";
+    };
+    RateData rate_data_;
+    std::atomic<bool> is_fetching_rates_{false};
+    void FetchExchangeRates();
+
     // Calculator Screen (Máy tính cá nhân)
     lv_obj_t* calc_box_ = nullptr;
     lv_obj_t* calc_back_btn_ = nullptr;
