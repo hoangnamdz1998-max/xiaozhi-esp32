@@ -7275,11 +7275,7 @@ void LcdDisplay::UpdateStandbyStatusBar() {
             }
             const char* b_icon = MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL;
             if (charging) {
-                if (battery_level >= 100) {
-                    b_icon = MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL;
-                } else {
-                    b_icon = MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_BOLT;
-                }
+                b_icon = MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_BOLT;
             } else {
                 const char* levels[] = {
                     MATERIAL_SYMBOLS_BATTERY_ANDROID_0,
@@ -7358,11 +7354,7 @@ void LcdDisplay::UpdateMenuStatusBar() {
             }
             if (menu_battery_label_ != nullptr) {
                 if (charging) {
-                    if (battery_level >= 100) {
-                        lv_label_set_text(menu_battery_label_, MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_FULL);
-                    } else {
-                        lv_label_set_text(menu_battery_label_, MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_BOLT);
-                    }
+                    lv_label_set_text(menu_battery_label_, MATERIAL_SYMBOLS_BATTERY_ANDROID_FRAME_BOLT);
                 } else {
                     const char* levels[] = {
                         MATERIAL_SYMBOLS_BATTERY_ANDROID_0,
