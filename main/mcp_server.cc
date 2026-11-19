@@ -51,9 +51,13 @@ void McpServer::AddCommonTools() {
                 Property("song_name", kPropertyTypeString),
                 Property("artist_name", kPropertyTypeString, std::string(""))
             }),
-            [music](const PropertyList& properties) -> ReturnValue {
+            [music, &board](const PropertyList& properties) -> ReturnValue {
                 auto song_name = properties["song_name"].value<std::string>();
                 auto artist_name = properties["artist_name"].value<std::string>();
+                auto display = board.GetDisplay();
+                if (display) {
+                    display->ShowMusicScreen(song_name, artist_name);
+                }
                 if (!music->Download(song_name, artist_name)) {
                     return "{\"success\": false, \"message\": \"Không thể tìm thấy hoặc phát bài hát này\"}";
                 }

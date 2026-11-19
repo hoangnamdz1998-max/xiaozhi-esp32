@@ -14685,7 +14685,9 @@ void LcdDisplay::SwitchToMusicChart() {
     music_sub_view_ = kMusicViewChart;
     if (music_chart_view_) lv_obj_clear_flag(music_chart_view_, LV_OBJ_FLAG_HIDDEN);
     if (music_player_view_) lv_obj_add_flag(music_player_view_, LV_OBJ_FLAG_HIDDEN);
+    UpdateChartSongsUI();
     UpdateMusicUI();
+    FetchRealtimeChart();
 }
 
 void LcdDisplay::SwitchToMusicPlayer() {
@@ -14838,7 +14840,7 @@ void LcdDisplay::LayoutMusicWidgets(bool is_portrait) {
 
 void LcdDisplay::UpdateChartSongsUI() {
     DisplayLockGuard lock(this);
-    if (!lock || !music_box_ || lv_obj_has_flag(music_box_, LV_OBJ_FLAG_HIDDEN)) return;
+    if (!lock) return;
     for (int i = 0; i < 10; ++i) {
         if (i < (int)music_chart_songs_.size()) {
             if (music_chart_item_titles_[i]) lv_label_set_text(music_chart_item_titles_[i], music_chart_songs_[i].title.c_str());
@@ -14914,6 +14916,7 @@ void LcdDisplay::PlayChartSong(int index) {
     music_current_artist_ = s_artist;
     music_is_playing_ = true;
     UpdateMusicUI();
+    if (music_time_lbl_) lv_label_set_text(music_time_lbl_, "Đang tải...");
 
     // DEBOUNCE CHUYỂN BÀI: Bảo vệ thiết bị khi người dùng bấm Next/Prev liên tục
     static lv_timer_t* chart_debounce_timer = nullptr;
@@ -14938,7 +14941,7 @@ void LcdDisplay::PlayChartSong(int index) {
             std::string t_id = pending_encode_id;
 
             esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-            cfg.stack_size = 8192;
+            cfg.stack_size = 10240;
             cfg.thread_name = "play_chart";
             esp_pthread_set_cfg(&cfg);
             std::thread([music, t_title, t_artist, t_id]() {
@@ -14950,7 +14953,7 @@ void LcdDisplay::PlayChartSong(int index) {
                     music->Download(t_title, t_artist);
                 }
             }).detach();
-        }, 350, nullptr);
+        }, 50, nullptr);
     }
 }
 
@@ -14971,6 +14974,10 @@ void LcdDisplay::ToggleMusicPlayPause() {
     if (!music) return;
     if (music_is_playing_) {
         music_is_playing_ = false;
+        esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+        cfg.stack_size = 10240;
+        cfg.thread_name = "stop_music";
+        esp_pthread_set_cfg(&cfg);
         std::thread([music]() {
             music->StopStreaming();
         }).detach();
@@ -15036,6 +15043,11 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
     if (fm_box_) lv_obj_add_flag(fm_box_, LV_OBJ_FLAG_HIDDEN);
     if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
     if (wallpaper_box_) lv_obj_add_flag(wallpaper_box_, LV_OBJ_FLAG_HIDDEN);
+    if (content_ != nullptr) lv_obj_add_flag(content_, LV_OBJ_FLAG_HIDDEN);
+    if (container_ != nullptr) lv_obj_add_flag(container_, LV_OBJ_FLAG_HIDDEN);
+    if (chat_box_ != nullptr) lv_obj_add_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+    if (emoji_box_ != nullptr) lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
 
     if (!song_name.empty()) music_current_song_ = song_name;
     if (!artist_name.empty()) music_current_artist_ = artist_name;

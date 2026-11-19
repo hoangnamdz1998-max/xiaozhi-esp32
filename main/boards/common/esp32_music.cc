@@ -922,8 +922,7 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
                 }
                 auto disp = Board::GetInstance().GetDisplay();
                 if (disp) {
-                    disp->UpdateMusicPlaybackState(true, final_title, final_artist);
-                    disp->SwitchToMusicPlayer();
+                    disp->ShowMusicScreen(final_title, final_artist);
                 }
 
                 song_name_displayed_ = false;
@@ -1024,8 +1023,7 @@ bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::s
 
     auto disp = Board::GetInstance().GetDisplay();
     if (disp) {
-        disp->UpdateMusicPlaybackState(true, song_name, artist_name);
-        disp->SwitchToMusicPlayer();
+        disp->ShowMusicScreen(song_name, artist_name);
     }
 
     song_name_displayed_ = false;
@@ -1226,10 +1224,6 @@ bool Esp32Music::StopStreaming() {
     ResetSampleRate();
     ForceCleanupCache();
 
-    auto codec = Board::GetInstance().GetAudioCodec();
-    if (codec && codec->output_enabled()) {
-        codec->EnableOutput(false);
-    }
     ESP_LOGI(TAG, "Stop streaming complete - Free heap: %d bytes", esp_get_free_heap_size());
     return true;
 }
@@ -2090,15 +2084,12 @@ bool Esp32Music::InitializeMp3Decoder() {
 
 
 void Esp32Music::CleanupMp3Decoder() {
-
     if (mp3_decoder_ != nullptr) {
-
-        MP3FreeDecoder(mp3_decoder_);
-
+        HMP3Decoder dec = mp3_decoder_;
         mp3_decoder_ = nullptr;
-
+        mp3_decoder_initialized_ = false;
+        MP3FreeDecoder(dec);
     }
-
     mp3_decoder_initialized_ = false;
 
 }
