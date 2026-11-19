@@ -20,11 +20,13 @@
 #include <driver/gpio.h>
 #include <esp_log.h>
 #include <esp_sntp.h>
+#include <esp_pthread.h>
 #include <arpa/inet.h>
 #include <cJSON.h>
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <thread>
 
 #define TAG "Application"
 
@@ -71,10 +73,18 @@ bool Application::SetDeviceState(DeviceState state) {
     DeviceState previous_state = GetDeviceState();
     if (previous_state == kDeviceStateIdle && state != kDeviceStateIdle) {
         auto music = Board::GetInstance().GetMusic();
-        if (music) {
-            music->StopStreaming();
+        if (music && music->IsPlaying()) {
+            esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+            cfg.stack_size = 8192;
+            cfg.thread_name = "stop_music_app";
+            esp_pthread_set_cfg(&cfg);
+            std::thread([music]() {
+                music->StopStreaming();
+            }).detach();
         }
-    } return state_machine_.TransitionTo(state); }
+    }
+    return state_machine_.TransitionTo(state);
+}
 
 void Application::Initialize() {
     auto& board = Board::GetInstance();

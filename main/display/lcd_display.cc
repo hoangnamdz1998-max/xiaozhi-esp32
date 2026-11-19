@@ -5602,6 +5602,19 @@ void LcdDisplay::OnSwipeUp() {
 
 
 
+    if (screen_mode_ == kScreenQuickSettings) {
+        ExitQuickSettings();
+        return;
+    }
+    if (screen_mode_ == kScreenMusic) {
+        if (music_sub_view_ == kMusicViewChart) {
+            return;
+        } else {
+            ReturnToChat();
+            return;
+        }
+    }
+
     auto& app = Application::GetInstance();
 
     auto state = app.GetDeviceState();
@@ -7940,6 +7953,13 @@ void LcdDisplay::CreateQuickSettingsUI() {
             Board::GetInstance().GetAudioCodec()->SetOutputVolume(val);
         }
     }, LV_EVENT_VALUE_CHANGED, this);
+
+    lv_obj_add_event_cb(qs_volume_slider_, [](lv_event_t* e) {
+        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        int val = lv_slider_get_value(self->qs_volume_slider_);
+        Settings settings("audio", true);
+        settings.SetInt("output_volume", val);
+    }, LV_EVENT_RELEASED, this);
 
     // Mic sensitivity row - icon & slider
     lv_obj_t* m_icon = lv_label_create(qs_sliders_card_);
@@ -15022,8 +15042,8 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
     if (!artist_name.empty()) music_current_artist_ = artist_name;
 
     CreateMusicScreenUI();
-    if (!song_name.empty()) {
-        music_current_song_ = song_name;
+    if (!song_name.empty() || music_is_playing_ || !music_current_song_.empty()) {
+        if (!song_name.empty()) music_current_song_ = song_name;
         if (!artist_name.empty()) music_current_artist_ = artist_name;
         music_is_playing_ = true;
         music_opened_from_chat_ = true;

@@ -41,8 +41,14 @@ void AudioCodec::SetOutputVolume(int volume) {
     output_volume_ = volume;
     ESP_LOGI(TAG, "Set output volume to %d", output_volume_);
     
-    Settings settings("audio", true);
-    settings.SetInt("output_volume", output_volume_);
+    // Avoid repeatedly committing to NVS flash during rapid slider dragging
+    static int64_t last_nvs_save = 0;
+    int64_t now = esp_timer_get_time() / 1000;
+    if (now - last_nvs_save > 1500) {
+        last_nvs_save = now;
+        Settings settings("audio", true);
+        settings.SetInt("output_volume", output_volume_);
+    }
 }
 
 void AudioCodec::SetInputGain(float gain) {

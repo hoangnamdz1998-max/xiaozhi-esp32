@@ -637,21 +637,33 @@ void Esp32Music::ForceCleanupCache() {
     
     // 4. Dừng download thread
     if (download_thread_.joinable()) {
-        ESP_LOGI(TAG, "Joining download thread...");
-        download_thread_.join();
-        ESP_LOGI(TAG, "Download thread stopped");
+        if (std::this_thread::get_id() != download_thread_.get_id()) {
+            ESP_LOGI(TAG, "Joining download thread...");
+            download_thread_.join();
+            ESP_LOGI(TAG, "Download thread stopped");
+        } else {
+            download_thread_.detach();
+        }
     }
     
     // 5. Dừng playback thread
     if (play_thread_.joinable()) {
-        ESP_LOGI(TAG, "Joining playback thread...");
-        play_thread_.join();
-        ESP_LOGI(TAG, "Playback thread stopped");
+        if (std::this_thread::get_id() != play_thread_.get_id()) {
+            ESP_LOGI(TAG, "Joining playback thread...");
+            play_thread_.join();
+            ESP_LOGI(TAG, "Playback thread stopped");
+        } else {
+            play_thread_.detach();
+        }
     }
     
     // 6. Dừng lyric thread
     if (lyric_thread_.joinable()) {
-        lyric_thread_.join();
+        if (std::this_thread::get_id() != lyric_thread_.get_id()) {
+            lyric_thread_.join();
+        } else {
+            lyric_thread_.detach();
+        }
     }
     
     // 7. Xóa sạch audio buffer
@@ -1461,9 +1473,11 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
 
     
 
-    current_http_ = nullptr;
+    Http* h_ptr = current_http_.exchange(nullptr);
     heap_caps_free(dl_buffer);
-    http->Close();
+    if (h_ptr) {
+        http->Close();
+    }
 
     is_downloading_ = false;
 

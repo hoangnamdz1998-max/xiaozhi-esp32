@@ -1200,7 +1200,7 @@ private:
 
 
 
-        xTaskCreatePinnedToCore(TouchTask, "touch_task", 4096, this, 5, nullptr, 0);
+        xTaskCreatePinnedToCore(TouchTask, "touch_task", 10240, this, 5, nullptr, 0);
 
     }
 
