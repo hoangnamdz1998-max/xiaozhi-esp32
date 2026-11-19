@@ -667,9 +667,8 @@ void Application::StartBackgroundOtaCheck() {
                         if (ver && url && cJSON_IsString(ver) && cJSON_IsString(url)) {
                             std::string new_ver = ver->valuestring;
                             std::string fw_url = url->valuestring;
-                            auto app_desc = esp_app_get_description();
-                            std::string cur_ver = app_desc->version;
-                            if (new_ver != cur_ver && !fw_url.empty()) {
+                            std::string cur_ver = (app->ota_ != nullptr) ? app->ota_->GetCurrentVersion() : "";
+                            if (!new_ver.empty() && new_ver != cur_ver && !fw_url.empty()) {
                                 ESP_LOGI(TAG, "New firmware version available on ndztech: %s (current: %s), upgrading in background...",
                                          new_ver.c_str(), cur_ver.c_str());
 
