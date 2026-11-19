@@ -96,7 +96,7 @@ private:
     void ForceCleanupCache();  // ← THÊM DÒNG NÀY
 
     std::atomic<Http*> current_http_{nullptr};
-    std::mutex stream_start_mutex_;
+    std::recursive_mutex stream_start_mutex_;
 public:
     Esp32Music();
     ~Esp32Music();

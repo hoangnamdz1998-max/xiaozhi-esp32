@@ -614,6 +614,7 @@ Esp32Music::~Esp32Music() {
 // Mới thêm vào
 
 void Esp32Music::ForceCleanupCache() {
+    std::lock_guard<std::recursive_mutex> lock(stream_start_mutex_);
     ESP_LOGI(TAG, "=== FORCE CACHE CLEANUP START ===");
     
     // 1. Dừng tất cả cờ điều khiển
@@ -622,12 +623,8 @@ void Esp32Music::ForceCleanupCache() {
     is_playing_ = false;
     is_lyric_running_ = false;
     
-    // 2. Đóng kết nối HTTP đang mở để download thread thoát khỏi Read() ngay lập tức
-    Http* h = current_http_.exchange(nullptr);
-    if (h) {
-        ESP_LOGI(TAG, "Closing active HTTP connection immediately...");
-        h->Close();
-    }
+    // 2. Xóa con trỏ HTTP, để chính luồng download tự giải phóng an toàn khi thoát Read()
+    current_http_ = nullptr;
 
     // 3. Đánh thức condition variable để các thread thức giấc và thoát
     {
@@ -783,13 +780,18 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
 
     is_downloading_ = true;
 
+    std::string search_song = song_name;
+    if (search_song.empty() || search_song == "nhạc" || search_song == "bài hát" || search_song == "nhac" || search_song == "music") {
+        search_song = "nhạc trẻ";
+    }
+
     ESP_LOGI(TAG, "Xiaozhi Open Source Music - Vietnamese Support");
 
-    ESP_LOGI(TAG, "Getting music: %s", song_name.c_str());
+    ESP_LOGI(TAG, "Getting music: %s", search_song.c_str());
 
     
 
-    std::string detected_lang = DetectLanguage(song_name);
+    std::string detected_lang = DetectLanguage(search_song);
 
     ESP_LOGI(TAG, "Detected language: %s", detected_lang.c_str());
 
@@ -797,13 +799,13 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
 
     last_downloaded_data_.clear();
 
-    current_song_name_ = song_name;
+    current_song_name_ = search_song;
 
     
 
     std::string base_url = "https://server-mcp-xiaozhi-dz.onrender.com";
 
-    std::string query_params = "song=" + url_encode(song_name) + "&artist=" + url_encode(artist_name);
+    std::string query_params = "song=" + url_encode(search_song) + "&artist=" + url_encode(artist_name);
 
     
 
@@ -1025,7 +1027,7 @@ std::string Esp32Music::GetDownloadResult() {
 
 
 bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::string& song_name, const std::string& artist_name, const std::string& lyric_url) {
-    std::lock_guard<std::mutex> lock(stream_start_mutex_);
+    std::lock_guard<std::recursive_mutex> lock(stream_start_mutex_);
     ESP_LOGI(TAG, "=== StartStreamingDirect: %s - %s ===", song_name.c_str(), audio_url.c_str());
     ForceCleanupCache();
     is_paused_ = false;
@@ -1113,7 +1115,7 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     }
 
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 10240;
+    cfg.stack_size = 16384;
     cfg.prio = 5;
     cfg.thread_name = "audio_dl";
     esp_pthread_set_cfg(&cfg);
@@ -1121,7 +1123,7 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     download_thread_ = std::thread(&Esp32Music::DownloadAudioStream, this, music_url);
     
     cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 12288;
+    cfg.stack_size = 16384;
     cfg.prio = 5;
     cfg.thread_name = "audio_play";
     esp_pthread_set_cfg(&cfg);
@@ -1237,7 +1239,7 @@ void Esp32Music::UpdateVisualizerBands(const int16_t* pcm, size_t count) {
 }
 
 bool Esp32Music::StopStreaming() {
-    std::lock_guard<std::mutex> lock(stream_start_mutex_);
+    std::lock_guard<std::recursive_mutex> lock(stream_start_mutex_);
     is_paused_ = false;
     for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
 
@@ -1265,6 +1267,7 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
 
     while (redirect_count < max_redirects) {
         http = network->CreateHttp(0);
+        http->SetTimeout(1500);
         http->SetHeader("User-Agent", "Mozilla/5.0 (compatible; ESP32-Radio/1.0)");
         http->SetHeader("Icy-MetaData", "0");
         http->SetHeader("Accept", "*/*");
@@ -1473,9 +1476,9 @@ void Esp32Music::DownloadAudioStream(const std::string& music_url) {
 
     
 
-    Http* h_ptr = current_http_.exchange(nullptr);
+    current_http_ = nullptr;
     heap_caps_free(dl_buffer);
-    if (h_ptr) {
+    if (http) {
         http->Close();
     }
 

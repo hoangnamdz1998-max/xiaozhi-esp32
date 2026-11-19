@@ -70,19 +70,6 @@ Application::~Application() {
 }
 
 bool Application::SetDeviceState(DeviceState state) {
-    DeviceState previous_state = GetDeviceState();
-    if (previous_state == kDeviceStateIdle && state != kDeviceStateIdle) {
-        auto music = Board::GetInstance().GetMusic();
-        if (music && music->IsPlaying()) {
-            esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-            cfg.stack_size = 8192;
-            cfg.thread_name = "stop_music_app";
-            esp_pthread_set_cfg(&cfg);
-            std::thread([music]() {
-                music->StopStreaming();
-            }).detach();
-        }
-    }
     return state_machine_.TransitionTo(state);
 }
 
@@ -1081,6 +1068,10 @@ void Application::HandleWakeWordDetectedEvent() {
     auto lcd = static_cast<LcdDisplay*>(disp);
     if (lcd && lcd->GetScreenMode() == LcdDisplay::kScreenMusic) {
         lcd->ReturnToChat();
+    }
+    auto music = Board::GetInstance().GetMusic();
+    if (music && music->IsPlaying()) {
+        music->StopStreaming();
     }
 
     if (!protocol_) {

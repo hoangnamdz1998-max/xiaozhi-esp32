@@ -54,6 +54,9 @@ void McpServer::AddCommonTools() {
             [music, &board](const PropertyList& properties) -> ReturnValue {
                 auto song_name = properties["song_name"].value<std::string>();
                 auto artist_name = properties["artist_name"].value<std::string>();
+                if (song_name.empty()) {
+                    song_name = "nhạc trẻ";
+                }
                 auto display = board.GetDisplay();
                 if (display) {
                     display->SetStatus("Đang tìm bài hát...");
