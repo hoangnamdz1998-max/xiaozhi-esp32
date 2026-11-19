@@ -64,7 +64,7 @@ std::string Ota::GetCheckVersionUrl() {
         url = CONFIG_OTA_URL;
 #endif
         if (url.empty()) {
-            url = "https://ndztech.vercel.app/api/ota";
+            url = "https://api.tenclass.net/xiaozhi/ota/";
         }
     }
     return url;

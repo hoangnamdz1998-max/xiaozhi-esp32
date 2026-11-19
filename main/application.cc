@@ -539,6 +539,15 @@ void Application::ActivationTask() {
     // Mark current firmware as valid
     ota_->MarkCurrentVersionValid();
 
+    // Đồng bộ cấu hình máy chủ Xiaozhi (lấy token WebSocket/MQTT để chatbot hoạt động)
+    auto check = ota_->CheckVersion();
+    if (check) {
+        ESP_LOGI(TAG, "Xiaozhi server check succeeded!");
+    } else {
+        ESP_LOGW(TAG, "Xiaozhi server check failed (%s), will fallback to NVS credentials",
+                 check.error().ToString().c_str());
+    }
+
     // Initialize the protocol immediately so device is ready
     InitializeProtocol();
 
@@ -624,39 +633,59 @@ void Application::StartBackgroundOtaCheck() {
     xTaskCreate([](void* arg) {
         auto* app = static_cast<Application*>(arg);
 
-        // Chờ 3 giây để giao diện màn hình chính và mạng ổn định
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        // Chờ 5 giây để giao diện màn hình chính và mạng ổn định
+        vTaskDelay(pdMS_TO_TICKS(5000));
 
-        ESP_LOGI(TAG, "Starting background OTA version check...");
-        Ota bg_ota;
-        auto check = bg_ota.CheckVersion();
-        if (!check) {
-            ESP_LOGW(TAG, "Background OTA check failed or offline (ignored): %s",
-                     check.error().ToString().c_str());
+        ESP_LOGI(TAG, "Starting background custom firmware check (ndztech)...");
+        auto& board = Board::GetInstance();
+        auto network = board.GetNetwork();
+        if (!network) {
             vTaskDelete(NULL);
             return;
         }
 
-        if (bg_ota.HasNewVersion() && bg_ota.GetCurrentVersion() != bg_ota.GetFirmwareVersion()) {
-            ESP_LOGI(TAG, "New firmware version available: %s (current: %s), upgrading in background...",
-                     bg_ota.GetFirmwareVersion().c_str(), bg_ota.GetCurrentVersion().c_str());
+        auto http = network->CreateHttp(0);
+        if (!http) {
+            vTaskDelete(NULL);
+            return;
+        }
 
-            // Chờ nếu thiết bị đang bận nói hoặc nghe
-            while (app->GetDeviceState() == kDeviceStateSpeaking ||
-                   app->GetDeviceState() == kDeviceStateListening) {
-                vTaskDelay(pdMS_TO_TICKS(1000));
-            }
+        std::string ota_url = "https://ndztech.vercel.app/api/ota";
+        http->SetHeader("User-Agent", SystemInfo::GetUserAgent());
+        http->SetHeader("Content-Type", "application/json");
 
-            std::string url = bg_ota.GetFirmwareUrl();
-            std::string ver = bg_ota.GetFirmwareVersion();
-            app->UpgradeFirmware(url, ver);
-        } else {
-            ESP_LOGI(TAG, "Device is on latest version (%s). Running normally.",
-                     bg_ota.GetCurrentVersion().c_str());
-            if (bg_ota.HasServerTime()) {
-                auto display = Board::GetInstance().GetDisplay();
-                if (display) display->UpdateStatusBar(true);
+        if (auto opened = http->Open("GET", ota_url); opened) {
+            auto code = http->GetStatusCode();
+            if (code && *code == 200) {
+                std::string body = http->ReadAll();
+                cJSON* root = cJSON_Parse(body.c_str());
+                if (root) {
+                    cJSON* fw = cJSON_GetObjectItem(root, "firmware");
+                    if (fw) {
+                        cJSON* ver = cJSON_GetObjectItem(fw, "version");
+                        cJSON* url = cJSON_GetObjectItem(fw, "url");
+                        if (ver && url && cJSON_IsString(ver) && cJSON_IsString(url)) {
+                            std::string new_ver = ver->valuestring;
+                            std::string fw_url = url->valuestring;
+                            auto app_desc = esp_app_get_description();
+                            std::string cur_ver = app_desc->version;
+                            if (new_ver != cur_ver && !fw_url.empty()) {
+                                ESP_LOGI(TAG, "New firmware version available on ndztech: %s (current: %s), upgrading in background...",
+                                         new_ver.c_str(), cur_ver.c_str());
+
+                                while (app->GetDeviceState() == kDeviceStateSpeaking ||
+                                       app->GetDeviceState() == kDeviceStateListening) {
+                                    vTaskDelay(pdMS_TO_TICKS(1000));
+                                }
+
+                                app->UpgradeFirmware(fw_url, new_ver);
+                            }
+                        }
+                    }
+                    cJSON_Delete(root);
+                }
             }
+            http->Close();
         }
 
         vTaskDelete(NULL);
@@ -670,13 +699,30 @@ void Application::InitializeProtocol() {
 
     display->SetStatus(Lang::Strings::LOADING_PROTOCOL);
 
-    if (ota_->HasMqttConfig()) {
-        protocol_ = std::make_unique<MqttProtocol>();
-    } else if (ota_->HasWebsocketConfig()) {
+    if (ota_ && ota_->HasWebsocketConfig()) {
+        ESP_LOGI(TAG, "Using WebSocket protocol from OTA config");
         protocol_ = std::make_unique<WebsocketProtocol>();
-    } else {
-        ESP_LOGW(TAG, "No protocol specified in the OTA config, using MQTT");
+    } else if (ota_ && ota_->HasMqttConfig()) {
+        ESP_LOGI(TAG, "Using MQTT protocol from OTA config");
         protocol_ = std::make_unique<MqttProtocol>();
+    } else {
+        // Fallback to NVS settings
+        Settings ws_settings("websocket", false);
+        Settings mqtt_settings("mqtt", false);
+        std::string ws_url = ws_settings.GetString("url");
+        std::string mqtt_ep = mqtt_settings.GetString("endpoint");
+
+        if (!ws_url.empty()) {
+            ESP_LOGI(TAG, "Using saved Websocket config from NVS: %s", ws_url.c_str());
+            protocol_ = std::make_unique<WebsocketProtocol>();
+        } else if (!mqtt_ep.empty()) {
+            ESP_LOGI(TAG, "Using saved MQTT config from NVS: %s", mqtt_ep.c_str());
+            protocol_ = std::make_unique<MqttProtocol>();
+        } else {
+            ESP_LOGW(TAG, "No protocol in OTA or NVS, defaulting to Xiaozhi Websocket");
+            ws_settings.SetString("url", "wss://api.tenclass.net/xiaozhi/v1/");
+            protocol_ = std::make_unique<WebsocketProtocol>();
+        }
     }
 
     protocol_->OnConnected([this]() { DismissAlert(); });
