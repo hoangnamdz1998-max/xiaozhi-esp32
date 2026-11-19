@@ -1091,18 +1091,16 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     }
 
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 12288;
+    cfg.stack_size = 10240;
     cfg.prio = 5;
-    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
     cfg.thread_name = "audio_dl";
     esp_pthread_set_cfg(&cfg);
     is_downloading_ = true;
     download_thread_ = std::thread(&Esp32Music::DownloadAudioStream, this, music_url);
     
     cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 20480;
+    cfg.stack_size = 12288;
     cfg.prio = 5;
-    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
     cfg.thread_name = "audio_play";
     esp_pthread_set_cfg(&cfg);
     is_playing_ = true;
@@ -1588,19 +1586,8 @@ void Esp32Music::PlayAudioStream() {
         
 
         if (current_state == kDeviceStateListening || current_state == kDeviceStateSpeaking) {
-
-            app.ToggleChatState();
-
-            vTaskDelay(pdMS_TO_TICKS(300));
-
+            vTaskDelay(pdMS_TO_TICKS(100));
             continue;
-
-        } else if (current_state != kDeviceStateIdle) {
-
-            vTaskDelay(pdMS_TO_TICKS(50));
-
-            continue;
-
         }
 
         

@@ -1653,6 +1653,7 @@ void Application::AddAudioData(AudioStreamPacket&& packet) {
     if (!codec->output_enabled()) {
         codec->EnableOutput(true);
     }
+    audio_service_.ResetOutputTimer();
     if (true) {
         if (packet.payload.size() >= 2) {
             size_t num_samples = packet.payload.size() / sizeof(int16_t);

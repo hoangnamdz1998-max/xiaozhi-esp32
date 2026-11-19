@@ -13022,7 +13022,6 @@ void LcdDisplay::FetchExchangeRates() {
 
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
     cfg.stack_size = 8192;
-    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
     cfg.thread_name = "fetch_rates";
     esp_pthread_set_cfg(&cfg);
 
@@ -14015,7 +14014,6 @@ void LcdDisplay::CreateFmRadioUI() {
                     std::string url = self->kFmChannels[idx].url;
                     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
                     cfg.stack_size = 8192;
-                    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
                     cfg.thread_name = "fm_start";
                     esp_pthread_set_cfg(&cfg);
                     std::thread([music, url]() {
@@ -14079,7 +14077,6 @@ void LcdDisplay::CreateFmRadioUI() {
             std::string url = self->kFmChannels[self->fm_current_channel_].url;
             esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
             cfg.stack_size = 8192;
-            cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
             cfg.thread_name = "fm_start";
             esp_pthread_set_cfg(&cfg);
             std::thread([music, url]() {
@@ -14853,7 +14850,6 @@ void LcdDisplay::UpdateChartSongsUI() {
 void LcdDisplay::FetchRealtimeChart() {
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
     cfg.stack_size = 8192;
-    cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
     cfg.thread_name = "fetch_chart";
     esp_pthread_set_cfg(&cfg);
     std::thread([this]() {
@@ -14942,8 +14938,7 @@ void LcdDisplay::PlayChartSong(int index) {
             std::string t_id = pending_encode_id;
 
             esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-            cfg.stack_size = 12288;
-            cfg.stack_alloc_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+            cfg.stack_size = 8192;
             cfg.thread_name = "play_chart";
             esp_pthread_set_cfg(&cfg);
             std::thread([music, t_title, t_artist, t_id]() {

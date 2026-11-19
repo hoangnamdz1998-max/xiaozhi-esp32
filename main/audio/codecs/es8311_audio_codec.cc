@@ -110,6 +110,9 @@ void Es8311AudioCodec::UpdateDeviceState() {
         int level = output_enabled_ ? 1 : 0;
         gpio_set_level(pa_pin_, pa_inverted_ ? !level : level);
     }
+    if (dev_ != nullptr && output_enabled_) {
+        esp_codec_dev_set_out_vol(dev_, output_volume_);
+    }
 }
 
 void Es8311AudioCodec::CreateDuplexChannels(gpio_num_t mclk, gpio_num_t bclk, gpio_num_t ws, gpio_num_t dout, gpio_num_t din) {
