@@ -51,6 +51,7 @@ private:
     
     std::atomic<DisplayMode> display_mode_;
     std::atomic<bool> is_playing_;
+    std::atomic<bool> is_paused_{false};
     std::atomic<bool> is_downloading_;
     std::thread play_thread_;
     std::thread download_thread_;
@@ -110,6 +111,12 @@ public:
     virtual size_t GetBufferSize() const override { return buffer_size_; }
     virtual bool IsDownloading() const override { return is_downloading_; }
     virtual bool IsPlaying() const override { return is_playing_; }
+    virtual void Pause() override;
+    virtual void Resume() override;
+    virtual bool IsPaused() const override { return is_paused_.load(); }
+    virtual uint32_t GetCurrentPlayTimeMs() const override {
+        return (uint32_t)(current_play_time_ms_ > 0 ? current_play_time_ms_ : 0);
+    }
     virtual int16_t* GetAudioData() override { return final_pcm_data_fft; }
     virtual void GetVisualizerBands(uint8_t bands[16]) override {
         for (int i = 0; i < 16; ++i) bands[i] = visualizer_bands_[i];

@@ -123,6 +123,7 @@ public:
     void CreateMusicScreenUI();
     void LayoutMusicWidgets(bool is_portrait);
     void UpdateMusicUI();
+    void StopMusicPlayback();
     virtual void ShowCalculator();
     virtual void ShowFlashlight();
     virtual void ShowFmRadio();

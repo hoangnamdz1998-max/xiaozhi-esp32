@@ -1778,6 +1778,10 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     }
 
     DisplayLockGuard lock(this);
+    if (!lock) return;
+    if (screen_mode_ == kScreenMusic) {
+        return;
+    }
 
     std::string filtered_msg = FilterChinese(content);
 
@@ -3449,6 +3453,10 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     }
 
     DisplayLockGuard lock(this);
+    if (!lock) return;
+    if (screen_mode_ == kScreenMusic) {
+        return;
+    }
 
     std::string filtered_msg = FilterChinese(content);
 
@@ -3632,6 +3640,9 @@ void LcdDisplay::SetStatus(const char* status) {
 }
 
 bool LcdDisplay::SetEmotion(const char* emotion) {
+    if (screen_mode_ == kScreenMusic) {
+        return false;
+    }
 
     if (!setup_ui_called_) {
 
@@ -4199,6 +4210,11 @@ void LcdDisplay::SetCustomWallpaper(const lv_image_dsc_t* img_dsc) {
 void LcdDisplay::OnStateChanged(DeviceState state) {
 
     DisplayLockGuard lock(this);
+    if (!lock) return;
+
+    if (screen_mode_ == kScreenMusic) {
+        return;
+    }
 
     is_wallpaper_active_ = true;
 
@@ -5684,7 +5700,8 @@ void LcdDisplay::OnSwipeUp() {
             // Người dùng chỉ thoát qua nút [X] cố định trên đỉnh
             return;
         } else {
-            // Ở trang phát nhạc: Vuốt lên sẽ thoát ra màn hình Menu (icon) luôn, nhưng nhạc VẪN TIẾP TỤC PHÁT!
+            // Ở trang phát nhạc: Vuốt lên thoát ra màn hình Menu và tắt nhạc luôn
+            StopMusicPlayback();
             ShowMenu();
             return;
         }
@@ -8093,75 +8110,13 @@ void LcdDisplay::CreateQuickSettingsUI() {
         Board::GetInstance().EnterWifiConfigMode();
     }, LV_EVENT_CLICKED, this);
 
-    // 4.5. Mini Music Player Card (nằm trên nút Khởi động lại)
-    qs_music_card_ = lv_obj_create(qs_content_box_);
-    lv_obj_set_style_bg_color(qs_music_card_, lv_color_hex(0x151e2e), 0);
-    lv_obj_set_style_bg_opa(qs_music_card_, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(qs_music_card_, 10, 0);
-    lv_obj_set_style_border_color(qs_music_card_, lv_color_hex(0x27354a), 0);
-    lv_obj_set_style_border_width(qs_music_card_, 1, 0);
-    lv_obj_set_style_pad_all(qs_music_card_, 4, 0);
-    lv_obj_clear_flag(qs_music_card_, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Icon nốt nhạc / đĩa than nhỏ
-    qs_music_icon_ = lv_label_create(qs_music_card_);
-    lv_label_set_text(qs_music_icon_, MATERIAL_SYMBOLS_MUSIC_NOTE);
-    lv_obj_set_style_text_font(qs_music_icon_, &font_material_symbols_30_4, 0);
-    lv_obj_set_style_text_color(qs_music_icon_, lv_color_hex(0xec4899), 0);
-    lv_obj_set_pos(qs_music_icon_, 4, 2);
-
-    // Tiêu đề bài hát
-    qs_music_title_ = lv_label_create(qs_music_card_);
-    lv_label_set_text(qs_music_title_, music_current_song_.c_str());
-    lv_obj_set_style_text_font(qs_music_title_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(qs_music_title_, lv_color_white(), 0);
-    lv_label_set_long_mode(qs_music_title_, LV_LABEL_LONG_DOT);
-    lv_obj_set_pos(qs_music_title_, 34, 4);
-
-    // Nút Back bài
-    qs_music_prev_btn_ = lv_button_create(qs_music_card_);
-    lv_obj_set_style_bg_color(qs_music_prev_btn_, lv_color_hex(0x1e293b), 0);
-    lv_obj_set_style_radius(qs_music_prev_btn_, 6, 0);
-    lv_obj_set_style_pad_all(qs_music_prev_btn_, 0, 0);
-    lv_obj_t* qs_prev_lbl = lv_label_create(qs_music_prev_btn_);
-    lv_label_set_text(qs_prev_lbl, "|<");
-    lv_obj_set_style_text_font(qs_prev_lbl, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(qs_prev_lbl, lv_color_white(), 0);
-    lv_obj_align(qs_prev_lbl, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_event_cb(qs_music_prev_btn_, [](lv_event_t* e) {
-        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        self->PlayPrevChartSong();
-    }, LV_EVENT_CLICKED, this);
-
-    // Nút Play/Pause
-    qs_music_play_btn_ = lv_button_create(qs_music_card_);
-    lv_obj_set_style_bg_color(qs_music_play_btn_, lv_color_hex(0x38bdf8), 0);
-    lv_obj_set_style_radius(qs_music_play_btn_, 6, 0);
-    lv_obj_set_style_pad_all(qs_music_play_btn_, 0, 0);
-    qs_music_play_lbl_ = lv_label_create(qs_music_play_btn_);
-    lv_label_set_text(qs_music_play_lbl_, music_is_playing_ ? "||" : ">");
-    lv_obj_set_style_text_font(qs_music_play_lbl_, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(qs_music_play_lbl_, lv_color_hex(0x0f172a), 0);
-    lv_obj_align(qs_music_play_lbl_, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_event_cb(qs_music_play_btn_, [](lv_event_t* e) {
-        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        self->ToggleMusicPlayPause();
-    }, LV_EVENT_CLICKED, this);
-
-    // Nút Next bài
-    qs_music_next_btn_ = lv_button_create(qs_music_card_);
-    lv_obj_set_style_bg_color(qs_music_next_btn_, lv_color_hex(0x1e293b), 0);
-    lv_obj_set_style_radius(qs_music_next_btn_, 6, 0);
-    lv_obj_set_style_pad_all(qs_music_next_btn_, 0, 0);
-    lv_obj_t* qs_next_lbl = lv_label_create(qs_music_next_btn_);
-    lv_label_set_text(qs_next_lbl, ">|");
-    lv_obj_set_style_text_font(qs_next_lbl, &font_noto_sans_custom_14_1, 0);
-    lv_obj_set_style_text_color(qs_next_lbl, lv_color_white(), 0);
-    lv_obj_align(qs_next_lbl, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_event_cb(qs_music_next_btn_, [](lv_event_t* e) {
-        auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        self->PlayNextChartSong();
-    }, LV_EVENT_CLICKED, this);
+    qs_music_card_ = nullptr;
+    qs_music_icon_ = nullptr;
+    qs_music_title_ = nullptr;
+    qs_music_prev_btn_ = nullptr;
+    qs_music_play_btn_ = nullptr;
+    qs_music_play_lbl_ = nullptr;
+    qs_music_next_btn_ = nullptr;
 
     // 5. Restart Button - Giữ nguyên màu đỏ nổi bật (trong qs_content_box_)
     qs_restart_btn_ = lv_button_create(qs_content_box_);
@@ -8324,39 +8279,16 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_pos(qs_wifi_btn_, 123, 238);
         }
 
-        // Hàng 2.5 (y = 280): Mini Music Player (nằm trên nút Khởi động lại)
-        if (qs_music_card_) {
-            lv_obj_set_size(qs_music_card_, 230, 68);
-            lv_obj_set_pos(qs_music_card_, 5, 280);
-            if (qs_music_icon_) lv_obj_set_pos(qs_music_icon_, 6, 6);
-            if (qs_music_title_) {
-                lv_obj_set_pos(qs_music_title_, 34, 8);
-                lv_obj_set_width(qs_music_title_, 186);
-            }
-            if (qs_music_prev_btn_) {
-                lv_obj_set_size(qs_music_prev_btn_, 56, 26);
-                lv_obj_set_pos(qs_music_prev_btn_, 18, 34);
-            }
-            if (qs_music_play_btn_) {
-                lv_obj_set_size(qs_music_play_btn_, 58, 26);
-                lv_obj_set_pos(qs_music_play_btn_, 86, 34);
-            }
-            if (qs_music_next_btn_) {
-                lv_obj_set_size(qs_music_next_btn_, 56, 26);
-                lv_obj_set_pos(qs_music_next_btn_, 156, 34);
-            }
-        }
-
-        // Hàng 3 (y = 356): Khởi động lại (nằm dưới Mini Player)
+        // Hàng 3 (y = 280): Khởi động lại
         if (qs_restart_btn_) {
             lv_obj_set_size(qs_restart_btn_, 230, 44);
-            lv_obj_set_pos(qs_restart_btn_, 5, 356);
+            lv_obj_set_pos(qs_restart_btn_, 5, 280);
         }
 
-        // Hàng 4 (y = 408): Thẻ thông tin hệ thống
+        // Hàng 4 (y = 330): Thẻ thông tin hệ thống
         if (qs_info_card_) {
             lv_obj_set_size(qs_info_card_, 230, 154);
-            lv_obj_set_pos(qs_info_card_, 5, 408);
+            lv_obj_set_pos(qs_info_card_, 5, 330);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
         if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 36);
@@ -8446,39 +8378,16 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
             lv_obj_set_pos(qs_wifi_btn_, 164, 206);
         }
 
-        // Hàng 2.5 (y = 246): Mini Music Player (nằm trên nút Khởi động lại)
-        if (qs_music_card_) {
-            lv_obj_set_size(qs_music_card_, 304, 64);
-            lv_obj_set_pos(qs_music_card_, 8, 246);
-            if (qs_music_icon_) lv_obj_set_pos(qs_music_icon_, 8, 6);
-            if (qs_music_title_) {
-                lv_obj_set_pos(qs_music_title_, 38, 8);
-                lv_obj_set_width(qs_music_title_, 256);
-            }
-            if (qs_music_prev_btn_) {
-                lv_obj_set_size(qs_music_prev_btn_, 62, 26);
-                lv_obj_set_pos(qs_music_prev_btn_, 46, 32);
-            }
-            if (qs_music_play_btn_) {
-                lv_obj_set_size(qs_music_play_btn_, 64, 26);
-                lv_obj_set_pos(qs_music_play_btn_, 120, 32);
-            }
-            if (qs_music_next_btn_) {
-                lv_obj_set_size(qs_music_next_btn_, 62, 26);
-                lv_obj_set_pos(qs_music_next_btn_, 196, 32);
-            }
-        }
-
-        // Hàng 3 (y = 318): Khởi động lại (to rõ 20pt)
+        // Hàng 3 (y = 246): Khởi động lại (to rõ 20pt)
         if (qs_restart_btn_) {
             lv_obj_set_size(qs_restart_btn_, 304, 42);
-            lv_obj_set_pos(qs_restart_btn_, 8, 318);
+            lv_obj_set_pos(qs_restart_btn_, 8, 246);
         }
 
-        // Hàng 4 (y = 368): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
+        // Hàng 4 (y = 296): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
         if (qs_info_card_) {
             lv_obj_set_size(qs_info_card_, 304, 154);
-            lv_obj_set_pos(qs_info_card_, 8, 368);
+            lv_obj_set_pos(qs_info_card_, 8, 296);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
         if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 36);
@@ -14289,6 +14198,7 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_align(close_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(music_chart_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->StopMusicPlayback();
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
 
@@ -14462,6 +14372,7 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_align(p_close_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(music_player_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
+        self->StopMusicPlayback();
         self->ShowMenu();
     }, LV_EVENT_CLICKED, this);
 
@@ -14662,8 +14573,10 @@ void LcdDisplay::CreateMusicScreenUI() {
             play_seconds = 0;
         }
         if (self->music_is_playing_) {
-            if (tick % 40 == 0) { // Mỗi 1 giây (40 * 25ms)
-                play_seconds++;
+            auto music = Board::GetInstance().GetMusic();
+            uint32_t play_ms = music ? music->GetCurrentPlayTimeMs() : 0;
+            if (play_ms > 0) {
+                play_seconds = (int)(play_ms / 1000);
                 if (self->music_time_lbl_) {
                     char time_buf[16];
                     snprintf(time_buf, sizeof(time_buf), "%02d:%02d", play_seconds / 60, play_seconds % 60);
@@ -14673,6 +14586,13 @@ void LcdDisplay::CreateMusicScreenUI() {
                     int pct = (play_seconds * 100) / 210;
                     if (pct > 100) pct = 100;
                     lv_bar_set_value(self->music_progress_bar_, pct, LV_ANIM_ON);
+                }
+            } else {
+                if (self->music_time_lbl_) {
+                    lv_label_set_text(self->music_time_lbl_, "Đang tải...");
+                }
+                if (self->music_progress_bar_) {
+                    lv_bar_set_value(self->music_progress_bar_, 0, LV_ANIM_OFF);
                 }
             }
         }
@@ -14969,11 +14889,10 @@ void LcdDisplay::PlayPrevChartSong() {
     PlayChartSong(prev_idx);
 }
 
-void LcdDisplay::ToggleMusicPlayPause() {
+void LcdDisplay::StopMusicPlayback() {
+    music_is_playing_ = false;
     auto music = Board::GetInstance().GetMusic();
-    if (!music) return;
-    if (music_is_playing_) {
-        music_is_playing_ = false;
+    if (music) {
         esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
         cfg.stack_size = 10240;
         cfg.thread_name = "stop_music";
@@ -14981,8 +14900,25 @@ void LcdDisplay::ToggleMusicPlayPause() {
         std::thread([music]() {
             music->StopStreaming();
         }).detach();
+    }
+    UpdateMusicUI();
+}
+
+void LcdDisplay::ToggleMusicPlayPause() {
+    auto music = Board::GetInstance().GetMusic();
+    if (!music) return;
+    if (music_is_playing_) {
+        // Đang phát -> Tạm dừng (Pause)
+        music_is_playing_ = false;
+        music->Pause();
     } else {
-        PlayChartSong(music_current_chart_idx_);
+        // Đang tạm dừng -> Phát tiếp (Resume nếu stream đang sống, hoặc phát bài mới)
+        music_is_playing_ = true;
+        if (music->IsPlaying()) {
+            music->Resume();
+        } else {
+            PlayChartSong(music_current_chart_idx_);
+        }
     }
     UpdateMusicUI();
 }

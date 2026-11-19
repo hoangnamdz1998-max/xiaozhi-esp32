@@ -617,6 +617,7 @@ void Esp32Music::ForceCleanupCache() {
     ESP_LOGI(TAG, "=== FORCE CACHE CLEANUP START ===");
     
     // 1. Dừng tất cả cờ điều khiển
+    is_paused_ = false;
     is_downloading_ = false;
     is_playing_ = false;
     is_lyric_running_ = false;
@@ -1017,17 +1018,37 @@ bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::s
     std::lock_guard<std::mutex> lock(stream_start_mutex_);
     ESP_LOGI(TAG, "=== StartStreamingDirect: %s - %s ===", song_name.c_str(), audio_url.c_str());
     ForceCleanupCache();
+    is_paused_ = false;
     is_downloading_ = true;
     current_song_name_ = song_name;
     current_music_url_ = audio_url;
 
     auto disp = Board::GetInstance().GetDisplay();
     if (disp) {
-        disp->ShowMusicScreen(song_name, artist_name);
+        disp->UpdateMusicPlaybackState(true, song_name, artist_name);
     }
 
     song_name_displayed_ = false;
     return StartStreaming(current_music_url_);
+}
+
+void Esp32Music::Pause() {
+    is_paused_ = true;
+    for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
+    auto disp = Board::GetInstance().GetDisplay();
+    if (disp) {
+        disp->UpdateMusicPlaybackState(false);
+    }
+    ESP_LOGI(TAG, "Music playback paused");
+}
+
+void Esp32Music::Resume() {
+    is_paused_ = false;
+    auto disp = Board::GetInstance().GetDisplay();
+    if (disp) {
+        disp->UpdateMusicPlaybackState(true);
+    }
+    ESP_LOGI(TAG, "Music playback resumed");
 }
 
 bool Esp32Music::StartStreaming(const std::string& music_url) {
@@ -1214,6 +1235,7 @@ void Esp32Music::UpdateVisualizerBands(const int16_t* pcm, size_t count) {
 
 bool Esp32Music::StopStreaming() {
     std::lock_guard<std::mutex> lock(stream_start_mutex_);
+    is_paused_ = false;
     for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
     auto disp = Board::GetInstance().GetDisplay();
     if (disp) {
@@ -1572,6 +1594,11 @@ void Esp32Music::PlayAudioStream() {
     
 
     while (is_playing_) {
+        if (is_paused_) {
+            for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
+            vTaskDelay(pdMS_TO_TICKS(50));
+            continue;
+        }
 
         auto& app = Application::GetInstance();
 
