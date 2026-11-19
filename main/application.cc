@@ -748,7 +748,13 @@ void Application::InitializeProtocol() {
             } else if (strcmp(state->valuestring, "stop") == 0) {
                 Schedule([this]() {
                     if (GetDeviceState() == kDeviceStateSpeaking) {
-                        SetDeviceState(kDeviceStateListening);
+                        auto music = Board::GetInstance().GetMusic();
+                        if (music && (music->IsPlaying() || music->IsDownloading())) {
+                            // Khi đang tải hoặc đang phát nhạc: chuyển sang Idle để nghe nhạc, không mở mic lắng nghe
+                            SetDeviceState(kDeviceStateIdle);
+                        } else {
+                            SetDeviceState(kDeviceStateListening);
+                        }
                     }
                 });
             } else if (strcmp(state->valuestring, "sentence_start") == 0) {

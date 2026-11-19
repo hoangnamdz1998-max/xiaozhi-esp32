@@ -7423,13 +7423,13 @@ void LcdDisplay::CreateMenuUI() {
         if (p > 0) lv_obj_add_flag(menu_page_box_[p], LV_OBJ_FLAG_HIDDEN);
     }
 
-    const char* titles[12] = {
+    const char* titles[11] = {
         // Trang 1 (6 icons to rõ)
         "Lịch", "Đồng hồ", "Thời tiết",
         "Tỷ giá", "Trợ lý AI", "Cài đặt",
-        // Trang 2 (6 icons to rõ)
-        "Âm nhạc", "Hình nền", "Máy tính",
-        "Đài FM", "Mã QR", "Đèn pin"
+        // Trang 2 (5 icons to rõ)
+        "Hình nền", "Máy tính", "Đài FM",
+        "Mã QR", "Đèn pin"
     };
 
     time_t now_cal = time(nullptr);
@@ -7442,8 +7442,8 @@ void LcdDisplay::CreateMenuUI() {
         menu_items_[i] = nullptr;
     }
 
-    for (int i = 0; i < 12; ++i) {
-        int p = (i < 6) ? 0 : 1; // 6 icon mỗi trang
+    for (int i = 0; i < 11; ++i) {
+        int p = (i < 6) ? 0 : 1; // 6 icon trang 1, 5 icon trang 2
         lv_obj_t* btn = lv_obj_create(menu_page_box_[p]);
         menu_items_[i] = btn;
         lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
@@ -7546,15 +7546,6 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
         } else if (i == 6) {
-            // Âm nhạc
-            lv_obj_set_style_bg_color(tile, lv_color_hex(0xEC4899), 0);
-            lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
-            lv_obj_t* icon = lv_label_create(tile);
-            lv_label_set_text(icon, MATERIAL_SYMBOLS_MUSIC_NOTE);
-            lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
-            lv_obj_set_style_text_color(icon, lv_color_white(), 0);
-            lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
-        } else if (i == 7) {
             // Hình nền
             lv_obj_set_style_bg_color(tile, lv_color_hex(0x0D9488), 0);
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
@@ -7563,7 +7554,7 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
-        } else if (i == 8) {
+        } else if (i == 7) {
             // Máy tính
             lv_obj_set_style_bg_color(tile, lv_color_hex(0xF97316), 0);
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
@@ -7572,7 +7563,7 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_text_font(icon, &font_material_symbols_30_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
-        } else if (i == 9) {
+        } else if (i == 8) {
             // Đài FM
             lv_obj_set_style_bg_color(tile, lv_color_hex(0x8B5CF6), 0);
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
@@ -7581,7 +7572,7 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_text_font(icon, &font_noto_sans_custom_30_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
-        } else if (i == 10) {
+        } else if (i == 9) {
             // Mã QR
             lv_obj_set_style_bg_color(tile, lv_color_hex(0x0284C7), 0);
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
@@ -7590,7 +7581,7 @@ void LcdDisplay::CreateMenuUI() {
             lv_obj_set_style_text_font(icon, &font_noto_sans_custom_20_4, 0);
             lv_obj_set_style_text_color(icon, lv_color_white(), 0);
             lv_obj_align(icon, LV_ALIGN_CENTER, 0, 0);
-        } else if (i == 11) {
+        } else if (i == 10) {
             // Đèn pin
             lv_obj_set_style_bg_color(tile, lv_color_hex(0xEAB308), 0);
             lv_obj_set_style_bg_opa(tile, LV_OPA_COVER, 0);
@@ -7634,16 +7625,14 @@ void LcdDisplay::CreateMenuUI() {
             } else if (index == 5) {
                 self->ShowQuickSettings();
             } else if (index == 6) {
-                self->ShowMusicScreen();
-            } else if (index == 7) {
                 self->ShowWallpaperSettings();
-            } else if (index == 8) {
+            } else if (index == 7) {
                 self->ShowCalculator();
-            } else if (index == 9) {
+            } else if (index == 8) {
                 self->ShowFmRadio();
-            } else if (index == 10) {
+            } else if (index == 9) {
                 self->ShowNotification("Mã QR: Quét kết nối", 1800);
-            } else if (index == 11) {
+            } else if (index == 10) {
                 self->ShowFlashlight();
             }
         }, LV_EVENT_CLICKED, this);
@@ -7735,10 +7724,10 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
     }
 
     if (is_portrait) {
-        // 240 x 320: 2 columns x 3 rows (6 icons / trang, cỡ lớn 66x66 px)
+        // 240 x 320: 2 columns x 3 rows (6 icons trang 1, 5 icons trang 2, cỡ lớn 66x66 px)
         int col_x[2] = {10, 124};
         int row_y[3] = {34, 124, 214};
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 11; ++i) {
             if (menu_items_[i] == nullptr) continue;
             int page_idx = (i < 6) ? i : (i - 6);
             int r = page_idx / 2;
@@ -7773,10 +7762,10 @@ void LcdDisplay::LayoutMenuWidgets(bool is_portrait) {
         }
         if (menu_dots_[2]) lv_obj_add_flag(menu_dots_[2], LV_OBJ_FLAG_HIDDEN);
     } else {
-        // 320 x 240: 3 columns x 2 rows (6 icons / trang)
+        // 320 x 240: 3 columns x 2 rows (6 icons trang 1, 5 icons trang 2)
         int col_x[3] = {16, 116, 216};
         int row_y[2] = {30, 120};
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 11; ++i) {
             if (menu_items_[i] == nullptr) continue;
             int page_idx = (i < 6) ? i : (i - 6);
             int r = page_idx / 3;

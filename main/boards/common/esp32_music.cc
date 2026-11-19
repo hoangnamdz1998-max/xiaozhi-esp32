@@ -1605,8 +1605,10 @@ void Esp32Music::PlayAudioStream() {
 
         
 
-        if (current_state == kDeviceStateListening || current_state == kDeviceStateSpeaking) {
-            vTaskDelay(pdMS_TO_TICKS(100));
+        // Chỉ tạm dừng luồng nhạc khi robot đang phát giọng nói TTS (speaking) để tránh đè tiếng.
+        // Không tạm dừng khi listening để nhạc có thể bắt đầu phát ngay.
+        if (current_state == kDeviceStateSpeaking) {
+            vTaskDelay(pdMS_TO_TICKS(50));
             continue;
         }
 
@@ -1901,6 +1903,9 @@ void Esp32Music::PlayAudioStream() {
                     auto disp = Board::GetInstance().GetDisplay();
                     if (disp) {
                         disp->ShowMusicScreen(current_song_name_, current_artist_name_);
+                    }
+                    if (app.GetDeviceState() == kDeviceStateListening) {
+                        app.SetDeviceState(kDeviceStateIdle);
                     }
                 }
                 app.AddAudioData(std::move(packet));

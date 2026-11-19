@@ -54,7 +54,12 @@ void McpServer::AddCommonTools() {
             [music, &board](const PropertyList& properties) -> ReturnValue {
                 auto song_name = properties["song_name"].value<std::string>();
                 auto artist_name = properties["artist_name"].value<std::string>();
+                auto display = board.GetDisplay();
+                if (display) {
+                    display->SetStatus("Đang tìm bài hát...");
+                }
                 if (!music->Download(song_name, artist_name)) {
+                    if (display) display->SetStatus("");
                     return "{\"success\": false, \"message\": \"Không thể tìm thấy hoặc phát bài hát này\"}";
                 }
                 return "{\"success\": true, \"message\": \"Đang phát bài hát ra loa\" }";
