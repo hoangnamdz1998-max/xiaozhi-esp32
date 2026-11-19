@@ -91,20 +91,13 @@ bool AdcBatteryMonitor::IsDischarging() {
 }
 
 uint8_t AdcBatteryMonitor::GetBatteryLevel() {
-    if (adc_battery_estimation_handle_ == nullptr) {
+    if (smooth_battery_level_ < 0.0f) {
+        CheckBatteryStatus();
+    }
+    if (smooth_battery_level_ < 0.0f) {
         return 100;
     }
-    
-    float capacity = 0;
-    esp_err_t err = adc_battery_estimation_get_capacity(adc_battery_estimation_handle_, &capacity);
-    if (err != ESP_OK) {
-        return 100;
-    }
-
-    if (capacity < 0.0f) capacity = 0.0f;
-    if (capacity > 100.0f) capacity = 100.0f;
-
-    return (uint8_t)(capacity + 0.5f);
+    return (uint8_t)(smooth_battery_level_ + 0.5f);
 }
 
 void AdcBatteryMonitor::SetChargingDetectCallback(std::function<bool()> callback) {
@@ -121,6 +114,61 @@ void AdcBatteryMonitor::CheckBatteryStatus() {
         is_charging_ = new_charging_status;
         if (on_charging_status_changed_) {
             on_charging_status_changed_(is_charging_);
+        }
+    }
+
+    if (adc_battery_estimation_handle_ != nullptr) {
+        float raw_capacity = 0.0f;
+        esp_err_t err = adc_battery_estimation_get_capacity(adc_battery_estimation_handle_, &raw_capacity);
+        if (err == ESP_OK) {
+            if (raw_capacity < 0.0f) raw_capacity = 0.0f;
+            if (raw_capacity > 100.0f) raw_capacity = 100.0f;
+
+            // Bù trừ sụt áp nội trở (IR drop) do dòng nạp từ củ sạc tạo ra
+            float target = raw_capacity;
+            if (is_charging_) {
+                if (raw_capacity > 92.0f) {
+                    target = 92.0f + (raw_capacity - 92.0f);
+                } else if (raw_capacity > 12.0f) {
+                    target = raw_capacity - 12.0f;
+                }
+            }
+
+            int64_t now_ms = esp_timer_get_time() / 1000;
+            if (smooth_battery_level_ < 0.0f) {
+                // Khởi tạo mức pin lần đầu khi vừa khởi động máy
+                smooth_battery_level_ = target;
+                last_step_time_ms_ = now_ms;
+            } else {
+                int64_t elapsed_ms = now_ms - last_step_time_ms_;
+                if (is_charging_) {
+                    // Đang cắm sạc: KHÔNG BAO GIỜ được tụt phần trăm
+                    // Tăng êm mượt tối đa 1% sau mỗi 25 giây
+                    if (target > smooth_battery_level_) {
+                        if (elapsed_ms >= 25000) {
+                            smooth_battery_level_ += 1.0f;
+                            if (smooth_battery_level_ > 100.0f) smooth_battery_level_ = 100.0f;
+                            last_step_time_ms_ = now_ms;
+                        }
+                    } else {
+                        // Giữ nguyên mức pin, không tụt số khi đang cắm sạc
+                        last_step_time_ms_ = now_ms;
+                    }
+                } else {
+                    // Đang rút sạc chạy pin: KHÔNG BAO GIỜ nhảy ngược lên
+                    // Giảm êm mượt tối đa 1% sau mỗi 40 giây
+                    if (target < smooth_battery_level_) {
+                        if (elapsed_ms >= 40000) {
+                            smooth_battery_level_ -= 1.0f;
+                            if (smooth_battery_level_ < 0.0f) smooth_battery_level_ = 0.0f;
+                            last_step_time_ms_ = now_ms;
+                        }
+                    } else {
+                        // Giữ nguyên mức pin, không nhảy số ảo khi rút sạc
+                        last_step_time_ms_ = now_ms;
+                    }
+                }
+            }
         }
     }
 }

@@ -23,6 +23,8 @@ private:
     adc_battery_estimation_handle_t adc_battery_estimation_handle_ = nullptr;
     esp_timer_handle_t timer_handle_ = nullptr;
     bool is_charging_ = false;
+    float smooth_battery_level_ = -1.0f;
+    int64_t last_step_time_ms_ = 0;
     std::function<void(bool)> on_charging_status_changed_;
     std::function<bool()> charging_detect_cb_;
 

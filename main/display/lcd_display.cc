@@ -1,4 +1,5 @@
 #include "lcd_display.h"
+#include <esp_app_desc.h>
 
 #include "custom_wallpaper.h"
 #include "web/wallpaper_manager.h"
@@ -8202,6 +8203,7 @@ void LcdDisplay::CreateQuickSettingsUI() {
     };
     qs_info_wifi_ = make_info_label("WiFi: --");
     qs_info_ip_   = make_info_label("IP: --");
+    qs_info_version_ = make_info_label("Phiên bản: --");
     qs_info_temp_ = make_info_label("Nhiệt độ: --");
     qs_info_sd_   = make_info_label("Thẻ nhớ SD: --");
 
@@ -8353,13 +8355,14 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
 
         // Hàng 4 (y = 408): Thẻ thông tin hệ thống
         if (qs_info_card_) {
-            lv_obj_set_size(qs_info_card_, 230, 134);
+            lv_obj_set_size(qs_info_card_, 230, 154);
             lv_obj_set_pos(qs_info_card_, 5, 408);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
-        if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 38);
-        if (qs_info_temp_) lv_obj_set_pos(qs_info_temp_, 10, 68);
-        if (qs_info_sd_) lv_obj_set_pos(qs_info_sd_, 10, 98);
+        if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 36);
+        if (qs_info_version_) lv_obj_set_pos(qs_info_version_, 10, 64);
+        if (qs_info_temp_) lv_obj_set_pos(qs_info_temp_, 10, 92);
+        if (qs_info_sd_) lv_obj_set_pos(qs_info_sd_, 10, 120);
     } else {
         // 320 x 240 (Màn hình ngang)
         // Fixed Top Header (tiêu đề to 20pt, nút X to và xích sang trái)
@@ -8474,13 +8477,14 @@ void LcdDisplay::LayoutQuickSettingsWidgets(bool is_portrait) {
 
         // Hàng 4 (y = 368): Thẻ thông tin hệ thống (chữ to 16_4 đồng bộ)
         if (qs_info_card_) {
-            lv_obj_set_size(qs_info_card_, 304, 134);
+            lv_obj_set_size(qs_info_card_, 304, 154);
             lv_obj_set_pos(qs_info_card_, 8, 368);
         }
         if (qs_info_wifi_) lv_obj_set_pos(qs_info_wifi_, 10, 8);
-        if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 38);
-        if (qs_info_temp_) lv_obj_set_pos(qs_info_temp_, 10, 68);
-        if (qs_info_sd_) lv_obj_set_pos(qs_info_sd_, 10, 98);
+        if (qs_info_ip_) lv_obj_set_pos(qs_info_ip_, 10, 36);
+        if (qs_info_version_) lv_obj_set_pos(qs_info_version_, 10, 64);
+        if (qs_info_temp_) lv_obj_set_pos(qs_info_temp_, 10, 92);
+        if (qs_info_sd_) lv_obj_set_pos(qs_info_sd_, 10, 120);
     }
     LayoutQrModalWidgets(is_portrait);
 }
@@ -8525,6 +8529,18 @@ void LcdDisplay::UpdateQuickSettingsInfo() {
     snprintf(ip_buf, sizeof(ip_buf), "Địa chỉ IP: %s", ip.c_str());
 
     if (qs_info_ip_) lv_label_set_text(qs_info_ip_, ip_buf);
+
+
+
+    // 2.5. Phiên bản Firmware
+
+    const esp_app_desc_t* app_desc = esp_app_get_description();
+
+    char ver_buf[64];
+
+    snprintf(ver_buf, sizeof(ver_buf), "Phiên bản: v%s", app_desc ? app_desc->version : "2.5.9");
+
+    if (qs_info_version_) lv_label_set_text(qs_info_version_, ver_buf);
 
 
 

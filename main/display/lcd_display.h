@@ -225,6 +225,7 @@ protected:
     lv_obj_t* qs_info_card_ = nullptr;
     lv_obj_t* qs_info_wifi_ = nullptr;
     lv_obj_t* qs_info_ip_ = nullptr;
+    lv_obj_t* qs_info_version_ = nullptr;
     lv_obj_t* qs_info_temp_ = nullptr;
     lv_obj_t* qs_info_sd_ = nullptr;
     std::atomic<bool> qs_at_bottom_{false};
