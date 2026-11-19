@@ -8,6 +8,7 @@
 #include <esp_app_desc.h>
 #include <esp_log.h>
 #include <esp_pthread.h>
+#include <thread>
 #include <algorithm>
 #include <cstring>
 #include <iterator>
@@ -61,14 +62,24 @@ void McpServer::AddCommonTools() {
                 if (display) {
                     display->SetStatus("Đang tìm bài hát...");
                 }
-                if (!music->Download(song_name, artist_name)) {
-                    if (display) display->SetStatus("");
-                    return "{\"success\": false, \"message\": \"Không thể tìm thấy hoặc phát bài hát này\"}";
-                }
-                if (display) {
-                    display->ShowMusicScreen(song_name, artist_name);
-                }
-                return "{\"success\": true, \"message\": \"Đang phát bài hát ra loa\" }";
+
+                esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
+                cfg.stack_size = 12288;
+                cfg.thread_name = "play_song_task";
+                esp_pthread_set_cfg(&cfg);
+                std::thread([music, &board, song_name, artist_name]() {
+                    if (music->Download(song_name, artist_name)) {
+                        auto display = board.GetDisplay();
+                        if (display) {
+                            display->ShowMusicScreen(song_name, artist_name);
+                        }
+                    } else {
+                        auto display = board.GetDisplay();
+                        if (display) display->SetStatus("");
+                    }
+                }).detach();
+
+                return "{\"success\": true, \"message\": \"Đang tìm và phát bài hát ra loa\" }";
             });
 
         AddTool("self.music.stop",

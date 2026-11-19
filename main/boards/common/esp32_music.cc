@@ -441,7 +441,7 @@ Esp32Music::Esp32Music() : last_downloaded_data_(), current_music_url_(), curren
 
                          current_lyric_index_(-1), lyric_thread_(), is_lyric_running_(false),
 
-                         display_mode_(DISPLAY_MODE_LYRICS), is_playing_(false), is_downloading_(false), 
+                         display_mode_(DISPLAY_MODE_SPECTRUM), is_playing_(false), is_downloading_(false), 
 
                          play_thread_(), download_thread_(), audio_buffer_(), buffer_mutex_(), 
 
@@ -966,33 +966,9 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
 
                     
 
-                    if (display_mode_ == DISPLAY_MODE_LYRICS) {
+                    // Tat lyric_thread de tiet kiem stack va tranh HTTP de len nhau
+                    is_lyric_running_ = false;
 
-                        if (is_lyric_running_) {
-
-                            is_lyric_running_ = false;
-
-                            if (lyric_thread_.joinable()) {
-
-                                lyric_thread_.join();
-
-                            }
-
-                        }
-
-                        
-
-                        is_lyric_running_ = true;
-
-                        current_lyric_index_ = -1;
-
-                        lyrics_.clear();
-
-                        
-
-                        lyric_thread_ = std::thread(&Esp32Music::LyricDisplayThread, this);
-
-                    }
 
                 }
 
@@ -1115,7 +1091,7 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     }
 
     esp_pthread_cfg_t cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 16384;
+    cfg.stack_size = 10240;
     cfg.prio = 5;
     cfg.thread_name = "audio_dl";
     esp_pthread_set_cfg(&cfg);
@@ -1123,7 +1099,7 @@ bool Esp32Music::StartStreaming(const std::string& music_url) {
     download_thread_ = std::thread(&Esp32Music::DownloadAudioStream, this, music_url);
     
     cfg = esp_pthread_get_default_config();
-    cfg.stack_size = 16384;
+    cfg.stack_size = 10240;
     cfg.prio = 5;
     cfg.thread_name = "audio_play";
     esp_pthread_set_cfg(&cfg);
