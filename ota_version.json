@@ -1,6 +1,6 @@
 {
   "firmware": {
-    "version": "2.5.6",
+    "version": "2.6.0",
     "url": "https://ndztech.vercel.app/firmware/xiaozhi.bin",
     "force": 0
   }
