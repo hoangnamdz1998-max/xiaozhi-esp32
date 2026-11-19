@@ -1068,7 +1068,7 @@ void Application::HandleStopListeningEvent() {
 
 void Application::HandleWakeWordDetectedEvent() {
     auto disp = Board::GetInstance().GetDisplay();
-    auto lcd = dynamic_cast<LcdDisplay*>(disp);
+    auto lcd = static_cast<LcdDisplay*>(disp);
     if (lcd && lcd->GetScreenMode() == LcdDisplay::kScreenMusic) {
         lcd->ReturnToChat();
     }
