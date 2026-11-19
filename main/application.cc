@@ -9,6 +9,7 @@
 #include "board.h"
 #include "cjson_utils.h"
 #include "display.h"
+#include "display/lcd_display.h"
 #include "mcp_server.h"
 #include "mqtt_protocol.h"
 #include "settings.h"
@@ -322,13 +323,17 @@ void Application::Run() {
                             Board::GetInstance().GetDisplay()->SetChatMessage("assistant", "Bạn có ở đó không?");
                         }
                     } else {
-                        if (now - listening_start_time_ >= 10000000) { // 10s second silence
-                            ESP_LOGI(TAG, "No speech detected after reminder (10s), going to idle");
+                        if (now - listening_start_time_ >= 20000000) { // 20s second silence
+                            ESP_LOGI(TAG, "No speech detected after reminder (20s), saying goodbye and going to idle");
                             stop_listening_sent_ = true;
+                            goodbye_sent_ = true;
+                            Board::GetInstance().GetDisplay()->SetChatMessage("assistant", "Tạm biệt bạn nhé!");
+                            Board::GetInstance().GetDisplay()->SetEmotion("neutral");
                             if (protocol_) {
-                                protocol_->SendStopListening();
+                                protocol_->SendWakeWordDetected("Tạm biệt");
+                            } else {
+                                SetDeviceState(kDeviceStateIdle);
                             }
-                            SetDeviceState(kDeviceStateIdle);
                         }
                     }
                 }
@@ -395,19 +400,29 @@ void Application::Run() {
                             Board::GetInstance().GetDisplay()->SetChatMessage("assistant", "Bạn có ở đó không?");
                         }
                     } else {
-                        if (now - listening_start_time_ >= 10000000) {
-                            ESP_LOGI(TAG, "No speech detected for 10s after reminder in clock tick, going to idle");
+                        if (now - listening_start_time_ >= 20000000) {
+                            ESP_LOGI(TAG, "No speech detected for 20s after reminder in clock tick, saying goodbye and going to idle");
                             stop_listening_sent_ = true;
+                            goodbye_sent_ = true;
+                            Board::GetInstance().GetDisplay()->SetChatMessage("assistant", "Tạm biệt bạn nhé!");
+                            Board::GetInstance().GetDisplay()->SetEmotion("neutral");
                             if (protocol_) {
-                                protocol_->SendStopListening();
+                                protocol_->SendWakeWordDetected("Tạm biệt");
+                            } else {
+                                SetDeviceState(kDeviceStateIdle);
                             }
-                            SetDeviceState(kDeviceStateIdle);
                         }
                     }
                 }
             } else if (GetDeviceState() == kDeviceStateListening && stop_listening_sent_) {
                 int64_t now = esp_timer_get_time();
-                if (now - last_speech_time_ >= 15000000) {
+                if (goodbye_sent_) {
+                    if (now - listening_start_time_ >= 28000000) {
+                        ESP_LOGI(TAG, "Goodbye reply timeout, returning to idle");
+                        goodbye_sent_ = false;
+                        SetDeviceState(kDeviceStateIdle);
+                    }
+                } else if (now - last_speech_time_ >= 15000000) {
                     ESP_LOGW(TAG, "Server reply timeout after stop listening, returning to idle");
                     SetDeviceState(kDeviceStateIdle);
                 }
@@ -748,6 +763,12 @@ void Application::InitializeProtocol() {
             } else if (strcmp(state->valuestring, "stop") == 0) {
                 Schedule([this]() {
                     if (GetDeviceState() == kDeviceStateSpeaking) {
+                        if (goodbye_sent_) {
+                            ESP_LOGI(TAG, "Goodbye TTS playback finished, returning to idle");
+                            goodbye_sent_ = false;
+                            SetDeviceState(kDeviceStateIdle);
+                            return;
+                        }
                         auto music = Board::GetInstance().GetMusic();
                         if (music && (music->IsPlaying() || music->IsDownloading())) {
                             // Khi đang tải hoặc đang phát nhạc: chuyển sang Idle để nghe nhạc, không mở mic lắng nghe
@@ -1046,6 +1067,12 @@ void Application::HandleStopListeningEvent() {
 }
 
 void Application::HandleWakeWordDetectedEvent() {
+    auto disp = Board::GetInstance().GetDisplay();
+    auto lcd = dynamic_cast<LcdDisplay*>(disp);
+    if (lcd && lcd->GetScreenMode() == LcdDisplay::kScreenMusic) {
+        lcd->ReturnToChat();
+    }
+
     if (!protocol_) {
         return;
     }
@@ -1196,6 +1223,7 @@ void Application::HandleStateChangedEvent() {
             user_has_spoken_ = false;
             stop_listening_sent_ = false;
             prompt_sent_ = false;
+            goodbye_sent_ = false;
 
             // Make sure the audio processor is running
             if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {

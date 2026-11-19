@@ -1034,19 +1034,11 @@ bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::s
 void Esp32Music::Pause() {
     is_paused_ = true;
     for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
-    auto disp = Board::GetInstance().GetDisplay();
-    if (disp) {
-        disp->UpdateMusicPlaybackState(false);
-    }
     ESP_LOGI(TAG, "Music playback paused");
 }
 
 void Esp32Music::Resume() {
     is_paused_ = false;
-    auto disp = Board::GetInstance().GetDisplay();
-    if (disp) {
-        disp->UpdateMusicPlaybackState(true);
-    }
     ESP_LOGI(TAG, "Music playback resumed");
 }
 
@@ -1236,10 +1228,6 @@ bool Esp32Music::StopStreaming() {
     std::lock_guard<std::mutex> lock(stream_start_mutex_);
     is_paused_ = false;
     for (int i = 0; i < 16; ++i) visualizer_bands_[i] = 0;
-    auto disp = Board::GetInstance().GetDisplay();
-    if (disp) {
-        disp->UpdateMusicPlaybackState(false);
-    }
 
     ESP_LOGI(TAG, "Stopping streaming cleanly...");
     ResetSampleRate();

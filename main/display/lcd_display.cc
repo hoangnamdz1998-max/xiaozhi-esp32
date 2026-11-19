@@ -5700,13 +5700,8 @@ void LcdDisplay::OnSwipeUp() {
             // Người dùng chỉ thoát qua nút [X] cố định trên đỉnh
             return;
         } else {
-            // Ở trang phát nhạc: Vuốt lên thoát ra màn hình Menu hoặc quay về Chat và tắt nhạc luôn
-            if (music_opened_from_chat_) {
-                ReturnToChat();
-            } else {
-                StopMusicPlayback();
-                ShowMenu();
-            }
+            // Ở trang phát nhạc: Vuốt lên thoát ra quay về Chat, tiếp tục nghe và tắt nhạc luôn
+            ReturnToChat();
             return;
         }
     } else if (screen_mode_ == kScreenWallpaperSettings) {
@@ -14348,11 +14343,7 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_align(p_back_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(music_player_back_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        if (self->music_opened_from_chat_) {
-            self->ReturnToChat();
-        } else {
-            self->SwitchToMusicChart();
-        }
+        self->ReturnToChat();
     }, LV_EVENT_CLICKED, this);
 
     // Nút thoát ra Menu hoặc Chat [X]
@@ -14369,12 +14360,7 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_align(p_close_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(music_player_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        self->StopMusicPlayback();
-        if (self->music_opened_from_chat_) {
-            self->ReturnToChat();
-        } else {
-            self->ShowMenu();
-        }
+        self->ReturnToChat();
     }, LV_EVENT_CLICKED, this);
 
     // 2. MIDDLE SPECTRUM VISUALIZER VỚI FALLING PEAK LED (HIỆU ỨNG RƠI)
@@ -14946,20 +14932,18 @@ void LcdDisplay::ReturnToChat() {
     }
     SetStatus(Lang::Strings::LISTENING);
 
-    // Tiếp tục đoạn chat đó (nếu đang ở trạng thái Idle thì kích hoạt lại chat)
+    // Tiếp tục đoạn chat đó và robot tiếp tục lắng nghe người dùng
     auto& app = Application::GetInstance();
-    if (app.GetDeviceState() == kDeviceStateIdle) {
-        app.ToggleChatState();
-    }
+    app.SetDeviceState(kDeviceStateListening);
 }
 
 void LcdDisplay::ToggleMusicPlayPause() {
     auto music = Board::GetInstance().GetMusic();
     if (!music) return;
     if (music_is_playing_) {
-        // Đang phát -> Tạm dừng (Pause)
-        music_is_playing_ = false;
-        music->Pause();
+        // Đang phát -> Bấm dừng: dừng nhạc, thoát trang phát nhạc và quay về đoạn chat tiếp tục nghe
+        ReturnToChat();
+        return;
     } else {
         // Đang tạm dừng -> Phát tiếp (Resume nếu stream đang sống, hoặc phát bài mới)
         music_is_playing_ = true;

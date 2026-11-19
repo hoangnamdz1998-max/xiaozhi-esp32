@@ -163,6 +163,7 @@ private:
     bool user_has_spoken_ = false;
     bool stop_listening_sent_ = false;
     bool prompt_sent_ = false;
+    bool goodbye_sent_ = false;
     TaskHandle_t activation_task_handle_ = nullptr;
 
 
