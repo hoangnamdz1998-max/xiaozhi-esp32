@@ -302,8 +302,8 @@ void Application::Run() {
                     user_has_spoken_ = true;
                     last_speech_time_ = now;
                 } else if (user_has_spoken_) {
-                    if (now - last_speech_time_ >= 1000000) { // 1 second silence after speech
-                        ESP_LOGI(TAG, "1 second silence detected after speech, stopping listening");
+                    if (now - last_speech_time_ >= 2000000) { // 2 seconds silence after speech
+                        ESP_LOGI(TAG, "2 seconds silence detected after speech, stopping listening");
                         stop_listening_sent_ = true;
                         Board::GetInstance().GetDisplay()->SetStatus("Đang suy nghĩ...");
                         Board::GetInstance().GetDisplay()->SetEmotion("thinking");
@@ -379,8 +379,8 @@ void Application::Run() {
                     user_has_spoken_ = true;
                     last_speech_time_ = now;
                 } else if (user_has_spoken_) {
-                    if (now - last_speech_time_ >= 1000000) {
-                        ESP_LOGI(TAG, "1 second silence detected in clock tick, stopping listening");
+                    if (now - last_speech_time_ >= 2000000) {
+                        ESP_LOGI(TAG, "2 seconds silence detected in clock tick, stopping listening");
                         stop_listening_sent_ = true;
                         Board::GetInstance().GetDisplay()->SetStatus("Đang suy nghĩ...");
                         Board::GetInstance().GetDisplay()->SetEmotion("thinking");
@@ -1621,7 +1621,7 @@ void Application::AddAudioData(AudioStreamPacket&& packet) {
     auto codec = Board::GetInstance().GetAudioCodec();
     if (!codec) return;
     auto state = GetDeviceState();
-    if (state == kDeviceStateListening || state == kDeviceStateSpeaking) {
+    if (state == kDeviceStateSpeaking) {
         return;
     }
     if (!codec->output_enabled()) {

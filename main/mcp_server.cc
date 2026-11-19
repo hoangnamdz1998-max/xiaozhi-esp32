@@ -62,6 +62,9 @@ void McpServer::AddCommonTools() {
                     if (display) display->SetStatus("");
                     return "{\"success\": false, \"message\": \"Không thể tìm thấy hoặc phát bài hát này\"}";
                 }
+                if (display) {
+                    display->ShowMusicScreen(song_name, artist_name);
+                }
                 return "{\"success\": true, \"message\": \"Đang phát bài hát ra loa\" }";
             });
 
