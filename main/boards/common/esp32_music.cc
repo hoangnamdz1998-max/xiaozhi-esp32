@@ -921,10 +921,8 @@ bool Esp32Music::Download(const std::string& song_name, const std::string& artis
                 if (cJSON_IsString(artist_item) && artist_item->valuestring && strlen(artist_item->valuestring) > 0) {
                     final_artist = artist_item->valuestring;
                 }
-                auto disp = Board::GetInstance().GetDisplay();
-                if (disp) {
-                    disp->ShowMusicScreen(final_title, final_artist);
-                }
+                current_song_name_ = final_title;
+                current_artist_name_ = final_artist;
 
                 song_name_displayed_ = false;
 
@@ -1021,6 +1019,7 @@ bool Esp32Music::StartStreamingDirect(const std::string& audio_url, const std::s
     is_paused_ = false;
     is_downloading_ = true;
     current_song_name_ = song_name;
+    current_artist_name_ = artist_name;
     current_music_url_ = audio_url;
 
     auto disp = Board::GetInstance().GetDisplay();
@@ -1898,6 +1897,12 @@ void Esp32Music::PlayAudioStream() {
                 
 
                 UpdateVisualizerBands(final_pcm_data, final_sample_count);
+                if (total_frames_decoded_ == 1) {
+                    auto disp = Board::GetInstance().GetDisplay();
+                    if (disp) {
+                        disp->ShowMusicScreen(current_song_name_, current_artist_name_);
+                    }
+                }
                 app.AddAudioData(std::move(packet));
 
                 total_played += pcm_size_bytes;

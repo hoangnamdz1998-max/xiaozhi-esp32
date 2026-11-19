@@ -297,7 +297,7 @@ void Application::Run() {
             }
             if (GetDeviceState() == kDeviceStateListening && !stop_listening_sent_) {
                 int64_t now = esp_timer_get_time();
-                if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
+                if (audio_service_.IsVoiceDetected() && (now - listening_start_time_ >= 1000000) && (now - prompt_time_ >= 1000000)) {
                     user_has_spoken_ = true;
                     last_speech_time_ = now;
                 } else if (user_has_spoken_) {
@@ -344,7 +344,7 @@ void Application::Run() {
                 auto led = Board::GetInstance().GetLed();
                 led->OnStateChanged();
                 int64_t now = esp_timer_get_time();
-                if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
+                if (audio_service_.IsVoiceDetected() && (now - listening_start_time_ >= 1000000) && (now - prompt_time_ >= 1000000)) {
                     user_has_spoken_ = true;
                     last_speech_time_ = now;
                     Board::GetInstance().GetDisplay()->SetStatus("Đang nghe bạn nói...");
@@ -370,7 +370,7 @@ void Application::Run() {
 
             if (GetDeviceState() == kDeviceStateListening && !stop_listening_sent_) {
                 int64_t now = esp_timer_get_time();
-                if (audio_service_.IsVoiceDetected() && (now - prompt_time_ >= 500000)) {
+                if (audio_service_.IsVoiceDetected() && (now - listening_start_time_ >= 1000000) && (now - prompt_time_ >= 1000000)) {
                     user_has_spoken_ = true;
                     last_speech_time_ = now;
                 } else if (user_has_spoken_) {
@@ -1267,6 +1267,7 @@ void Application::StartListeningAudio() {
     // Play popup sound after ResetDecoder (in EnableVoiceProcessing) has been called
     if (play_popup_on_listening_) {
         play_popup_on_listening_ = false;
+        prompt_time_ = esp_timer_get_time();
         audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
     }
 }

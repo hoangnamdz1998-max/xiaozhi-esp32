@@ -5700,9 +5700,13 @@ void LcdDisplay::OnSwipeUp() {
             // Người dùng chỉ thoát qua nút [X] cố định trên đỉnh
             return;
         } else {
-            // Ở trang phát nhạc: Vuốt lên thoát ra màn hình Menu và tắt nhạc luôn
-            StopMusicPlayback();
-            ShowMenu();
+            // Ở trang phát nhạc: Vuốt lên thoát ra màn hình Menu hoặc quay về Chat và tắt nhạc luôn
+            if (music_opened_from_chat_) {
+                ReturnToChat();
+            } else {
+                StopMusicPlayback();
+                ShowMenu();
+            }
             return;
         }
     } else if (screen_mode_ == kScreenWallpaperSettings) {
@@ -14355,10 +14359,14 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_align(p_back_lbl, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_event_cb(music_player_back_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
-        self->SwitchToMusicChart();
+        if (self->music_opened_from_chat_) {
+            self->ReturnToChat();
+        } else {
+            self->SwitchToMusicChart();
+        }
     }, LV_EVENT_CLICKED, this);
 
-    // Nút thoát ra Menu [X]
+    // Nút thoát ra Menu hoặc Chat [X]
     music_player_close_btn_ = lv_button_create(music_player_view_);
     lv_obj_set_size(music_player_close_btn_, 32, 32);
     lv_obj_set_style_bg_color(music_player_close_btn_, lv_color_hex(0x1e293b), 0);
@@ -14373,7 +14381,11 @@ void LcdDisplay::CreateMusicScreenUI() {
     lv_obj_add_event_cb(music_player_close_btn_, [](lv_event_t* e) {
         auto* self = static_cast<LcdDisplay*>(lv_event_get_user_data(e));
         self->StopMusicPlayback();
-        self->ShowMenu();
+        if (self->music_opened_from_chat_) {
+            self->ReturnToChat();
+        } else {
+            self->ShowMenu();
+        }
     }, LV_EVENT_CLICKED, this);
 
     // 2. MIDDLE SPECTRUM VISUALIZER VỚI FALLING PEAK LED (HIỆU ỨNG RƠI)
@@ -14904,6 +14916,54 @@ void LcdDisplay::StopMusicPlayback() {
     UpdateMusicUI();
 }
 
+void LcdDisplay::ReturnToChat() {
+    DisplayLockGuard lock(this);
+    if (!lock) return;
+
+    StopMusicPlayback();
+    if (music_box_ != nullptr) lv_obj_add_flag(music_box_, LV_OBJ_FLAG_HIDDEN);
+    music_opened_from_chat_ = false;
+    screen_mode_ = previous_screen_mode_;
+
+    // Khôi phục nền đen đặc trưng của giao diện Chat Xiaozhi
+    lv_obj_t* active_scr = lv_screen_active();
+    if (active_scr != nullptr) {
+        lv_obj_set_style_bg_color(active_scr, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(active_scr, LV_OPA_COVER, 0);
+    }
+    if (wallpaper_image_ != nullptr) lv_obj_add_flag(wallpaper_image_, LV_OBJ_FLAG_HIDDEN);
+
+    // Bố cục và hiển thị lại mắt robot cùng đoạn hội thoại chat
+    LayoutChatWidgets(height_ > width_);
+    if (emoji_box_ != nullptr) {
+        lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(emoji_box_);
+        if (!gif_controller_) {
+            SetEmotion("neutral");
+        }
+    }
+    if (chat_box_ != nullptr && lv_obj_get_child_cnt(chat_box_) > 0) {
+        lv_obj_remove_flag(chat_box_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(chat_box_);
+    }
+    if (top_bar_ != nullptr) {
+        lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
+        lv_obj_remove_flag(top_bar_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(top_bar_);
+    }
+    if (status_bar_ != nullptr) {
+        lv_obj_remove_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(status_bar_);
+    }
+    SetStatus(Lang::Strings::LISTENING);
+
+    // Tiếp tục đoạn chat đó (nếu đang ở trạng thái Idle thì kích hoạt lại chat)
+    auto& app = Application::GetInstance();
+    if (app.GetDeviceState() == kDeviceStateIdle) {
+        app.ToggleChatState();
+    }
+}
+
 void LcdDisplay::ToggleMusicPlayPause() {
     auto music = Board::GetInstance().GetMusic();
     if (!music) return;
@@ -14993,9 +15053,11 @@ void LcdDisplay::ShowMusicScreen(const std::string& song_name, const std::string
         music_current_song_ = song_name;
         if (!artist_name.empty()) music_current_artist_ = artist_name;
         music_is_playing_ = true;
+        music_opened_from_chat_ = true;
         SwitchToMusicPlayer();
     } else {
         // Mở từ Menu: mở trang danh sách bài hát (Chart view)
+        music_opened_from_chat_ = false;
         SwitchToMusicChart();
         FetchRealtimeChart();
     }

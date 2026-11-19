@@ -39,6 +39,7 @@ private:
     std::string last_downloaded_data_;
     std::string current_music_url_;
     std::string current_song_name_;
+    std::string current_artist_name_;
     bool song_name_displayed_;
     
     // 歌词相关

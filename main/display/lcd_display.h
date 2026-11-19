@@ -124,6 +124,7 @@ public:
     void LayoutMusicWidgets(bool is_portrait);
     void UpdateMusicUI();
     void StopMusicPlayback();
+    void ReturnToChat();
     virtual void ShowCalculator();
     virtual void ShowFlashlight();
     virtual void ShowFmRadio();
@@ -434,6 +435,7 @@ protected:
 
     MusicSubView music_sub_view_ = kMusicViewChart;
     int music_current_chart_idx_ = 0;
+    bool music_opened_from_chat_ = false;
 
     lv_obj_t* music_box_ = nullptr;
     // Sub-view 1: Chart List (Full màn hình)
