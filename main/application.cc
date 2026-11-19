@@ -553,9 +553,6 @@ void Application::ActivationTask() {
 
     // Signal completion to main loop immediately -> enters Standby/Idle without waiting
     xEventGroupSetBits(event_group_, MAIN_EVENT_ACTIVATION_DONE);
-
-    // Check for new firmware version completely in background
-    StartBackgroundOtaCheck();
 }
 
 void Application::CheckAssetsVersion() {
@@ -626,69 +623,11 @@ void Application::CheckAssetsVersion() {
 }
 
 void Application::CheckNewVersion() {
-    StartBackgroundOtaCheck();
+    // Đã tắt hoàn toàn tính năng tự động nâng cấp firmware
 }
 
 void Application::StartBackgroundOtaCheck() {
-    xTaskCreate([](void* arg) {
-        auto* app = static_cast<Application*>(arg);
-
-        // Chờ 5 giây để giao diện màn hình chính và mạng ổn định
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        ESP_LOGI(TAG, "Starting background custom firmware check (ndztech)...");
-        auto& board = Board::GetInstance();
-        auto network = board.GetNetwork();
-        if (!network) {
-            vTaskDelete(NULL);
-            return;
-        }
-
-        auto http = network->CreateHttp(0);
-        if (!http) {
-            vTaskDelete(NULL);
-            return;
-        }
-
-        std::string ota_url = "https://ndztech.vercel.app/api/ota";
-        http->SetHeader("User-Agent", SystemInfo::GetUserAgent());
-        http->SetHeader("Content-Type", "application/json");
-
-        if (auto opened = http->Open("GET", ota_url); opened) {
-            auto code = http->GetStatusCode();
-            if (code && *code == 200) {
-                std::string body = http->ReadAll();
-                cJSON* root = cJSON_Parse(body.c_str());
-                if (root) {
-                    cJSON* fw = cJSON_GetObjectItem(root, "firmware");
-                    if (fw) {
-                        cJSON* ver = cJSON_GetObjectItem(fw, "version");
-                        cJSON* url = cJSON_GetObjectItem(fw, "url");
-                        if (ver && url && cJSON_IsString(ver) && cJSON_IsString(url)) {
-                            std::string new_ver = ver->valuestring;
-                            std::string fw_url = url->valuestring;
-                            std::string cur_ver = (app->ota_ != nullptr) ? app->ota_->GetCurrentVersion() : "";
-                            if (!new_ver.empty() && new_ver != cur_ver && !fw_url.empty()) {
-                                ESP_LOGI(TAG, "New firmware version available on ndztech: %s (current: %s), upgrading in background...",
-                                         new_ver.c_str(), cur_ver.c_str());
-
-                                while (app->GetDeviceState() == kDeviceStateSpeaking ||
-                                       app->GetDeviceState() == kDeviceStateListening) {
-                                    vTaskDelay(pdMS_TO_TICKS(1000));
-                                }
-
-                                app->UpgradeFirmware(fw_url, new_ver);
-                            }
-                        }
-                    }
-                    cJSON_Delete(root);
-                }
-            }
-            http->Close();
-        }
-
-        vTaskDelete(NULL);
-    }, "ota_bg_check", 8192, this, 1, NULL);
+    // Đã tắt hoàn toàn tính năng tự động nâng cấp firmware
 }
 
 void Application::InitializeProtocol() {
